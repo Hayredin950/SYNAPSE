@@ -6,3 +6,4 @@
 - [2025-07-04 20:04:00] Style: Modernize button and input styles for better UX
 - [2025-07-04 21:45:00] Feat: Integrate FAANG-style technology signals
 - [2025-07-07 16:25:00] Fix: Resolve semantic search result ranking
+- [2025-07-08 14:39:00] Fix: Handle rate limits for OpenAI and Anthropic APIs
