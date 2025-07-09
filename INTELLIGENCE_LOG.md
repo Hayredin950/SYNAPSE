@@ -7,3 +7,4 @@
 - [2025-07-04 21:45:00] Feat: Integrate FAANG-style technology signals
 - [2025-07-07 16:25:00] Fix: Resolve semantic search result ranking
 - [2025-07-08 14:39:00] Fix: Handle rate limits for OpenAI and Anthropic APIs
+- [2025-07-09 17:27:00] Feature: Add support for multi-model LLM routing
