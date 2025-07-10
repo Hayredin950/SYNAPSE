@@ -10,3 +10,4 @@
 - [2025-07-09 17:27:00] Feature: Add support for multi-model LLM routing
 - [2025-07-09 18:36:00] Feature: Implement deep-dive analysis for emerging tech
 - [2025-07-10 10:31:00] Cleanup: Remove deprecated technology scrapers
+- [2025-07-10 19:35:00] Feat: Implement autonomous research agent with RAG
