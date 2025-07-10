@@ -9,3 +9,4 @@
 - [2025-07-08 14:39:00] Fix: Handle rate limits for OpenAI and Anthropic APIs
 - [2025-07-09 17:27:00] Feature: Add support for multi-model LLM routing
 - [2025-07-09 18:36:00] Feature: Implement deep-dive analysis for emerging tech
+- [2025-07-10 10:31:00] Cleanup: Remove deprecated technology scrapers
