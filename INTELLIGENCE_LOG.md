@@ -23,3 +23,4 @@
 - [2025-07-21 18:19:00] Update: Refresh core NLP dependencies
 - [2025-07-21 19:07:00] Refactor: Modularize rag pipeline components
 - [2025-07-22 11:15:00] Refactor: Centralize agent fleet configuration
+- [2025-07-23 12:46:00] Feature: Add support for multi-model LLM routing
