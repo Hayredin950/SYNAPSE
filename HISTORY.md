@@ -10,3 +10,6 @@
 ### 2025-07-03T20:46:46
 - chore: optimize core engine components
 
+### 2025-07-23T09:51:46
+- fix: resolve subtle race conditions
+
