@@ -16,3 +16,6 @@
 ### 2025-07-27T20:57:46
 - feat: implement advanced data structures
 
+### 2025-07-27T17:28:46
+- fix: resolve subtle race conditions
+
