@@ -25,3 +25,4 @@
 - [2025-07-22 11:15:00] Refactor: Centralize agent fleet configuration
 - [2025-07-23 12:46:00] Feature: Add support for multi-model LLM routing
 - [2025-07-30 13:39:00] Feat: Integrate FAANG-style technology signals
+- [2025-07-30 16:29:00] UI: Enhance accessibility for knowledge graph visualization
