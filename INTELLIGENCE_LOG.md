@@ -26,3 +26,4 @@
 - [2025-07-23 12:46:00] Feature: Add support for multi-model LLM routing
 - [2025-07-30 13:39:00] Feat: Integrate FAANG-style technology signals
 - [2025-07-30 16:29:00] UI: Enhance accessibility for knowledge graph visualization
+- [2025-07-31 13:05:00] Fix: Handle offline mode for local knowledge persistence
