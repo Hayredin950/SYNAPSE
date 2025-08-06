@@ -32,3 +32,4 @@
 - [2025-08-04 16:22:00] Feature: Implement deep-dive analysis for emerging tech
 - [2025-08-06 17:29:00] Style: Modernize workspace typography and layout
 - [2025-08-06 17:41:00] Fix: Handle rate limits for OpenAI and Anthropic APIs
+- [2025-08-06 18:06:00] UI: Enhance accessibility for knowledge graph visualization
