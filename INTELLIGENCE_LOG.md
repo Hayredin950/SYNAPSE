@@ -35,3 +35,4 @@
 - [2025-08-06 18:06:00] UI: Enhance accessibility for knowledge graph visualization
 - [2025-08-08 17:15:00] Feature: Add support for multi-model LLM routing
 - [2025-08-08 21:10:00] Refactor: Optimize vector database indexing
+- [2025-08-11 14:58:00] Refactor: Modularize rag pipeline components
