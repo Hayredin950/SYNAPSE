@@ -38,3 +38,4 @@
 - [2025-08-11 14:58:00] Refactor: Modularize rag pipeline components
 - [2025-08-13 20:06:00] Docs: Add documentation for technology intelligence pipeline
 - [2025-08-14 10:47:00] Update: Refresh core NLP dependencies
+- [2025-08-14 19:00:00] Bugfix: Fix edge case in keyword extraction logic
