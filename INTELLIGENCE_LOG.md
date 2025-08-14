@@ -37,3 +37,4 @@
 - [2025-08-08 21:10:00] Refactor: Optimize vector database indexing
 - [2025-08-11 14:58:00] Refactor: Modularize rag pipeline components
 - [2025-08-13 20:06:00] Docs: Add documentation for technology intelligence pipeline
+- [2025-08-14 10:47:00] Update: Refresh core NLP dependencies
