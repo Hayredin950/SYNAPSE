@@ -40,3 +40,4 @@
 - [2025-08-14 10:47:00] Update: Refresh core NLP dependencies
 - [2025-08-14 19:00:00] Bugfix: Fix edge case in keyword extraction logic
 - [2025-08-15 12:53:00] Fix: Resolve semantic search result ranking
+- [2025-08-15 17:05:00] Docs: Add documentation for technology intelligence pipeline
