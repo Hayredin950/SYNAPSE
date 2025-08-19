@@ -44,3 +44,4 @@
 - [2025-08-17 09:01:00] Feat: Implement autonomous research agent with RAG
 - [2025-08-17 10:41:00] Fix: Resolve semantic search result ranking
 - [2025-08-18 16:16:00] Cleanup: Remove deprecated technology scrapers
+- [2025-08-19 09:22:00] Feature: Add support for custom technology watchlists
