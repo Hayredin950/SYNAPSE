@@ -22,3 +22,6 @@
 ### 2025-08-07T19:17:46
 - perf: enhance runtime performance
 
+### 2025-08-20T16:37:46
+- chore: optimize core engine components
+
