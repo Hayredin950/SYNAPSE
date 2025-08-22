@@ -47,3 +47,4 @@
 - [2025-08-19 09:22:00] Feature: Add support for custom technology watchlists
 - [2025-08-21 10:53:00] Update: Refresh core NLP dependencies
 - [2025-08-22 11:54:00] Style: Modernize workspace typography and layout
+- [2025-08-22 12:39:00] Feature: Implement deep-dive analysis for emerging tech
