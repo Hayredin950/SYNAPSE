@@ -31,3 +31,6 @@
 ### 2025-08-20T14:05:46
 - feat: implement advanced data structures
 
+### 2025-09-04T18:30:46
+- test: expand coverage for critical paths
+
