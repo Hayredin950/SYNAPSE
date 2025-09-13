@@ -34,3 +34,6 @@
 ### 2025-09-04T18:30:46
 - test: expand coverage for critical paths
 
+### 2025-09-13T16:36:46
+- docs: update technical architecture
+
