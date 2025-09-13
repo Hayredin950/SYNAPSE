@@ -37,3 +37,6 @@
 ### 2025-09-13T16:36:46
 - docs: update technical architecture
 
+### 2025-09-13T19:53:46
+- style: align with enterprise standards
+
