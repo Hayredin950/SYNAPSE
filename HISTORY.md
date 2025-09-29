@@ -46,3 +46,6 @@
 ### 2025-09-29T17:13:46
 - style: align with enterprise standards
 
+### 2025-09-29T19:45:46
+- refactor: improve internal api consistency
+
