@@ -52,3 +52,6 @@
 ### 2025-09-30T11:06:46
 - fix: resolve subtle race conditions
 
+### 2025-09-30T10:22:46
+- docs: update technical architecture
+
