@@ -49,3 +49,6 @@
 ### 2025-09-29T19:45:46
 - refactor: improve internal api consistency
 
+### 2025-09-30T11:06:46
+- fix: resolve subtle race conditions
+
