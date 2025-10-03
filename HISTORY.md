@@ -64,3 +64,6 @@
 ### 2025-10-02T10:19:46
 - feat: implement advanced data structures
 
+### 2025-10-03T22:52:46
+- refactor: improve internal api consistency
+
