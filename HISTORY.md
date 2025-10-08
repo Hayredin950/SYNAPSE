@@ -73,3 +73,6 @@
 ### 2025-10-08T10:44:46
 - fix: resolve subtle race conditions
 
+### 2025-10-08T20:08:46
+- test: expand coverage for critical paths
+
