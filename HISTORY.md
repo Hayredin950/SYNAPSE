@@ -79,3 +79,6 @@
 ### 2025-10-08T09:36:46
 - perf: enhance runtime performance
 
+### 2025-10-10T09:22:46
+- style: align with enterprise standards
+
