@@ -65,3 +65,4 @@ class UserPaper(models.Model):
 
     def __str__(self):
         return f"{self.user} ↔ {self.paper}"
+        return f"{self.user} ↔ {self.paper}"
