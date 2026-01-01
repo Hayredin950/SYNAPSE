@@ -197,3 +197,4 @@ class NewArticleSignalE2ETests(TestCase):
         payload = call_args[0][1]
         self.assertIn("article_id", payload)
         self.assertIn("title", payload)
+        self.assertIn("title", payload)
