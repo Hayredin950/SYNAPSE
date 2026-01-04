@@ -1133,3 +1133,4 @@ def make_generate_chart_tool() -> StructuredTool:
         ),
         args_schema=GenerateChartInput,
     )
+    )
