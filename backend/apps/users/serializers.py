@@ -164,3 +164,4 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             )
         attrs["user"] = user
         return attrs
+        return attrs
