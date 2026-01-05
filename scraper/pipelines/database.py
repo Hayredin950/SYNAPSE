@@ -532,3 +532,4 @@ class DatabasePipeline:
         except Exception:
             logger.warning(f"Could not parse datetime: {value}")
             return None
+            return None
