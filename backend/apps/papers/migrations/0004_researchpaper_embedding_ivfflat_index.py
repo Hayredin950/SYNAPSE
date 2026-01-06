@@ -32,3 +32,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(create_ivfflat_index, drop_ivfflat_index),
     ]
+    ]
