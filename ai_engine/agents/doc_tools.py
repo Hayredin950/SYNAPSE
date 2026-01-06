@@ -3580,3 +3580,4 @@ def make_generate_html_tool() -> StructuredTool:
         args_schema=GenerateHTMLInput,
         return_direct=False,
     )
+    )
