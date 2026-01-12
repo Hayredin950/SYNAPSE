@@ -23,3 +23,4 @@ if (SENTRY_DSN) {
     sendDefaultPii: false,
   })
 }
+}
