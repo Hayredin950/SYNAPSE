@@ -170,3 +170,4 @@ class S3ServiceTest(TestCase):
         """upload_to_s3 should raise FileNotFoundError for missing file."""
         with self.assertRaises(FileNotFoundError):
             upload_to_s3("/nonexistent/path/file.pdf", bucket="test-bucket")
+            upload_to_s3("/nonexistent/path/file.pdf", bucket="test-bucket")
