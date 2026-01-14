@@ -253,3 +253,4 @@ class TestInterestFeedFiltering(TestCase):
             self.assertIn(
                 "security", topic, f"Expected only security articles: {topic}"
             )
+            )
