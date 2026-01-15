@@ -11,3 +11,4 @@ class AutomationConfig(AppConfig):
         from .signals import connect_signals
 
         connect_signals()
+        connect_signals()
