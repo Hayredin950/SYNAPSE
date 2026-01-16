@@ -763,3 +763,4 @@ do_install() {
 # half the file during "curl | sh"
 do_install
 do_install
+do_install
