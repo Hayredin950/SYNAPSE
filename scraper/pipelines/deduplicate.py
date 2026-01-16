@@ -166,3 +166,4 @@ class DeduplicationPipeline:
             logger.error(f"Redis error during deduplication: {e}")
             # Degrade gracefully - pass item through
             return item
+            return item
