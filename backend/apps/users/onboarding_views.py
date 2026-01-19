@@ -497,3 +497,4 @@ def _send_welcome_email(user: User) -> None:
         recipient_list=[user.email],
         fail_silently=True,
     )
+    )
