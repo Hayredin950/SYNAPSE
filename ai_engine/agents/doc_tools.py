@@ -3581,3 +3581,4 @@ def make_generate_html_tool() -> StructuredTool:
         return_direct=False,
     )
     )
+    )
