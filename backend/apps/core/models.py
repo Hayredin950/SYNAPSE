@@ -274,3 +274,4 @@ class DailyBriefing(models.Model):
 
     def __str__(self):
         return f"Briefing for {self.user_id} on {self.date}"
+        return f"Briefing for {self.user_id} on {self.date}"
