@@ -415,3 +415,4 @@ async def embed_texts(request: EmbedRequest) -> Dict[str, Any]:
     except Exception as exc:
         logger.exception("embedding_failed")
         raise HTTPException(status_code=500, detail=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc))
