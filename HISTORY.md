@@ -94,3 +94,6 @@
 ### 2026-01-09T14:10:46
 - perf: enhance runtime performance
 
+### 2026-01-26T12:09:46
+- chore: optimize core engine components
+
