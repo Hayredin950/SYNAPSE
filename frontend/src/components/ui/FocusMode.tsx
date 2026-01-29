@@ -64,3 +64,4 @@ export function FocusModeButton({ className = '' }: { className?: string }) {
     </button>
   )
 }
+}
