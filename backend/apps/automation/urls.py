@@ -94,3 +94,4 @@ urlpatterns = [
         name="marketplace-upvote",
     ),
 ]
+]
