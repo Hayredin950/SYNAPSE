@@ -512,3 +512,4 @@ def cancel_agent_task(agent_task_id: str, celery_task_id: str) -> dict:
         "AgentTask %s cancelled (celery_task_id=%s)", agent_task_id, celery_task_id
     )
     return {"success": True, "agent_task_id": agent_task_id}
+    return {"success": True, "agent_task_id": agent_task_id}
