@@ -37,3 +37,4 @@ trap 'echo "[start-worker-with-health] terminating health server PID=$HEALTH_PID
 echo "[start-worker-with-health] starting celery worker..."
 exec /app/start-worker.sh
 
+
