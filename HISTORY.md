@@ -106,3 +106,6 @@
 ### 2026-02-09T11:56:46
 - test: expand coverage for critical paths
 
+### 2026-02-09T10:11:46
+- fix: resolve subtle race conditions
+
