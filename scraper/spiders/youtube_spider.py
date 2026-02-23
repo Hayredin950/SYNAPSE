@@ -305,3 +305,4 @@ class YouTubeSpider(scrapy.Spider):
     def parse(self, response):
         """Not used — yt-dlp handles all fetching."""
         pass
+        pass
