@@ -82,3 +82,4 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"     Twitter failed (needs bearer token): {e}"))
 
         self.stdout.write(self.style.SUCCESS("All scrapers done."))
+        self.stdout.write(self.style.SUCCESS("All scrapers done."))
