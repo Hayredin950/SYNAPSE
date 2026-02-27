@@ -19,3 +19,4 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(enable_pgvector, migrations.RunPython.noop),
     ]
+    ]
