@@ -34,3 +34,4 @@ class Migration(migrations.Migration):
             index=models.Index(fields=["user", "timestamp"], name="ua_user_time_idx"),
         ),
     ]
+    ]
