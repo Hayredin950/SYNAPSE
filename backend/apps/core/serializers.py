@@ -82,3 +82,4 @@ class CollectionListSerializer(serializers.ModelSerializer):
 
     def get_bookmark_count(self, obj):
         return obj.bookmarks.count()
+        return obj.bookmarks.count()
