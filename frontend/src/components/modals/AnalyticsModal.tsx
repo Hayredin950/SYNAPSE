@@ -284,3 +284,4 @@ export function AnalyticsModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+}
