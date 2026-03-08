@@ -214,3 +214,4 @@ def embed_text(text: str) -> List[float]:
 def embed_batch(texts: List[str], batch_size: int = _BATCH_SIZE) -> List[List[float]]:
     """Convenience wrapper — embed a list of text strings in batches."""
     return get_embedder().embed_batch(texts, batch_size=batch_size)
+    return get_embedder().embed_batch(texts, batch_size=batch_size)
