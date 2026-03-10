@@ -77,3 +77,4 @@ class Migration(migrations.Migration):
         # 4. Backfill existing rows
         migrations.RunSQL(sql=BACKFILL_SQL, reverse_sql=migrations.RunSQL.noop),
     ]
+    ]
