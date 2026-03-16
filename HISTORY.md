@@ -130,3 +130,6 @@
 ### 2026-03-16T14:29:46
 - refactor: improve internal api consistency
 
+### 2026-03-16T09:18:46
+- chore: optimize core engine components
+
