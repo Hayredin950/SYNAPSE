@@ -106,3 +106,4 @@ export function KeyboardShortcutsModal({ open, onClose }: Props) {
     document.body
   )
 }
+}
