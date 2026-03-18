@@ -387,3 +387,4 @@ export function ContentReaderModal({ article, onClose }: Props) {
     document.body,
   )
 }
+}
