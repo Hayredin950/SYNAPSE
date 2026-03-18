@@ -228,3 +228,4 @@ class HackerNewsSpider(scrapy.Spider):
         """
         story_id = failure.request.meta.get("story_id", "unknown")
         logger.error(f"Request failed for story {story_id}: {failure.value}")
+        logger.error(f"Request failed for story {story_id}: {failure.value}")
