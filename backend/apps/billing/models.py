@@ -198,3 +198,4 @@ class UserFeedback(models.Model):
 
     def __str__(self):
         return f"{self.type} from {self.user.email if self.user else 'anonymous'}"
+        return f"{self.type} from {self.user.email if self.user else 'anonymous'}"
