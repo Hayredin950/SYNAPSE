@@ -22,3 +22,4 @@ class ArticleFilter(django_filters.FilterSet):
     class Meta:
         model = Article
         fields = ["topic", "source", "date_from", "date_to", "trending"]
+        fields = ["topic", "source", "date_from", "date_to", "trending"]
