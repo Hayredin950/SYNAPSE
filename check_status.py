@@ -25,3 +25,4 @@ print(f'Total UserArticles: {UserArticle.objects.filter(user=u).count()}')
 if recent > 0 and recent_linked == 0:
     print('\n*** PROBLEM: Articles scraped but NO UserArticle links created! ***')
     print('This confirms the bug: user_id is not reaching the database pipeline.')
+    print('This confirms the bug: user_id is not reaching the database pipeline.')
