@@ -142,3 +142,6 @@
 ### 2026-04-01T12:46:46
 - docs: update technical architecture
 
+### 2026-04-01T17:51:46
+- chore: optimize core engine components
+
