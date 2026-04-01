@@ -124,3 +124,4 @@ fix/
 # Firebase Service Account Key (NEVER commit this)
 *firebase-adminsdk*.json
 firebase-service-account.json
+firebase-service-account.json
