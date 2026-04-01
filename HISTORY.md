@@ -139,3 +139,6 @@
 ### 2026-03-26T13:07:46
 - fix: resolve subtle race conditions
 
+### 2026-04-01T12:46:46
+- docs: update technical architecture
+
