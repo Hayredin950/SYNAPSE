@@ -87,3 +87,4 @@ urlpatterns += [
         name="zotero-disconnect",
     ),
 ]
+]
