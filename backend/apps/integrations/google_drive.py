@@ -329,3 +329,4 @@ def export_as_google_doc(
 
     logger.info("Exported '%s' as Google Doc: %s", name, uploaded.get("id"))
     return uploaded
+    return uploaded
