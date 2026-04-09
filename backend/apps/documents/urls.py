@@ -74,3 +74,4 @@ urlpatterns = [
         name="document-generate-stream",
     ),
 ]
+]
