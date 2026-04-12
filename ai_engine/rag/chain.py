@@ -371,3 +371,4 @@ class SynapseRAGChain:
                 }
             )
         return sources
+        return sources
