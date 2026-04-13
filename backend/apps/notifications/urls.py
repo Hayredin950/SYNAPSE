@@ -35,3 +35,4 @@ urlpatterns = [
     ),
     path("<uuid:pk>/", NotificationDeleteView.as_view(), name="notification-delete"),
 ]
+]
