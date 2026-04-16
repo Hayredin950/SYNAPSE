@@ -6,3 +6,4 @@ class TweetsConfig(AppConfig):
     name = "apps.tweets"
     label = "tweets"
     verbose_name = "X / Twitter"
+    verbose_name = "X / Twitter"
