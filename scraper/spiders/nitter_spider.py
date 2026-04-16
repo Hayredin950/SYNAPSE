@@ -482,3 +482,4 @@ class NitterSpider(scrapy.Spider):
                 "query": query,
             },
         )
+        )
