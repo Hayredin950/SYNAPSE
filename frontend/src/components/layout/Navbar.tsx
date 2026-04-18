@@ -530,3 +530,4 @@ export const Navbar = React.memo(function Navbar({ onMobileMenuClick, onSearchCl
     </nav>
   )
 })
+})
