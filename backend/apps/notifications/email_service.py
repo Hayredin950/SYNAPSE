@@ -543,3 +543,4 @@ def _build_workflow_html(
   </table>
 </body>
 </html>"""
+</html>"""
