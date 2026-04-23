@@ -148,3 +148,6 @@
 ### 2026-04-05T11:54:46
 - chore: optimize core engine components
 
+### 2026-04-23T16:23:46
+- test: expand coverage for critical paths
+
