@@ -151,3 +151,6 @@
 ### 2026-04-23T16:23:46
 - test: expand coverage for critical paths
 
+### 2026-04-23T17:02:46
+- refactor: improve internal api consistency
+
