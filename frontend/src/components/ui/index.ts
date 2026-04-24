@@ -20,3 +20,4 @@ export {
 export { Tooltip } from './Tooltip'
 export { HorizontalScroller } from './HorizontalScroller'
 export { ScrollSentinel } from './ScrollSentinel'
+export { ScrollSentinel } from './ScrollSentinel'
