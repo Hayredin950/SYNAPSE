@@ -21,3 +21,4 @@ class Migration(migrations.Migration):
             old_name="core_conver_conv_id_idx",
         ),
     ]
+    ]
