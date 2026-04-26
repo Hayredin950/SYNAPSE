@@ -157,3 +157,6 @@
 ### 2026-04-26T09:51:46
 - perf: enhance runtime performance
 
+### 2026-04-26T22:37:46
+- fix: resolve subtle race conditions
+
