@@ -158,3 +158,4 @@ def sanitize_input(text: str, max_length: int = 8192) -> str:
     text = text.replace("\x00", "")  # Remove null bytes
     text = text[:max_length]
     return text.strip()
+    return text.strip()
