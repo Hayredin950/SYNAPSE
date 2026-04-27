@@ -166,3 +166,6 @@
 ### 2026-04-27T13:35:46
 - refactor: improve internal api consistency
 
+### 2026-04-27T18:29:46
+- docs: update technical architecture
+
