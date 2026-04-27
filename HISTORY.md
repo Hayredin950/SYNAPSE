@@ -169,3 +169,6 @@
 ### 2026-04-27T18:29:46
 - docs: update technical architecture
 
+### 2026-04-27T14:41:46
+- fix: resolve subtle race conditions
+
