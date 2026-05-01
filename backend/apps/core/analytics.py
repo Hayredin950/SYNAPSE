@@ -266,3 +266,4 @@ def flush_analytics() -> None:
     ph = _get_posthog()
     if ph:
         ph.flush()
+        ph.flush()
