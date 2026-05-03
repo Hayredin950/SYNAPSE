@@ -61,3 +61,4 @@ export default function ProgressBar({ currentStep, totalSteps, stepLabels = DEFA
     </div>
   );
 }
+}
