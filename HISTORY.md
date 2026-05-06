@@ -172,3 +172,6 @@
 ### 2026-04-27T14:41:46
 - fix: resolve subtle race conditions
 
+### 2026-05-06T19:51:46
+- fix: resolve subtle race conditions
+
