@@ -1,0 +1,3328 @@
+\documentclass{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\definecolor{darkblue}{RGB}{0,0,139}
+\definecolor{darkred}{RGB}{139,0,0}
+\definecolor{darkgreen}{RGB}{0,100,0}
+\definecolor{darkorange}{RGB}{255,140,0}
+\definecolor{criticalred}{RGB}{220,20,60}
+\definecolor{highred}{RGB}{255,69,0}
+\definecolor{mediumorange}{RGB}{255,165,0}
+\definecolor{lowgreen}{RGB}{34,139,34}
+\definecolor{lightgray}{RGB}{211,211,211}
+\definecolor{codegray}{RGB}{248,248,248}
+
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+
+\definecolor{darkred}{rgb}{0.8,0,0}
+\definecolor{darkorange}{rgb}{1,0.5,0}
+\definecolor{darkyellow}{rgb}{1,1,0}
+\definecolor{darkgreen}{rgb}{0,0.5,0}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  keywordstyle=\color{darkblue},
+  commentstyle=\color{gray},
+  stringstyle=\color{darkred},
+  captionpos=b
+}
+
+\title{SYNAPSE Security and Compliance Documentation}
+\author{Security Team}
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SYNAPSE Security and Compliance}
+\lhead{Document}
+\cfoot{\thepage}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction}
+
+\section{Security Philosophy}
+
+The SYNAPSE platform follows a comprehensive security approach based on three core principles:
+
+\begin{enumerate}
+\item \textbf{Defense in Depth}: Multiple layers of security controls ensure that if one layer fails, others remain effective. This applies across network, application, data, and operational layers.
+
+\item \textbf{Least Privilege}: Every user, process, and component has only the minimum permissions required to perform their function. This principle is applied to database users, AWS IAM roles, API endpoints, and file system access.
+
+\item \textbf{Zero Trust Architecture}: We assume no implicit trust. All requests, whether internal or external, must be authenticated and authorized. Network segmentation, encryption, and continuous verification are mandatory.
+\end{enumerate}
+
+\section{Scope of Security Coverage}
+
+This document covers security implementations across the entire SYNAPSE stack:
+
+\begin{itemize}
+\item \textbf{Application Layer}: Django 4.2 backend, FastAPI services, Next.js 14 frontend
+\item \textbf{Data Layer}: PostgreSQL 15 database, Redis 7 caching, pgvector embeddings
+\item \textbf{Message Queue}: Celery for asynchronous tasks
+\item \textbf{Infrastructure}: AWS deployment, Docker containerization, VPC configuration
+\item \textbf{Third-party Integrations}: Google Drive OAuth, external APIs
+\item \textbf{Operations}: Monitoring, logging, incident response, vulnerability management
+\end{itemize}
+
+\section{Security Definitions}
+
+\subsection{OWASP (Open Web Application Security Project)}
+A non-profit organization focused on improving software security through community-driven projects, tools, and documentation. OWASP publishes the Top 10, a list of the most critical web application security risks.
+
+\subsection{CVE (Common Vulnerabilities and Exposures)}
+A system for identifying and cataloging publicly disclosed cybersecurity vulnerabilities. Each CVE receives a unique identifier (e.g., CVE-2023-1234) and severity rating.
+
+\subsection{CVSS (Common Vulnerability Scoring System)}
+A standardized method for rating the severity of security vulnerabilities on a scale of 0.0 to 10.0:
+\begin{itemize}
+\item 0.0: None
+\item 0.1-3.9: Low
+\item 4.0-6.9: Medium
+\item 7.0-8.9: High
+\item 9.0-10.0: Critical
+\end{itemize}
+
+\subsection{PII (Personally Identifiable Information)}
+Any data that can be used to identify an individual, including names, email addresses, phone numbers, IP addresses, and account identifiers.
+
+\subsection{JWT (JSON Web Token)}
+A stateless token format for securely transmitting claims between parties. Structure: Header.Payload.Signature. Used for authentication and API access control.
+
+\subsection{RBAC (Role-Based Access Control)}
+An access control model where permissions are granted based on user roles rather than individual users. SYNAPSE uses three primary roles: Admin, Premium, and User.
+
+\subsection{STRIDE Threat Model}
+A methodology for identifying six classes of security threats:
+\begin{itemize}
+\item \textbf{Spoofing}: Identity spoofing or impersonation
+\item \textbf{Tampering}: Unauthorized modification of data
+\item \textbf{Repudiation}: Denial of actions or transactions
+\item \textbf{Information Disclosure}: Unauthorized access to sensitive data
+\item \textbf{Denial of Service}: Attacks that prevent system availability
+\item \textbf{Elevation of Privilege}: Unauthorized access to higher-level permissions
+\end{itemize}
+
+\section{Regulatory Context}
+
+SYNAPSE operates under the following compliance frameworks:
+
+\begin{itemize}
+\item \textbf{GDPR (General Data Protection Regulation)}: European privacy regulation requiring data protection, consent, and subject rights
+\item \textbf{CCPA (California Consumer Privacy Act)}: California privacy law similar to GDPR
+\item \textbf{OWASP Top 10}: Industry standard for web application security
+\item \textbf{CWE (Common Weakness Enumeration)}: Categorization of software weaknesses
+\item \textbf{ISO 27001}: International standard for information security management
+\end{itemize}
+
+\chapter{Threat Model}
+
+\section{Assets to Protect}
+
+\subsection{User Data}
+\begin{itemize}
+\item User accounts, email addresses, profile information
+\item Authentication credentials and tokens
+\item Saved searches, preferences, and workspace configurations
+\item Usage history and activity logs
+\end{itemize}
+
+\subsection{API Keys and Secrets}
+\begin{itemize}
+\item OAuth tokens for Google Drive integration
+\item Third-party API keys for external services
+\item Database connection strings
+\item AWS credentials and access tokens
+\item JWT signing keys
+\end{itemize}
+
+\subsection{Scraped Content}
+\begin{itemize}
+\item Aggregated technology intelligence data
+\item Web-scraped content with licensing implications
+\item Competitive intelligence data
+\item Patent and research document aggregations
+\end{itemize}
+
+\subsection{AI Models and Embeddings}
+\begin{itemize}
+\item Trained machine learning models
+\item Vector embeddings stored in pgvector
+\item Fine-tuning data and training datasets
+\item Model weights and parameters
+\end{itemize}
+
+\subsection{Infrastructure}
+\begin{itemize}
+\item AWS accounts and resources
+\item Docker registry and container images
+\item Database backups and snapshots
+\item Server configurations and deployment scripts
+\end{itemize}
+
+\section{Threat Actors}
+
+\subsection{Unauthenticated Users}
+External attackers with no legitimate access. Threats include reconnaissance, credential stuffing, and exploitation of authentication endpoints.
+
+\subsection{Authenticated Users}
+Legitimate users with platform access. Threats include Insecure Direct Object Reference (IDOR), privilege escalation, and data exfiltration.
+
+\subsection{Admin Users}
+Internal administrators with elevated privileges. Threats include insider threats, negligent misuse, and account compromise.
+
+\subsection{External Attackers}
+Sophisticated threat actors targeting the platform. Threats include APTs (Advanced Persistent Threats), zero-day exploits, and supply chain attacks.
+
+\subsection{Insiders}
+Current or former employees with system knowledge. Threats include deliberate sabotage, data theft, and credential misuse.
+
+\section{Attack Vectors}
+
+\subsection{Web-Based Attacks}
+\begin{itemize}
+\item Cross-Site Scripting (XSS): JavaScript injection in frontend
+\item Cross-Site Request Forgery (CSRF): Unauthorized request forgery
+\item SQL Injection: Database query manipulation
+\item Server-Side Template Injection (SSTI): Template engine exploitation
+\end{itemize}
+
+\subsection{API-Based Attacks}
+\begin{itemize}
+\item Broken Authentication: Weak token validation
+\item Broken Access Control: Privilege escalation via API
+\item Rate Limit Bypass: Excessive API requests
+\item Insecure Deserialization: Malicious object serialization
+\end{itemize}
+
+\subsection{Network-Based Attacks}
+\begin{itemize}
+\item Man-in-the-Middle (MITM): TLS interception
+\item DNS Hijacking: Malicious DNS resolution
+\item DDoS Attacks: Volumetric attacks on infrastructure
+\item Network Reconnaissance: Port scanning, vulnerability probing
+\end{itemize}
+
+\subsection{Supply Chain Attacks}
+\begin{itemize}
+\item Dependency Poisoning: Malicious package injection
+\item Container Image Compromise: Infected Docker images
+\item Build Pipeline Attacks: Compromised build tools
+\item Third-party Integration Compromise: Malicious OAuth/API providers
+\end{itemize}
+
+\subsection{Social Engineering}
+\begin{itemize}
+\item Phishing: Credential harvesting via email
+\item Pretexting: False authority claims
+\item Baiting: Malicious USB or downloads
+\item Tailgating: Physical access exploitation
+\end{itemize}
+
+\section{STRIDE Threat Model with Mitigations}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|p{1.5cm}|p{3.5cm}|p{4cm}|}
+\hline
+\textbf{Threat} & \textbf{Description} & \textbf{Mitigation} \\
+\hline
+\textcolor{darkred}{[CRITICAL]} Spoofing & Attacker impersonates legitimate user or service & JWT with RS256 signing, OAuth2 verification, API key management, IP logging \\
+\hline
+\textcolor{darkred}{[CRITICAL]} Tampering & Unauthorized modification of data in transit or at rest & TLS 1.3 encryption, AES-256 encryption at rest, HMAC signatures, database constraints \\
+\hline
+\textcolor{darkorange}{[HIGH]} Repudiation & User denies performing an action & Comprehensive audit logging, immutable log storage, digital signatures \\
+\hline
+\textcolor{darkred}{[CRITICAL]} Info Disclosure & Unauthorized access to sensitive data & Encryption, access control, PII minimization, secure logging practices \\
+\hline
+\textcolor{darkred}{[CRITICAL]} DoS & System becomes unavailable & Rate limiting, auto-scaling, CDN usage, request validation, timeouts \\
+\hline
+\textcolor{darkred}{[CRITICAL]} Elevation of Privilege & Attacker gains higher permissions & RBAC, least privilege database users, privilege boundary enforcement \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Risk Matrix: Top 15 Threats}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|p{3.5cm}|p{1.2cm}|p{1.2cm}|p{3cm}|}
+\hline
+\textbf{Threat} & \textbf{Likelihood} & \textbf{Impact} & \textbf{Risk Level} \\
+\hline
+\textcolor{darkred}{1. Credential Stuffing} & High & High & \textcolor{darkred}{[CRITICAL]} \\
+\hline
+\textcolor{darkred}{2. SQL Injection} & Medium & Critical & \textcolor{darkred}{[CRITICAL]} \\
+\hline
+\textcolor{darkred}{3. Privilege Escalation (IDOR)} & Medium & Critical & \textcolor{darkred}{[CRITICAL]} \\
+\hline
+\textcolor{darkred}{4. API Rate Limit Bypass} & High & High & \textcolor{darkred}{[CRITICAL]} \\
+\hline
+\textcolor{darkred}{5. Compromised Dependencies} & Medium & Critical & \textcolor{darkred}{[CRITICAL]} \\
+\hline
+\textcolor{darkorange}{6. XSS via Frontend} & High & Medium & \textcolor{darkorange}{[HIGH]} \\
+\hline
+\textcolor{darkorange}{7. CSRF Attacks} & Medium & Medium & \textcolor{darkorange}{[HIGH]} \\
+\hline
+\textcolor{darkorange}{8. DDoS on API} & Medium & High & \textcolor{darkorange}{[HIGH]} \\
+\hline
+\textcolor{darkorange}{9. JWT Token Compromise} & Low & Critical & \textcolor{darkorange}{[HIGH]} \\
+\hline
+\textcolor{darkorange}{10. OAuth Token Theft} & Medium & High & \textcolor{darkorange}{[HIGH]} \\
+\hline
+\textcolor{darkyellow}{11. Information Disclosure (Logs)} & Medium & Medium & \textcolor{darkyellow}{[MEDIUM]} \\
+\hline
+\textcolor{darkyellow}{12. Insecure Deserialization} & Low & High & \textcolor{darkyellow}{[MEDIUM]} \\
+\hline
+\textcolor{darkyellow}{13. API Key Exposure} & Low & High & \textcolor{darkyellow}{[MEDIUM]} \\
+\hline
+\textcolor{darkgreen}{14. Social Engineering} & Low & Medium & \textcolor{darkgreen}{[LOW]} \\
+\hline
+\textcolor{darkgreen}{15. Physical Security Breach} & Very Low & Medium & \textcolor{darkgreen}{[LOW]} \\
+\hline
+\end{tabular}
+\end{table}
+
+\chapter{OWASP Top 10 (2021) Coverage}
+
+\section{A01: Broken Access Control}
+
+\subsection{Description}
+Broken Access Control occurs when users can act outside their intended permissions. This includes accessing unauthorized resources, modifying data, changing account settings, or accessing other users' accounts.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} Users could access other users' saved searches, workspace data, or API keys. Admins could be impersonated, allowing unauthorized system modifications.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item JWT-based authentication with RS256 signing
+\item RBAC with three roles: Admin, Premium, User
+\item Django permission classes on all views
+\item IDOR prevention through user ID validation
+\item Object-level permissions enforcement
+\item Admin action logging and audit trails
+\end{itemize}
+
+\subsection{Code Example: Django Permission Classes}
+\begin{lstlisting}[language=Python]
+from rest_framework.permissions import BasePermission
+from rest_framework.exceptions import PermissionDenied
+
+class IsOwnerOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return True
+        return obj.owner == request.user
+
+class IsPremiumUser(BasePermission):
+    def has_permission(self, request, view):
+        return (request.user and request.user.is_authenticated 
+                and request.user.is_premium)
+
+class IsAdmin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_staff
+
+# Usage in views
+class SearchViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    
+    def get_queryset(self):
+        return Search.objects.filter(user=self.request.user)
+\end{lstlisting}
+
+\section{A02: Cryptographic Failures}
+
+\subsection{Description}
+Cryptographic failures occur when sensitive data is exposed due to weak encryption, missing encryption, or insecure key management.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} User emails, API keys, and OAuth tokens could be exposed if stored unencrypted. Database credentials in connection strings could be leaked.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item AES-256 encryption for sensitive database fields using pgcrypto
+\item TLS 1.3 minimum for all data in transit
+\item HSTS (HTTP Strict Transport Security) enabled
+\item JWT tokens signed with RS256 (asymmetric cryptography)
+\item Secrets stored in AWS Secrets Manager, never in code
+\item Secure key rotation policies
+\item Database SSL/TLS connections enforced
+\end{itemize}
+
+\subsection{Code Example: Django Encrypted Fields}
+\begin{lstlisting}[language=Python]
+from django_encrypted_model_fields.fields import EncryptedTextField
+
+class User(models.Model):
+    email = models.EmailField()
+    encrypted_phone = EncryptedTextField(null=True, blank=True)
+    encrypted_oauth_token = EncryptedTextField(null=True)
+    
+    class Meta:
+        db_table = 'users'
+
+# Encryption happens transparently on save/load
+user = User.objects.get(id=1)
+phone = user.encrypted_phone  # Automatically decrypted
+\end{lstlisting}
+
+\section{A03: Injection}
+
+\subsection{Description}
+Injection attacks occur when untrusted data is sent as commands or queries without proper validation or parameterization.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} SQL injection could expose the entire database. Command injection in Celery tasks could execute arbitrary code. NoSQL injection could manipulate Redis queries.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item Parameterized queries in Django ORM (prevents SQL injection)
+\item Pydantic models for FastAPI input validation
+\item Django REST Framework serializers for validation
+\item No raw SQL queries without parameterization
+\item Input length limits enforced at application level
+\item Whitelist validation for command execution
+\item Celery task argument validation
+\item Redis key prefixing and type checking
+\end{itemize}
+
+\subsection{Code Example: SQL Injection Prevention}
+\begin{lstlisting}[language=Python]
+# VULNERABLE - NEVER DO THIS
+search_term = request.GET.get('q')
+results = Search.objects.raw(f"SELECT * FROM searches WHERE title LIKE '%{search_term}%'")
+
+# SECURE - Use ORM parameterization
+search_term = request.GET.get('q')
+results = Search.objects.filter(title__icontains=search_term)
+
+# Or with Q objects for complex queries
+from django.db.models import Q
+results = Search.objects.filter(
+    Q(title__icontains=search_term) | 
+    Q(description__icontains=search_term)
+)
+
+# Pydantic validation for FastAPI
+from pydantic import BaseModel, constr
+
+class SearchQuery(BaseModel):
+    query: constr(max_length=256)
+    filters: dict = {}
+    
+@app.post("/api/search")
+async def search(search: SearchQuery):
+    results = db.search(search.query)
+    return results
+\end{lstlisting}
+
+\section{A04: Insecure Design}
+
+\subsection{Description}
+Insecure design refers to missing security controls by design, inadequate threat modeling, or unsafe design patterns.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} Lack of rate limiting design could allow unlimited API abuse. Missing audit logging could hide insider threats. No encryption-by-design could expose sensitive data.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item Threat modeling performed on all major features
+\item Security-first design reviews for new features
+\item Rate limiting baked into API design
+\item Audit logging on all sensitive operations
+\item Default-deny approach for permissions
+\item Secure defaults (SSL enabled, debug mode off)
+\item Regular security architecture reviews
+\end{itemize}
+
+\section{A05: Security Misconfiguration}
+
+\subsection{Description}
+Security misconfiguration occurs when security settings are not properly configured, defaults are used, or unnecessary features are enabled.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} DEBUG mode enabled could leak sensitive information. ALLOWED\_HOSTS misconfiguration could enable Host Header Injection. S3 buckets could be publicly accessible.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item DEBUG=False in production
+\item SECURE\_SSL\_REDIRECT=True
+\item SECURE\_HSTS\_SECONDS=31536000 (1 year)
+\item SESSION\_COOKIE\_SECURE=True
+\item CSRF\_COOKIE\_SECURE=True
+\item SECURE\_CONTENT\_TYPE\_NOSNIFF=True
+\item SECURE\_BROWSER\_XSS\_FILTER=True
+\item X\_FRAME\_OPTIONS='DENY'
+\item ALLOWED\_HOSTS whitelist configured
+\item S3 bucket public ACL blocking enabled
+\item Container images scanned before deployment
+\item Secrets never committed to version control
+\end{itemize}
+
+\section{A06: Vulnerable Components}
+
+\subsection{Description}
+Using libraries, frameworks, or components with known vulnerabilities that could be exploited.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} Outdated Django, FastAPI, or Next.js versions could contain publicly known exploits. Vulnerable Python or Node dependencies could be exploited.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item Automated dependency scanning with Dependabot
+\item Python: Safety, Bandit, pip-audit tools
+\item Node.js: npm audit, Snyk scanning
+\item GitHub Actions CI/CD blocking vulnerable dependencies
+\item Patch critical CVEs within 24 hours
+\item Patch high severity CVEs within 7 days
+\item Software Bill of Materials (SBOM) generated for each release
+\item Container image scanning with AWS ECR and Trivy
+\item Regular dependency updates scheduled monthly
+\end{itemize}
+
+\subsection{Code Example: Dependency Scanning}
+\begin{lstlisting}[language=bash]
+# Python dependency security checking
+pip install safety pip-audit bandit
+
+# Check for known vulnerabilities
+safety check --json
+
+# Audit specific packages
+pip-audit
+
+# Security code analysis
+bandit -r . -f json
+
+# GitHub Actions workflow
+name: Security Scan
+on: [push, pull_request]
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run safety check
+        run: |
+          pip install safety
+          safety check --json > safety-report.json
+      - name: Fail on vulnerabilities
+        run: safety check
+\end{lstlisting}
+
+\section{A07: Identification and Authentication Failures}
+
+\subsection{Description}
+Weak authentication mechanisms that allow attackers to compromise user accounts or bypass authentication entirely.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} Weak password requirements could allow brute force. Unencrypted passwords could be exposed. Token theft could grant unauthorized access.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item Passwords hashed with bcrypt (work factor 12)
+\item Minimum 8 character password requirement
+\item Password complexity: uppercase, lowercase, numbers, special chars
+\item Account lockout after 5 failed login attempts (django-axes)
+\item 30-minute lockout duration
+\item JWT tokens with 15-minute expiration
+\item Refresh tokens with 7-day expiration
+\item HTTP-only, secure cookies for token storage
+\item Token refresh endpoint with rate limiting
+\item MFA support for premium accounts
+\item Session timeout after 24 hours of inactivity
+\end{itemize}
+
+\section{A08: Software and Data Integrity Failures}
+
+\subsection{Description}
+Failures in software updates, CI/CD pipelines, or data integrity verification that could allow malicious code injection.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} Compromised Docker images could deploy malicious code. Unsigned package updates could introduce vulnerabilities. Tampered database snapshots could corrupt data.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item Docker image signing and verification
+\item Container registry scanning (AWS ECR)
+\item Code review on all commits
+\item GitHub branch protection requiring reviews
+\item Signed git commits required
+\item Automated tests on all pull requests
+\item SBOM generation and verification
+\item Database backup verification and integrity checks
+\item Secure supply chain practices
+\end{itemize}
+
+\section{A09: Security Logging and Monitoring Failures}
+
+\subsection{Description}
+Insufficient logging and monitoring that prevents detection of attacks or forensic investigation.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} Without audit logs, insider threats could go undetected. API abuse might not trigger alerts. Breaches could go unnoticed for extended periods.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item Structured JSON logging with no PII
+\item All authentication events logged
+\item All API access logged with timestamps
+\item All admin actions audited
+\item Failed login attempts tracked (django-axes)
+\item Database query logging in development
+\item CloudWatch integration for log aggregation
+\item ELK stack (Elasticsearch, Logstash, Kibana) for analysis
+\item Alert thresholds for suspicious patterns
+\item Retention policy: 90 days operational, 1 year compliance
+\item Log immutability enforcement
+\end{itemize}
+
+\section{A10: Server-Side Request Forgery (SSRF)}
+
+\subsection{Description}
+Attacks where the server makes unintended requests to internal or external systems on behalf of the attacker.
+
+\subsection{Risk in SYNAPSE Context}
+\textcolor{darkred}{[CRITICAL]} An attacker could scan internal AWS metadata service. SSRF could be used to access internal databases or Redis. OAuth token refresh endpoints could be exploited.
+
+\subsection{Mitigation Implemented}
+\begin{itemize}
+\item URL validation whitelist for external requests
+\item Blocked internal IP ranges (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16)
+\item AWS metadata service endpoint blocked (169.254.169.254)
+\item Request size limits (max 10MB)
+\item Timeout limits on external requests (5 seconds)
+\item DNS resolution validation
+\item VPC configuration with no internet access for databases
+\item WAF rules to detect SSRF patterns
+\end{itemize}
+
+\subsection{Code Example: SSRF Prevention}
+\begin{lstlisting}[language=Python]
+import ipaddress
+import requests
+from urllib.parse import urlparse
+
+# SSRF-safe request function
+def safe_external_request(url, timeout=5):
+    # Whitelist of allowed domains
+    WHITELIST_DOMAINS = [
+        'api.github.com',
+        'api.twitter.com',
+        'drive.google.com'
+    ]
+    
+    parsed = urlparse(url)
+    
+    # Check domain whitelist
+    if parsed.netloc not in WHITELIST_DOMAINS:
+        raise ValueError(f"Domain {parsed.netloc} not whitelisted")
+    
+    # Block internal IPs
+    try:
+        ip = socket.gethostbyname(parsed.hostname)
+        ip_obj = ipaddress.ip_address(ip)
+        
+        # Block private IP ranges
+        if ip_obj.is_private or ip_obj.is_loopback:
+            raise ValueError(f"Internal IP {ip} blocked")
+    except socket.gaierror:
+        raise ValueError("DNS resolution failed")
+    
+    # Make request with timeout
+    response = requests.get(url, timeout=timeout)
+    return response
+\end{lstlisting}
+
+
+\chapter{Authentication and Authorization Security}
+
+\section{JWT Implementation}
+
+SYNAPSE uses JWT (JSON Web Tokens) for stateless authentication across the platform.
+
+\subsection{Token Structure and Signing}
+\begin{itemize}
+\item \textbf{Algorithm}: RS256 (RSA Signature with SHA-256)
+\item \textbf{Asymmetric Signing}: Private key for signing, public key for verification
+\item \textbf{Access Token Expiration}: 15 minutes
+\item \textbf{Refresh Token Expiration}: 7 days
+\item \textbf{Token Claims}: User ID, role, permissions, issued at, expiration
+\end{itemize}
+
+\subsection{JWT Configuration}
+\begin{lstlisting}[language=Python]
+# settings.py
+import datetime
+from pathlib import Path
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': datetime.timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': datetime.timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'RS256',
+    'SIGNING_KEY': Path('/run/secrets/jwt_private_key').read_text(),
+    'VERIFYING_KEY': Path('/run/secrets/jwt_public_key').read_text(),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+\end{lstlisting}
+
+\section{Token Storage}
+
+\subsection{HTTP-Only Cookies (Recommended)}
+Tokens are stored in HTTP-only, secure, same-site cookies:
+\begin{itemize}
+\item \textbf{HTTP-Only}: JavaScript cannot access the token (prevents XSS theft)
+\item \textbf{Secure Flag}: Cookie only sent over HTTPS
+\item \textbf{SameSite=Strict}: Cookie not sent in cross-site requests (CSRF protection)
+\item \textbf{Path=/api/}: Cookie only sent to API endpoints
+\item \textbf{Domain}: Configured for main domain only
+\end{itemize}
+
+\subsection{Token Storage Implementation}
+\begin{lstlisting}[language=Python]
+# views.py
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class CookieTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        
+        if response.status_code == 200:
+            access_token = response.data['access']
+            refresh_token = response.data['refresh']
+            
+            # Set secure HTTP-only cookies
+            response.set_cookie(
+                'access_token',
+                access_token,
+                max_age=15*60,  # 15 minutes
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                path='/api/'
+            )
+            
+            response.set_cookie(
+                'refresh_token',
+                refresh_token,
+                max_age=7*24*60*60,  # 7 days
+                httponly=True,
+                secure=True,
+                samesite='Strict',
+                path='/api/auth/refresh/'
+            )
+            
+            # Remove tokens from response body
+            del response.data['access']
+            del response.data['refresh']
+        
+        return response
+\end{lstlisting}
+
+\section{Token Refresh Strategy}
+
+\subsection{Refresh Token Rotation}
+\begin{itemize}
+\item Refresh tokens are rotated on each refresh request
+\item Old refresh tokens are blacklisted after rotation
+\item Prevents token reuse if a refresh token is stolen
+\item Suspicious refresh patterns (rapid succession) trigger alerts
+\end{itemize}
+
+\subsection{Refresh Endpoint}
+\begin{lstlisting}[language=Python]
+class CookieTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        
+        if response.status_code == 200:
+            new_access = response.data['access']
+            new_refresh = response.data.get('refresh')
+            
+            response.set_cookie(
+                'access_token',
+                new_access,
+                max_age=15*60,
+                httponly=True,
+                secure=True,
+                samesite='Strict'
+            )
+            
+            if new_refresh:
+                response.set_cookie(
+                    'refresh_token',
+                    new_refresh,
+                    max_age=7*24*60*60,
+                    httponly=True,
+                    secure=True,
+                    samesite='Strict'
+                )
+        
+        return response
+\end{lstlisting}
+
+\section{Password Security}
+
+\subsection{Password Hashing}
+\begin{itemize}
+\item \textbf{Algorithm}: bcrypt with work factor 12
+\item \textbf{Minimum Length}: 8 characters
+\item \textbf{Complexity}: Minimum 1 uppercase, 1 lowercase, 1 digit, 1 special char
+\item \textbf{History}: Prevent reuse of last 5 passwords
+\item \textbf{Expiration}: No mandatory expiration (NIST guidance)
+\end{itemize}
+
+\subsection{Password Policy Configuration}
+\begin{lstlisting}[language=Python]
+# settings.py
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8}
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'custom_validators.ComplexityValidator',
+    },
+]
+
+# Custom complexity validator
+import re
+from django.core.exceptions import ValidationError
+
+class ComplexityValidator:
+    def validate(self, password, user=None):
+        if not re.search(r'[A-Z]', password):
+            raise ValidationError("Password must contain uppercase")
+        if not re.search(r'[a-z]', password):
+            raise ValidationError("Password must contain lowercase")
+        if not re.search(r'[0-9]', password):
+            raise ValidationError("Password must contain number")
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+            raise ValidationError("Password must contain special character")
+\end{lstlisting}
+
+\section{Role-Based Access Control (RBAC)}
+
+\subsection{Role Hierarchy}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|p{3.5cm}|p{3.5cm}|}
+\hline
+\textbf{Role} & \textbf{Permissions} & \textbf{Use Case} \\
+\hline
+Admin & All permissions, system configuration, user management & Internal team, system operators \\
+\hline
+Premium & Full API access, AI features, custom workspaces, API keys, advanced analytics & Paid subscribers \\
+\hline
+User & Basic API access (100 req/min), limited features & Free tier subscribers \\
+\hline
+Viewer & Read-only access to shared resources & Invited collaborators (future) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{RBAC Implementation}
+\begin{lstlisting}[language=Python]
+# models.py
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+
+class CustomUser(AbstractUser):
+    ROLE_CHOICES = [
+        ('admin', 'Administrator'),
+        ('premium', 'Premium User'),
+        ('user', 'Free User'),
+    ]
+    
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='user')
+    is_premium = models.BooleanField(default=False)
+    mfa_enabled = models.BooleanField(default=False)
+    
+    class Meta:
+        db_table = 'users'
+
+# permissions.py
+from rest_framework.permissions import BasePermission
+
+class IsAdmin(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.role == 'admin'
+
+class IsPremium(BasePermission):
+    def has_permission(self, request, view):
+        return (request.user and 
+                request.user.role in ['admin', 'premium'])
+
+class IsAuthenticated(BasePermission):
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+\end{lstlisting}
+
+\section{Django Permission Classes}
+
+All views use explicit permission classes:
+
+\begin{lstlisting}[language=Python]
+# views.py
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+
+class SearchViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    serializer_class = SearchSerializer
+    
+    def get_queryset(self):
+        return Search.objects.filter(user=self.request.user)
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class PremiumFeatureViewSet(viewsets.ViewSet):
+    permission_classes = [IsPremium]
+    
+    def create(self, request):
+        if not request.user.is_premium:
+            return Response({'error': 'Premium required'}, 
+                          status=403)
+        # Process request
+\end{lstlisting}
+
+\section{OAuth2 for Third-Party Integrations}
+
+\subsection{Google Drive Integration}
+\begin{itemize}
+\item OAuth2 code flow with PKCE
+\item Scopes limited to read-only Drive access
+\item Tokens encrypted and stored securely
+\item Refresh tokens rotated on use
+\item User can revoke access at any time
+\end{itemize}
+
+\subsection{OAuth2 Configuration}
+\begin{lstlisting}[language=Python]
+# OAuth2 settings
+OAUTH2_PROVIDER = {
+    'SCOPES': {
+        'read': 'Read access to protected resources',
+        'write': 'Write access to protected resources',
+    },
+    'ACCESS_TOKEN_EXPIRE_SECONDS': 900,
+}
+
+# Google Drive OAuth
+GOOGLE_OAUTH_SCOPES = [
+    'https://www.googleapis.com/auth/drive.readonly',
+]
+
+GOOGLE_CLIENT_ID = 'from-aws-secrets-manager'
+GOOGLE_CLIENT_SECRET = 'from-aws-secrets-manager'
+\end{lstlisting}
+
+\section{Multi-Factor Authentication (MFA)}
+
+\subsection{MFA Support}
+\begin{itemize}
+\item Required for admin accounts
+\item Optional for premium users
+\item TOTP (Time-based One-Time Password) with authenticator apps
+\item Backup codes provided during setup
+\item MFA status checked at login
+\end{itemize}
+
+\section{Account Lockout}
+
+\subsection{django-axes Configuration}
+\begin{lstlisting}[language=Python]
+# settings.py
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_DURATION = datetime.timedelta(minutes=30)
+AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
+AXES_USE_USER_AGENT = True
+AXES_VERBOSE = True
+
+# Custom lockout logic
+from axes.decorators import axes_dispatch_decorator
+
+@axes_dispatch_decorator
+def login_view(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home')
+        # Failed attempt logged by axes
+    
+    return render(request, 'login.html')
+\end{lstlisting}
+
+\section{Session Management}
+
+\subsection{Session Configuration}
+\begin{lstlisting}[language=Python]
+# settings.py
+SESSION_COOKIE_AGE = 24 * 60 * 60  # 24 hours
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_COOKIE_DOMAIN = '.synapse.local'
+SESSION_COOKIE_PATH = '/api/'
+\end{lstlisting}
+
+\chapter{API Security}
+
+\section{Rate Limiting Strategy}
+
+API rate limiting prevents abuse and controls costs:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|l|p{2.5cm}|}
+\hline
+\textbf{User Type} & \textbf{Limit} & \textbf{Window} \\
+\hline
+Unauthenticated & 20 requests & 1 minute \\
+\hline
+Free User & 100 requests & 1 minute \\
+\hline
+Premium User & 1000 requests & 1 minute \\
+\hline
+AI Endpoints & 10 requests & 1 minute \\
+\hline
+Admin & Unlimited & N/A \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Django REST Framework Throttle Configuration}
+
+\begin{lstlisting}[language=Python]
+# settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/min',
+        'user': '100/min',
+        'premium': '1000/min',
+        'ai': '10/min',
+    }
+}
+
+# Custom throttle classes
+from rest_framework.throttling import BaseThrottle
+
+class PremiumUserThrottle(BaseThrottle):
+    scope = 'premium'
+    
+    def throttle_success(self, request):
+        if request.user and request.user.is_premium:
+            self.scope = 'premium'
+            self.rate = self.get_rate()
+            self.num_requests, self.duration = self.parse_rate(self.rate)
+            return self.allow_request(request, view)
+        return True
+
+class AIEndpointThrottle(BaseThrottle):
+    scope = 'ai'
+    THROTTLE_RATES = {'ai': '10/min'}
+    
+    def allow_request(self, request, view):
+        # Custom logic for AI endpoints
+        pass
+\end{lstlisting}
+
+\section{Redis-Backed Rate Limiting}
+
+\begin{lstlisting}[language=Python]
+# Use django-ratelimit with Redis backend
+import redis
+from django_ratelimit.decorators import ratelimit
+
+RATELIMIT_ENABLE = True
+RATELIMIT_USE_CACHE = 'redis'
+
+cache_conn = redis.Redis(
+    host='redis.internal',
+    port=6379,
+    db=0,
+    ssl=True,
+    decode_responses=True
+)
+
+# Per-user rate limiting
+@ratelimit(key='user', rate='100/m', method=['POST', 'PUT', 'DELETE'])
+def api_endpoint(request):
+    pass
+
+# Per-IP rate limiting
+@ratelimit(key='ip', rate='20/m')
+def public_endpoint(request):
+    pass
+\end{lstlisting}
+
+\section{API Key Management}
+
+\subsection{API Key Features}
+\begin{itemize}
+\item Generated securely with cryptographically random strings
+\item Stored hashed (not plaintext) in database
+\item Can be revoked at any time
+\item Rate limit per key
+\item Labeled for identification
+\item Last used timestamp tracked
+\end{itemize}
+
+\subsection{API Key Implementation}
+\begin{lstlisting}[language=Python]
+# models.py
+import secrets
+from django.db import models
+
+class APIKey(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    key_hash = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=100)
+    is_active = models.BooleanField(default=True)
+    last_used = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        if not self.key_hash:
+            raw_key = secrets.token_urlsafe(32)
+            self.key_hash = hash_api_key(raw_key)
+        super().save(*args, **kwargs)
+
+# Authentication
+from rest_framework.authentication import TokenAuthentication
+
+class APIKeyAuthentication(TokenAuthentication):
+    keyword = 'Bearer'
+    
+    def authenticate_credentials(self, key):
+        key_hash = hash_api_key(key)
+        try:
+            api_key = APIKey.objects.get(
+                key_hash=key_hash,
+                is_active=True
+            )
+            api_key.last_used = now()
+            api_key.save(update_fields=['last_used'])
+            return (api_key.user, key)
+        except APIKey.DoesNotExist:
+            raise exceptions.AuthenticationFailed('Invalid API key')
+\end{lstlisting}
+
+\section{Input Validation}
+
+\subsection{Django REST Framework Serializers}
+\begin{lstlisting}[language=Python]
+from rest_framework import serializers
+
+class SearchSerializer(serializers.ModelSerializer):
+    query = serializers.CharField(
+        max_length=256,
+        min_length=1,
+        required=True
+    )
+    filters = serializers.JSONField(required=False)
+    limit = serializers.IntegerField(
+        min_value=1,
+        max_value=100,
+        default=10
+    )
+    
+    class Meta:
+        model = Search
+        fields = ['query', 'filters', 'limit']
+    
+    def validate_query(self, value):
+        if len(value.strip()) == 0:
+            raise serializers.ValidationError("Query cannot be empty")
+        return value
+    
+    def validate_filters(self, value):
+        # Whitelist allowed filter keys
+        allowed_keys = {'category', 'date_from', 'date_to'}
+        if not set(value.keys()).issubset(allowed_keys):
+            raise serializers.ValidationError("Invalid filter keys")
+        return value
+\end{lstlisting}
+
+\subsection{Pydantic Validation for FastAPI}
+\begin{lstlisting}[language=Python]
+from pydantic import BaseModel, Field, constr
+from typing import Optional
+
+class SearchRequest(BaseModel):
+    query: constr(max_length=256, min_length=1)
+    filters: Optional[dict] = None
+    limit: int = Field(default=10, ge=1, le=100)
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "query": "machine learning",
+                "filters": {"category": "AI"},
+                "limit": 20
+            }
+        }
+
+@app.post("/search")
+async def search(req: SearchRequest):
+    # Pydantic validates input automatically
+    results = search_service.find(req.query, req.filters)
+    return {"results": results}
+\end{lstlisting}
+
+\section{Request Size Limits}
+
+\begin{lstlisting}[language=Python]
+# settings.py
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+
+# FastAPI
+from fastapi import FastAPI, UploadFile
+
+app = FastAPI()
+
+@app.post("/upload")
+async def upload(file: UploadFile):
+    MAX_SIZE = 10 * 1024 * 1024
+    size = 0
+    
+    content = await file.read(MAX_SIZE + 1)
+    if len(content) > MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File too large"
+        )
+    
+    # Process file
+    return {"status": "success"}
+\end{lstlisting}
+
+\section{CORS Configuration}
+
+\subsection{CORS Whitelist}
+\begin{lstlisting}[language=Python]
+# settings.py
+CORS_ALLOWED_ORIGINS = [
+    "https://synapse.io",
+    "https://www.synapse.io",
+    "https://app.synapse.io",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# NO wildcard - explicit whitelist only
+CORS_ALLOW_ALL_ORIGINS = False
+\end{lstlisting}
+
+\section{GraphQL Security}
+
+\subsection{GraphQL Configuration}
+\begin{itemize}
+\item Introspection disabled in production
+\item Query depth limiting (max depth 10)
+\item Query complexity analysis
+\item Rate limiting per query type
+\item Authentication required
+\end{itemize}
+
+\subsection{GraphQL Implementation}
+\begin{lstlisting}[language=Python]
+from django.urls import path
+from graphene_django.views import GraphQLView
+from graphql_core import graphql_sync
+
+class SecureGraphQLView(GraphQLView):
+    def parse_body(self, request):
+        # Limit query size
+        body = super().parse_body(request)
+        if len(str(body)) > 10000:
+            raise ValueError("Query too large")
+        return body
+    
+    def get_root_value(self, request, *args, **kwargs):
+        # Disable introspection in production
+        if settings.DEBUG:
+            return super().get_root_value(request, *args, **kwargs)
+        
+        # Block introspection queries
+        query = self.get_query(request)
+        if '__schema' in query or '__type' in query:
+            raise ValueError("Introspection disabled")
+        
+        return super().get_root_value(request, *args, **kwargs)
+
+urlpatterns = [
+    path('graphql/', SecureGraphQLView.as_view(
+        graphiql=settings.DEBUG,
+        schema=schema
+    )),
+]
+\end{lstlisting}
+
+\section{API Versioning}
+
+\begin{lstlisting}[language=Python]
+# settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_VERSIONING_CLASS': 'rest_framework.versioning.URLPathVersioning',
+}
+
+# urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+
+router_v1 = DefaultRouter()
+router_v1.register(r'searches', SearchViewSet, basename='search')
+
+urlpatterns = [
+    path('api/v1/', include(router_v1.urls)),
+    path('api/v2/', include(router_v2.urls)),
+]
+
+# View versioning
+class SearchViewSet(viewsets.ModelViewSet):
+    def get_serializer_class(self):
+        if self.request.version == '1':
+            return SearchSerializerV1
+        return SearchSerializerV2
+\end{lstlisting}
+
+
+\chapter{Data Security}
+
+\section{Data Classification}
+
+SYNAPSE classifies data into four categories:
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|p{2.5cm}|p{3.5cm}|}
+\hline
+\textbf{Level} & \textbf{Examples} & \textbf{Protection} \\
+\hline
+Public & Blog posts, marketing content & No encryption required \\
+\hline
+Internal & Design docs, architectural diagrams & Encrypted at rest, access controlled \\
+\hline
+Confidential & User data, API keys, credentials & Strong encryption, minimal access \\
+\hline
+Restricted & Payment info, healthcare data & Highest encryption, extreme access control \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Encryption at Rest}
+
+\subsection{AES-256 Field-Level Encryption}
+\begin{itemize}
+\item User emails encrypted with AES-256
+\item OAuth tokens encrypted with AES-256
+\item API keys encrypted before storage
+\item Encryption keys rotated annually
+\item Key derivation using PBKDF2
+\end{itemize}
+
+\subsection{PostgreSQL pgcrypto Extension}
+\begin{lstlisting}[language=Python]
+# models.py
+from django.db import models
+from django.contrib.postgres.fields import JSONField
+
+class User(models.Model):
+    # Encrypted fields
+    email = models.CharField(max_length=255)
+    encrypted_phone = models.TextField()
+    encrypted_oauth_token = models.TextField(null=True)
+    
+    class Meta:
+        db_table = 'users'
+
+# Database trigger for encryption
+# CREATE TRIGGER encrypt_sensitive_data
+# BEFORE INSERT ON users
+# FOR EACH ROW
+# EXECUTE FUNCTION encrypt_sensitive_columns();
+
+# Migration with encryption
+class Migration(migrations.Migration):
+    operations = [
+        migrations.RunSQL(
+            sql="""
+            UPDATE users 
+            SET encrypted_phone = pgp_sym_encrypt(
+                phone, 
+                current_setting('app.encryption_key')
+            );
+            """
+        ),
+    ]
+\end{lstlisting}
+
+\section{Encryption in Transit}
+
+\subsection{TLS 1.3 Configuration}
+\begin{itemize}
+\item \textbf{Minimum Version}: TLS 1.3 only (TLS 1.2 with strong cipher suites acceptable)
+\item \textbf{Cipher Suites}: Only AEAD ciphers (AES-GCM, ChaCha20-Poly1305)
+\item \textbf{Certificate}: Wildcard or SAN certificate from trusted CA
+\item \textbf{Certificate Pinning}: Public key pins for API clients (optional)
+\item \textbf{OCSP Stapling}: Enabled for certificate validation
+\end{itemize}
+
+\subsection{HSTS (HTTP Strict Transport Security)}
+\begin{lstlisting}[language=Python]
+# settings.py
+SECURE_SSL_REDIRECT = True
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True  # Include in HSTS preload list
+
+# Nginx configuration
+server {
+    listen 443 ssl http2;
+    server_name synapse.io;
+    
+    ssl_protocols TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    
+    add_header Strict-Transport-Security 
+        "max-age=31536000; includeSubDomains; preload" 
+        always;
+}
+\end{lstlisting}
+
+\section{PII (Personally Identifiable Information) Handling}
+
+\subsection{Minimal Collection Principle}
+\begin{itemize}
+\item Collect only email and name (no phone, SSN, or DOB without consent)
+\item Purpose limitation: Data used only for stated purposes
+\item Storage minimization: Delete old data according to retention policy
+\item User consent required before collection
+\end{itemize}
+
+\subsection{PII Data Handling}
+\begin{lstlisting}[language=Python]
+# models.py
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    # Only essential PII
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    # NOT collected
+    # phone_number, ssn, date_of_birth, passport_number
+    
+    # Consent tracking
+    marketing_consent = models.BooleanField(default=False)
+    privacy_policy_accepted = models.DateTimeField()
+    
+    class Meta:
+        db_table = 'user_profiles'
+
+# PII access logging
+from django.db.models.signals import post_access
+
+def log_pii_access(sender, instance, **kwargs):
+    AuditLog.objects.create(
+        action='PII_ACCESS',
+        user=current_user,
+        object_type='UserProfile',
+        object_id=instance.id,
+        timestamp=now()
+    )
+
+post_access.connect(log_pii_access, sender=UserProfile)
+\end{lstlisting}
+
+\section{Database Security}
+
+\subsection{Least Privilege Database Users}
+\begin{lstlisting}[language=sql]
+-- Create read-only user
+CREATE USER synapse_read ENCRYPTED PASSWORD 'strong_password';
+GRANT CONNECT ON DATABASE synapse TO synapse_read;
+GRANT USAGE ON SCHEMA public TO synapse_read;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO synapse_read;
+
+-- Create application user (write)
+CREATE USER synapse_app ENCRYPTED PASSWORD 'strong_password';
+GRANT CONNECT ON DATABASE synapse TO synapse_app;
+GRANT USAGE ON SCHEMA public TO synapse_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES 
+    IN SCHEMA public TO synapse_app;
+
+-- Create admin user
+CREATE USER synapse_admin ENCRYPTED PASSWORD 'strong_password';
+GRANT ALL PRIVILEGES ON DATABASE synapse TO synapse_admin;
+
+-- Deny public access
+REVOKE ALL ON DATABASE synapse FROM PUBLIC;
+
+-- Require SSL connections
+-- In postgresql.conf: ssl = on
+-- In pg_hba.conf: hostssl all all 0.0.0.0/0 cert
+\end{lstlisting}
+
+\subsection{Database Connection Security}
+\begin{lstlisting}[language=Python]
+# settings.py
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'synapse',
+        'USER': 'synapse_app',
+        'PASSWORD': get_secret('DB_PASSWORD'),
+        'HOST': 'rds.internal.aws.synapse.local',
+        'PORT': '5432',
+        'OPTIONS': {
+            'sslmode': 'require',
+            'sslcert': '/run/secrets/db_cert',
+            'sslkey': '/run/secrets/db_key',
+            'sslrootcert': '/run/secrets/db_root_cert',
+        },
+        'CONN_MAX_AGE': 600,
+    }
+}
+\end{lstlisting}
+
+\section{Secrets Management}
+
+\subsection{AWS Secrets Manager Integration}
+\begin{itemize}
+\item All secrets stored in AWS Secrets Manager
+\item Never committed to version control
+\item Secrets Manager audit logging enabled
+\item Key rotation every 90 days
+\item Least privilege IAM policies for access
+\end{itemize}
+
+\subsection{Secrets Retrieval}
+\begin{lstlisting}[language=Python]
+# secrets.py
+import json
+import boto3
+from functools import lru_cache
+
+class SecretsManager:
+    def __init__(self):
+        self.client = boto3.client('secretsmanager')
+    
+    @lru_cache(maxsize=128)
+    def get_secret(self, secret_name):
+        try:
+            response = self.client.get_secret_value(
+                SecretId=secret_name
+            )
+            return json.loads(response['SecretString'])
+        except Exception as e:
+            raise ValueError(f"Failed to get secret: {secret_name}")
+    
+    def get_database_password(self):
+        secrets = self.get_secret('synapse/db/password')
+        return secrets['password']
+    
+    def get_jwt_keys(self):
+        secrets = self.get_secret('synapse/jwt/keys')
+        return secrets['private_key'], secrets['public_key']
+    
+    def get_api_keys(self):
+        return self.get_secret('synapse/api/keys')
+
+secrets = SecretsManager()
+
+# In settings.py
+DATABASES = {
+    'default': {
+        'PASSWORD': secrets.get_database_password(),
+    }
+}
+
+JWT_PRIVATE_KEY = secrets.get_jwt_keys()[0]
+JWT_PUBLIC_KEY = secrets.get_jwt_keys()[1]
+\end{lstlisting}
+
+\section{Data Retention and Deletion Policies}
+
+\subsection{Retention Schedule}
+\begin{itemize}
+\item \textbf{Operational Logs}: 90 days
+\item \textbf{Audit Logs}: 1 year
+\item \textbf{User Data}: Until account deletion + 30 days
+\item \textbf{Deleted User Data}: Cryptographic shredding, 7 days
+\item \textbf{Backups}: 30 days for incremental, 90 days for full
+\item \textbf{API Logs}: 30 days
+\end{itemize}
+
+\subsection{Data Deletion Implementation}
+\begin{lstlisting}[language=Python]
+# models.py
+from django.utils import timezone
+from datetime import timedelta
+
+class User(models.Model):
+    email = models.EmailField()
+    deleted_at = models.DateTimeField(null=True)
+    
+    def soft_delete(self):
+        self.deleted_at = timezone.now()
+        self.save()
+    
+    def can_be_permanently_deleted(self):
+        if not self.deleted_at:
+            return False
+        return timezone.now() >= self.deleted_at + timedelta(days=30)
+
+# Celery task for permanent deletion
+from celery import shared_task
+
+@shared_task
+def delete_old_users():
+    users = User.objects.filter(
+        deleted_at__lt=timezone.now() - timedelta(days=30)
+    )
+    
+    for user in users:
+        # Cryptographic shredding
+        user_data = user.__dict__
+        for field in user_data:
+            if hasattr(user, field):
+                setattr(user, field, None)
+        user.delete()
+\end{lstlisting}
+
+\section{Backup Encryption}
+
+\begin{itemize}
+\item All RDS snapshots encrypted with AWS KMS
+\item Cross-region backup replication encrypted
+\item Backup integrity verified with checksums
+\item Backup restoration tested monthly
+\item Backup access restricted to backup administrators
+\end{itemize}
+
+\section{pgvector/Embedding Data Security}
+
+\begin{lstlisting}[language=Python]
+# models.py
+from pgvector.django import VectorField
+
+class DocumentEmbedding(models.Model):
+    document = models.ForeignKey(Document, on_delete=models.CASCADE)
+    embedding = VectorField(dimensions=1536)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'document_embeddings'
+        indexes = [
+            models.Index(fields=['document']),
+        ]
+
+# Embeddings are user-specific
+# Never share embeddings across users
+# Embeddings treated as Confidential data (encrypted at rest)
+
+# Vector search with access control
+def search_embeddings(user, query_embedding):
+    return DocumentEmbedding.objects.filter(
+        document__owner=user
+    ).order_by(Distance('embedding', query_embedding))[:10]
+\end{lstlisting}
+
+\chapter{Django Security Settings}
+
+\section{Complete Security Configuration}
+
+\subsection{settings.py Security Checklist}
+\begin{lstlisting}[language=Python]
+# settings.py - Production Security Configuration
+
+# DEBUG DISABLED
+DEBUG = False
+ALLOWED_HOSTS = ['synapse.io', 'www.synapse.io', 'api.synapse.io']
+
+# SSL/TLS Configuration
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+
+# HSTS Configuration
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Content Security
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Cookie Configuration
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Strict'
+
+# Authentication
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+     'OPTIONS': {'min_length': 8}},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+        }
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': '/var/log/synapse/django.log',
+            'maxBytes': 1024 * 1024 * 100,  # 100MB
+            'backupCount': 10,
+            'formatter': 'json',
+        },
+    },
+    'root': {
+        'handlers': ['file'],
+        'level': 'INFO',
+    },
+}
+
+# CSRF Protection
+CSRF_TRUSTED_ORIGINS = ['https://synapse.io']
+CSRF_FAILURE_VIEW = 'api.views.csrf_failure'
+
+# Security Middleware
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.CommonMiddleware',
+]
+
+# Allowed Hosts
+ALLOWED_HOSTS = ['*.synapse.io', 'synapse.io']
+
+# Secret Key
+SECRET_KEY = get_secret('DJANGO_SECRET_KEY')
+
+# Database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'OPTIONS': {'sslmode': 'require'},
+    }
+}
+\end{lstlisting}
+
+\section{CSRF Protection for API Endpoints}
+
+\begin{lstlisting}[language=Python]
+# views.py
+from django.middleware.csrf import get_token
+from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
+
+@ensure_csrf_cookie
+def get_csrf_token(request):
+    token = get_token(request)
+    return JsonResponse({'csrfToken': token})
+
+@csrf_protect
+def api_endpoint(request):
+    if request.method == 'POST':
+        # CSRF token already validated by decorator
+        return handle_post(request)
+    return JsonResponse({'status': 'ok'})
+
+# For SPA with fetch API
+# Include CSRF token in header
+// frontend.js
+fetch('/api/endpoint', {
+    method: 'POST',
+    headers: {
+        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content,
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    credentials: 'same-origin',
+})
+\end{lstlisting}
+
+\section{Content Security Policy (CSP) Headers}
+
+\begin{lstlisting}[language=Python]
+# middleware.py
+class SecurityHeadersMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        response = self.get_response(request)
+        
+        # Content Security Policy
+        response['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
+        
+        # Additional security headers
+        response['X-Content-Type-Options'] = 'nosniff'
+        response['X-Frame-Options'] = 'DENY'
+        response['X-XSS-Protection'] = '1; mode=block'
+        response['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        
+        return response
+\end{lstlisting}
+
+\section{Django Admin Hardening}
+
+\subsection{Admin Security Configuration}
+\begin{lstlisting}[language=Python]
+# settings.py
+# Change admin URL
+ADMIN_URL = get_secret('ADMIN_URL_PATH')  # Not /admin/
+
+# Admin authentication
+from django.contrib.admin import AdminSite
+
+class SecureAdminSite(AdminSite):
+    site_header = 'SYNAPSE Admin Panel'
+    
+    def has_permission(self, request):
+        # Require authentication + 2FA
+        if not request.user.is_authenticated:
+            return False
+        if not request.user.is_staff:
+            return False
+        # Check 2FA enabled
+        if not request.user.is_totp_verified:
+            return False
+        return True
+    
+    def get_app_list(self, request):
+        # Log admin access
+        AuditLog.objects.create(
+            action='ADMIN_ACCESS',
+            user=request.user,
+            ip_address=get_client_ip(request),
+        )
+        return super().get_app_list(request)
+
+# Use secure admin site
+admin.site.__class__ = SecureAdminSite
+
+# IP whitelist for admin
+ADMIN_IP_WHITELIST = ['10.0.1.0/24', '203.0.113.0/24']
+
+# Admin rate limiting
+from django_ratelimit.decorators import ratelimit
+
+@ratelimit(key='user', rate='50/h', method='POST')
+def admin_login(request):
+    pass
+\end{lstlisting}
+
+\subsection{Admin IP Whitelist Middleware}
+\begin{lstlisting}[language=Python]
+# middleware.py
+import ipaddress
+
+class AdminIPWhitelistMiddleware:
+    ADMIN_IP_WHITELIST = [
+        ipaddress.ip_network('10.0.1.0/24'),
+        ipaddress.ip_network('203.0.113.0/24'),
+    ]
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        if request.path.startswith('/secure-admin-path/'):
+            client_ip = self.get_client_ip(request)
+            ip_obj = ipaddress.ip_address(client_ip)
+            
+            # Check if IP is whitelisted
+            whitelisted = any(
+                ip_obj in network 
+                for network in self.ADMIN_IP_WHITELIST
+            )
+            
+            if not whitelisted:
+                return JsonResponse(
+                    {'error': 'Access denied'},
+                    status=403
+                )
+        
+        return self.get_response(request)
+    
+    def get_client_ip(self, request):
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+\end{lstlisting}
+
+
+\chapter{Infrastructure Security}
+
+\section{AWS VPC Configuration}
+
+\subsection{Network Architecture}
+\begin{itemize}
+\item \textbf{Public Subnets}: ALB (Application Load Balancer) only
+\item \textbf{Private Subnets}: Django/FastAPI application servers
+\item \textbf{Database Subnets}: PostgreSQL RDS (no internet access)
+\item \textbf{Cache Subnets}: Redis ElastiCache (no internet access)
+\item \textbf{NAT Gateway}: For outbound internet access from private subnets
+\item \textbf{VPC Flow Logs}: Enabled for traffic analysis
+\end{itemize}
+
+\subsection{VPC Diagram (Text Format)}
+\begin{lstlisting}
+Internet
+   |
+   v
+[IGW - Internet Gateway]
+   |
+   +---> [Public Subnet - ALB]
+            |
+            | (Port 443 only)
+            v
+[Private Subnet - App Servers] <- EC2 instances
+            |
+            | (Database queries)
+            v
+[Private Subnet - RDS PostgreSQL]
+
+[Private Subnet - ElastiCache Redis]
+\end{lstlisting}
+
+\section{Security Groups}
+
+\subsection{ALB Security Group}
+\begin{lstlisting}[language=bash]
+# Inbound rules
+- Protocol: TCP, Port: 80, Source: 0.0.0.0/0 (redirect to 443)
+- Protocol: TCP, Port: 443, Source: 0.0.0.0/0
+
+# Outbound rules
+- Protocol: TCP, Port: 8000, Destination: app-sg
+\end{lstlisting}
+
+\subsection{Application Server Security Group}
+\begin{lstlisting}[language=bash]
+# Inbound rules
+- Protocol: TCP, Port: 8000, Source: alb-sg
+- Protocol: TCP, Port: 22, Source: bastion-sg (SSH via bastion)
+
+# Outbound rules
+- Protocol: TCP, Port: 5432, Destination: rds-sg (PostgreSQL)
+- Protocol: TCP, Port: 6379, Destination: redis-sg (Redis)
+- Protocol: TCP, Port: 443, Destination: 0.0.0.0/0 (HTTPS to internet)
+\end{lstlisting}
+
+\subsection{RDS Security Group}
+\begin{lstlisting}[language=bash]
+# Inbound rules
+- Protocol: TCP, Port: 5432, Source: app-sg
+
+# Outbound rules
+- None (deny all outbound)
+\end{lstlisting}
+
+\subsection{Redis Security Group}
+\begin{lstlisting}[language=bash]
+# Inbound rules
+- Protocol: TCP, Port: 6379, Source: app-sg
+
+# Outbound rules
+- None (deny all outbound)
+\end{lstlisting}
+
+\section{EC2 Hardening}
+
+\subsection{EC2 Configuration}
+\begin{itemize}
+\item No SSH access from internet (use AWS Systems Manager Session Manager)
+\item IAM instance profile with minimal permissions
+\item EBS volumes encrypted with AWS KMS
+\item VPC flow logs enabled
+\item CloudWatch agent for monitoring
+\item Root volume snapshot encryption
+\item Automatic security patching enabled
+\end{itemize}
+
+\subsection{EC2 Launch Template}
+\begin{lstlisting}[language=bash]
+aws ec2 create-launch-template \
+  --launch-template-name synapse-app-template \
+  --launch-template-data '{
+    "ImageId": "ami-hardened-app-image",
+    "InstanceType": "t3.large",
+    "KeyName": "removed-no-ssh",
+    "IamInstanceProfile": {"Arn": "arn:aws:iam::ACCOUNT:instance-profile/synapse-app"},
+    "SecurityGroupIds": ["sg-app-servers"],
+    "BlockDeviceMappings": [
+      {
+        "DeviceName": "/dev/xvda",
+        "Ebs": {
+          "VolumeSize": 50,
+          "VolumeType": "gp3",
+          "Encrypted": true,
+          "KmsKeyId": "arn:aws:kms:region:account:key/id",
+          "DeleteOnTermination": true
+        }
+      }
+    ],
+    "MetadataOptions": {
+      "HttpTokens": "required",
+      "HttpPutResponseHopLimit": 1
+    },
+    "Monitoring": {"Enabled": true},
+    "TagSpecifications": [
+      {
+        "ResourceType": "instance",
+        "Tags": [
+          {"Key": "Name", "Value": "synapse-app-server"},
+          {"Key": "Environment", "Value": "production"},
+          {"Key": "Compliance", "Value": "required"}
+        ]
+      }
+    ]
+  }'
+\end{lstlisting}
+
+\section{RDS Security}
+
+\subsection{RDS Configuration}
+\begin{itemize}
+\item \textbf{Engine}: PostgreSQL 15.x
+\item \textbf{Encryption at Rest}: AES-256 with AWS KMS
+\item \textbf{Encryption in Transit}: SSL/TLS required
+\item \textbf{Public Access}: Disabled
+\item \textbf{Backup Retention}: 30 days
+\item \textbf{Multi-AZ}: Enabled for failover
+\item \textbf{Enhanced Monitoring}: CloudWatch detailed metrics
+\item \textbf{Deletion Protection}: Enabled
+\end{itemize}
+
+\subsection{RDS Creation}
+\begin{lstlisting}[language=bash]
+aws rds create-db-instance \
+  --db-instance-identifier synapse-prod \
+  --db-instance-class db.r5.xlarge \
+  --engine postgres \
+  --engine-version 15.3 \
+  --master-username postgres \
+  --master-user-password GENERATED \
+  --allocated-storage 100 \
+  --storage-type gp3 \
+  --storage-encrypted \
+  --kms-key-id arn:aws:kms:region:account:key/id \
+  --db-subnet-group-name synapse-db-subnet \
+  --vpc-security-group-ids sg-rds-postgres \
+  --publicly-accessible false \
+  --backup-retention-period 30 \
+  --multi-az \
+  --enable-cloudwatch-logs-exports postgresql \
+  --enable-iam-database-authentication \
+  --deletion-protection \
+  --copy-tags-to-snapshot \
+  --enable-enhanced-monitoring \
+  --monitoring-role-arn arn:aws:iam::ACCOUNT:role/rds-monitoring
+\end{lstlisting}
+
+\section{S3 Bucket Security}
+
+\subsection{Bucket Policy}
+\begin{lstlisting}[language=Python]
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyUnencryptedObjectUploads",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::synapse-data/*",
+      "Condition": {
+        "StringNotEquals": {
+          "s3:x-amz-server-side-encryption": "AES256"
+        }
+      }
+    },
+    {
+      "Sid": "DenyPublicAccess",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::synapse-data/*"
+    },
+    {
+      "Sid": "AllowApplicationAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::ACCOUNT:role/synapse-app"
+      },
+      "Action": ["s3:GetObject", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::synapse-data/*",
+      "Condition": {
+        "StringEquals": {
+          "s3:x-amz-server-side-encryption": "AES256"
+        }
+      }
+    }
+  ]
+}
+\end{lstlisting}
+
+\subsection{S3 Configuration}
+\begin{lstlisting}[language=bash]
+# Block all public access
+aws s3api put-public-access-block \
+  --bucket synapse-data \
+  --public-access-block-configuration \
+  "BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+# Enable versioning
+aws s3api put-bucket-versioning \
+  --bucket synapse-data \
+  --versioning-configuration Status=Enabled
+
+# Enable server-side encryption
+aws s3api put-bucket-encryption \
+  --bucket synapse-data \
+  --server-side-encryption-configuration '{
+    "Rules": [
+      {
+        "ApplyServerSideEncryptionByDefault": {
+          "SSEAlgorithm": "AES256"
+        }
+      }
+    ]
+  }'
+
+# Enable MFA delete
+aws s3api put-bucket-versioning \
+  --bucket synapse-data \
+  --versioning-configuration Status=Enabled,MFADelete=Enabled
+
+# Enable logging
+aws s3api put-bucket-logging \
+  --bucket synapse-data \
+  --bucket-logging-status '{
+    "LoggingEnabled": {
+      "TargetBucket": "synapse-logs",
+      "TargetPrefix": "s3-access-logs/"
+    }
+  }'
+\end{lstlisting}
+
+\section{Docker Security}
+
+\subsection{Dockerfile Security Best Practices}
+\begin{lstlisting}[language=bash]
+# Use specific base image version, not latest
+FROM python:3.11.5-slim-bookworm
+
+# Run as non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for caching
+COPY requirements.txt .
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Switch to non-root user
+USER appuser
+
+# Use read-only root filesystem
+RUN chmod -R 555 /app
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD python -c "import requests; requests.get('http://localhost:8000/health')"
+
+# Don't run as PID 1 (use exec form)
+ENTRYPOINT ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+
+# Security labels
+LABEL security.scan="required" \
+      security.non-root="true" \
+      security.read-only-fs="true"
+\end{lstlisting}
+
+\subsection{Docker Security Scanning}
+\begin{lstlisting}[language=bash]
+# Push image to ECR
+aws ecr get-login-password --region us-east-1 | \
+  docker login --username AWS --password-stdin ACCOUNT.dkr.ecr.us-east-1.amazonaws.com
+
+docker tag synapse:latest ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/synapse:latest
+
+docker push ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/synapse:latest
+
+# Enable image scanning
+aws ecr put-image-scanning-configuration \
+  --repository-name synapse \
+  --image-scanning-configuration scanOnPush=true
+
+# Scan with Trivy
+trivy image --severity CRITICAL,HIGH \
+  ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/synapse:latest
+
+# Sign images
+cosign sign --key cosign.key \
+  ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/synapse:latest
+
+# Verify signature
+cosign verify --key cosign.pub \
+  ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/synapse:latest
+\end{lstlisting}
+
+\section{Kubernetes/ECS Task Definition Security}
+
+\subsection{ECS Task Definition}
+\begin{lstlisting}[language=Python]
+{
+  "family": "synapse-app",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT:role/synapse-task-role",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT:role/synapse-task-execution-role",
+  "containerDefinitions": [
+    {
+      "name": "synapse",
+      "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/synapse:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DJANGO_SETTINGS_MODULE",
+          "value": "config.settings.production"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:region:account:secret:synapse/db/password"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:region:account:secret:synapse/django/secret-key"
+        }
+      ],
+      "readonlyRootFilesystem": true,
+      "mountPoints": [
+        {
+          "sourceVolume": "tmp",
+          "containerPath": "/tmp",
+          "readOnly": false
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/synapse-app",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "privileged": false,
+      "user": "1000:1000"
+    }
+  ],
+  "volumes": [
+    {
+      "name": "tmp",
+      "emptyDir": {}
+    }
+  ]
+}
+\end{lstlisting}
+
+\chapter{Dependency Security}
+
+\section{Python Dependency Scanning}
+
+\subsection{Safety Check}
+\begin{lstlisting}[language=bash]
+# Install safety
+pip install safety
+
+# Check dependencies
+safety check --json > safety-report.json
+
+# CI/CD integration
+safety check --exit-code on-failure
+\end{lstlisting}
+
+\subsection{Bandit Security Analysis}
+\begin{lstlisting}[language=bash]
+# Install bandit
+pip install bandit
+
+# Scan code
+bandit -r . -f json -o bandit-report.json
+
+# Scan specific directories
+bandit -r synapse/ -ll  # Only report medium+ severity
+\end{lstlisting}
+
+\subsection{pip-audit Tool}
+\begin{lstlisting}[language=bash]
+# Install pip-audit
+pip install pip-audit
+
+# Audit installed packages
+pip-audit --desc
+
+# Generate JSON report
+pip-audit --format json > audit-report.json
+\end{lstlisting}
+
+\section{Node.js Dependency Scanning}
+
+\subsection{npm audit}
+\begin{lstlisting}[language=bash]
+# Audit dependencies
+npm audit
+
+# Fix vulnerabilities
+npm audit fix
+
+# Audit only production dependencies
+npm audit --production
+
+# Generate JSON report
+npm audit --json > npm-audit.json
+
+# CI/CD: fail on vulnerabilities
+npm audit --audit-level=moderate
+\end{lstlisting}
+
+\subsection{Snyk Integration}
+\begin{lstlisting}[language=bash]
+# Install Snyk
+npm install -g snyk
+
+# Test project
+snyk test
+
+# Monitor for new vulnerabilities
+snyk monitor
+
+# Fix vulnerabilities
+snyk fix
+\end{lstlisting}
+
+\section{Automated Vulnerability Scanning}
+
+\subsection{GitHub Dependabot Configuration}
+\begin{lstlisting}[language=bash]
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "all"
+    reviewers:
+      - "security-team"
+    labels:
+      - "security"
+    commit-message:
+      prefix: "chore: "
+  
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "daily"
+    allow:
+      - dependency-type: "all"
+    reviewers:
+      - "security-team"
+    labels:
+      - "security"
+  
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+\end{lstlisting}
+
+\section{Software Bill of Materials (SBOM)}
+
+\subsection{SBOM Generation}
+\begin{lstlisting}[language=bash]
+# Install cyclonedx tools
+pip install cyclonedx-bom
+
+# Generate Python SBOM
+cyclonedx-bom -o sbom-python.json
+
+# Generate Node.js SBOM
+npm install -g @cyclonedx/npm
+cyclonedx-npm -o sbom-node.json
+
+# Generate with SPDX format
+pip install spdx-tools
+
+# Include in release artifacts
+cp sbom-python.json sbom-node.json ./dist/
+tar -czf synapse-release-sbom.tar.gz sbom-*.json
+\end{lstlisting}
+
+\section{Dependency Update Policy}
+
+\subsection{CVE Response SLA}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Severity} & \textbf{CVSS Score} & \textbf{Patch Timeline} \\
+\hline
+\textcolor{darkred}{Critical} & 9.0-10.0 & 24 hours \\
+\hline
+\textcolor{darkorange}{High} & 7.0-8.9 & 7 days \\
+\hline
+\textcolor{darkyellow}{Medium} & 4.0-6.9 & 30 days \\
+\hline
+\textcolor{darkgreen}{Low} & 0.1-3.9 & 90 days \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Dependency Pinning}
+\begin{lstlisting}[language=bash]
+# requirements.txt - Pinned versions
+Django==4.2.7
+djangorestframework==3.14.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+celery==5.3.4
+fastapi==0.105.0
+pydantic==2.5.0
+
+# requirements-dev.txt
+pytest==7.4.3
+pytest-cov==4.1.0
+black==23.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Semantic versioning for updates
+# Patch: Bug fixes only (4.2.7 -> 4.2.8)
+# Minor: New features, backwards compatible (4.2.x -> 4.3.0)
+# Major: Breaking changes (4.x -> 5.0)
+\end{lstlisting}
+
+
+\chapter{Security Monitoring and Incident Response}
+
+\section{Security Logging Requirements}
+
+\subsection{Logging Events}
+\begin{itemize}
+\item \textbf{Authentication Events}: Login attempts (success/failure), logout, password changes, 2FA enable/disable
+\item \textbf{API Access}: All API requests, user ID, endpoint, method, status code, response time
+\item \textbf{Admin Actions}: User creation, permission changes, system configuration changes
+\item \textbf{Data Access}: Large exports, data downloads, sensitive field access
+\item \textbf{Error Events}: Application errors, database errors, external API failures
+\item \textbf{Security Events}: Failed authorization, suspicious patterns, rate limit violations
+\end{itemize}
+
+\subsection{Structured JSON Logging}
+\begin{lstlisting}[language=Python]
+import json
+import logging
+from pythonjsonlogger import jsonlogger
+
+# Configure JSON logging
+logger = logging.getLogger()
+handler = logging.StreamHandler()
+formatter = jsonlogger.JsonFormatter(
+    '%(timestamp)s %(level)s %(message)s %(user_id)s %(ip_address)s'
+)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+# Usage: Log without PII in message
+logger.info(
+    'User login successful',
+    extra={
+        'timestamp': datetime.now().isoformat(),
+        'level': 'INFO',
+        'user_id': user.id,
+        'ip_address': get_client_ip(request),
+        'user_agent': request.META.get('HTTP_USER_AGENT'),
+    }
+)
+
+# Log format:
+# {"timestamp": "2024-01-15T10:30:45.123Z", "level": "INFO", 
+#  "message": "User login successful", "user_id": 12345, 
+#  "ip_address": "203.0.113.42"}
+\end{lstlisting}
+
+\section{Log Aggregation with CloudWatch}
+
+\begin{lstlisting}[language=Python]
+# settings.py
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+        }
+    },
+    'handlers': {
+        'watchtower': {
+            'level': 'INFO',
+            'class': 'watchtower.CloudWatchLogHandler',
+            'log_group': '/aws/synapse/application',
+            'stream_name': 'app-logs',
+            'formatter': 'json',
+        },
+    },
+    'root': {
+        'handlers': ['watchtower'],
+        'level': 'INFO',
+    },
+}
+\end{lstlisting}
+
+\section{SIEM Integration: ELK Stack}
+
+\subsection{Logstash Configuration}
+\begin{lstlisting}[language=bash]
+input {
+  syslog {
+    port => 514
+    type => "syslog"
+  }
+  
+  cloudwatch_logs {
+    log_group_name => "/aws/synapse/application"
+    start_position => "end"
+  }
+}
+
+filter {
+  if [type] == "syslog" {
+    grok {
+      match => { "message" => "%{SYSLOGLINE}" }
+    }
+  }
+  
+  # Parse JSON logs
+  json {
+    source => "message"
+  }
+  
+  # Remove PII
+  mutate {
+    remove_field => ["email", "password_hash", "credit_card"]
+  }
+  
+  # Geolocation enrichment
+  geoip {
+    source => "ip_address"
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["elasticsearch.internal:9200"]
+    index => "synapse-logs-%{+YYYY.MM.dd}"
+  }
+  
+  # Alert on critical events
+  if [level] == "CRITICAL" {
+    email {
+      to => "security@synapse.io"
+      subject => "CRITICAL SECURITY EVENT"
+    }
+  }
+}
+\end{lstlisting}
+
+\section{Intrusion Detection}
+
+\subsection{fail2ban Configuration}
+\begin{lstlisting}[language=bash]
+# /etc/fail2ban/jail.local
+[DEFAULT]
+bantime = 3600
+findtime = 600
+maxretry = 5
+
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+maxretry = 3
+
+[django-auth]
+enabled = true
+port = http,https
+filter = django-auth
+logpath = /var/log/synapse/django.log
+maxretry = 5
+bantime = 1800
+
+[nginx-http-auth]
+enabled = true
+port = http,https
+filter = nginx-http-auth
+logpath = /var/log/nginx/error.log
+\end{lstlisting}
+
+\subsection{AWS GuardDuty}
+\begin{lstlisting}[language=bash]
+# Enable GuardDuty
+aws guardduty create-detector --enable --region us-east-1
+
+# List findings
+aws guardduty list-findings --detector-id DETECTOR_ID
+
+# Create SNS notification for findings
+aws events put-rule \
+  --name guardduty-findings \
+  --event-pattern '{"source":["aws.guardduty"]}'
+
+aws events put-targets \
+  --rule guardduty-findings \
+  --targets "Id"="1","Arn"="arn:aws:sns:us-east-1:ACCOUNT:security-alerts"
+\end{lstlisting}
+
+\section{Alert Thresholds}
+
+\subsection{Alert Configuration}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
+\hline
+\textbf{Metric} & \textbf{Threshold} & \textbf{Action} \\
+\hline
+Failed logins per IP & >10/min & Ban IP for 30 min \\
+\hline
+Failed logins per user & >5/hour & Lock account for 1 hour \\
+\hline
+API errors & >5\% error rate & Page on-call \\
+\hline
+Unusual API patterns & >1000 req/min from single IP & Rate limit + alert \\
+\hline
+Database query time & >5000ms average & Alert + slow query log \\
+\hline
+PII field access & Any access to phone/SSN & Log + audit \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Incident Response Plan}
+
+\subsection{Incident Response Phases}
+
+\begin{enumerate}
+\item \textbf{Detection}: Automated alerts trigger incident creation
+\item \textbf{Containment}: Isolate affected systems, revoke credentials, block attackers
+\item \textbf{Eradication}: Remove attacker access, patch vulnerabilities
+\item \textbf{Recovery}: Restore systems, monitor for re-infection
+\item \textbf{Lessons Learned}: Post-mortem, process improvements
+\end{enumerate}
+
+\subsection{Incident Severity and SLA}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|p{2.5cm}|p{2.5cm}|}
+\hline
+\textbf{Level} & \textbf{Description} & \textbf{Response Time} \\
+\hline
+\textcolor{darkred}{P1 Critical} & Data breach, service down, RCE & 1 hour \\
+\hline
+\textcolor{darkorange}{P2 High} & Unauthorized access, credential compromise & 4 hours \\
+\hline
+\textcolor{darkyellow}{P3 Medium} & Privilege escalation attempt, config issue & 24 hours \\
+\hline
+\textcolor{darkgreen}{P4 Low} & Suspicious but contained, info disclosure & 7 days \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Incident Response Playbook}
+\begin{lstlisting}[language=bash]
+P1 CRITICAL INCIDENT RESPONSE
+1. Alert triggered -> Incident created in Jira
+2. On-call engineer paged immediately (PagerDuty)
+3. Incident commander assumes leadership role
+4. Affected systems isolated from network
+5. Evidence collected for forensics
+6. AWS root account security keys rotated
+7. All active sessions terminated
+8. Backup systems activated
+9. External communications: status.synapse.io updated
+10. Post-incident analysis within 24 hours
+
+P2 HIGH INCIDENT RESPONSE
+1. Alert triggered -> Incident created
+2. On-call engineer notified
+3. Root cause analysis initiated
+4. Affected user accounts reviewed
+5. Logs analyzed for scope of breach
+6. Security patches applied
+7. Response time: 4 hours to initial containment
+\end{lstlisting}
+
+\section{Vulnerability Disclosure Policy}
+
+\subsection{Security.txt}
+\begin{lstlisting}[language=bash]
+# /.well-known/security.txt
+Contact: security@synapse.io
+Expires: 2025-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://synapse.io/.well-known/security.txt
+Policy: https://synapse.io/security/responsible-disclosure
+Acknowledgments: https://synapse.io/security/thanks
+\end{lstlisting}
+
+\subsection{Responsible Disclosure Process}
+\begin{enumerate}
+\item Security researcher discovers vulnerability
+\item Reports to security@synapse.io with details
+\item We acknowledge receipt within 24 hours
+\item Investigation period: 7-30 days depending on severity
+\item Researcher may request CVE allocation
+\item Patch released with public advisory
+\item Researcher credited publicly (if desired)
+\end{enumerate}
+
+\chapter{Penetration Testing Checklist}
+
+\section{Reconnaissance Tests}
+
+\begin{enumerate}
+\item DNS enumeration: nslookup, dig, zone transfers
+\item Subdomain discovery: subfinder, amass
+\item Technology identification: whatruns, builtwith
+\item WHOIS information gathering
+\item Shodan/Censys scanning for exposed services
+\item Git repository history analysis
+\item Public code repository scanning (GitHub, GitLab)
+\item S3 bucket discovery and enumeration
+\item Infrastructure mapping: port scanning, service detection
+\end{enumerate}
+
+\section{Authentication Bypass Tests}
+
+\begin{enumerate}
+\item Default credentials on admin panels
+\item SQL injection on login form
+\item JWT token manipulation: expiration, signature bypass
+\item Session fixation attacks
+\item Password reset token prediction
+\item Email verification bypass
+\item OAuth2/OIDC flow exploitation
+\item Brute force attacks with rate limit bypass
+\item Credential stuffing with common password lists
+\end{enumerate}
+
+\section{Authorization Tests (IDOR \& Privilege Escalation)}
+
+\begin{enumerate}
+\item Direct object reference manipulation (IDs in URLs)
+\item Cross-user data access attempts
+\item Privilege escalation through API parameters
+\item Role manipulation attacks
+\item Admin panel bypass attempts
+\item Permission boundary testing
+\item Object ownership verification
+\item Function-level authorization testing
+\end{enumerate}
+
+\section{Injection Tests}
+
+\begin{enumerate}
+\item SQL Injection: Single quote, UNION, time-based, blind
+\item NoSQL Injection: MongoDB, Redis query injection
+\item Command Injection: Shell metacharacters, pipe operators
+\item SSTI (Server-Side Template Injection): Jinja2, Mako
+\item XSS (Cross-Site Scripting): Stored, reflected, DOM-based
+\item LDAP Injection: Active Directory queries
+\item XML/XPath Injection: XML external entity attacks
+\item Log Injection: Newline insertion for log spoofing
+\end{enumerate}
+
+\section{API Security Tests}
+
+\begin{enumerate}
+\item Rate limiting bypass (header manipulation, IP rotation)
+\item Broken object level authorization
+\item Mass assignment attacks
+\item API key exposure in responses
+\item Unencrypted sensitive data in API responses
+\item GraphQL injection and enumeration
+\item API versioning bypass
+\item Webhook security (signature verification, replay attacks)
+\item API documentation exposure
+\end{enumerate}
+
+\section{Business Logic Tests}
+
+\begin{enumerate}
+\item Price manipulation in shopping carts
+\item Workflow bypass (skipping required steps)
+\item Race conditions in critical operations
+\item Insufficient input validation on business logic
+\item Transaction reversal attacks
+\item State manipulation attacks
+\item Negative quantity/amount acceptance
+\item Duplicate transaction processing
+\end{enumerate}
+
+\section{Infrastructure Tests}
+
+\begin{enumerate}
+\item AWS S3 bucket misconfiguration
+\item CloudFormation template exposure
+\item EC2 security group overly permissive rules
+\item RDS snapshots with public access enabled
+\item Lambda function URL public access
+\item Secrets Manager access from unexpected roles
+\item CloudWatch Logs exposure
+\item VPC Flow Logs disclosure
+\item EBS snapshot sharing across accounts
+\end{enumerate}
+
+\section{Penetration Testing Tools}
+
+\begin{itemize}
+\item \textbf{OWASP ZAP}: Automated web application scanner
+\item \textbf{Burp Suite Professional}: Manual testing proxy
+\item \textbf{sqlmap}: SQL injection detection and exploitation
+\item \textbf{nikto}: Web server vulnerability scanner
+\item \textbf{nmap}: Network reconnaissance and port scanning
+\item \textbf{Metasploit}: Exploitation framework
+\item \textbf{john}: Password cracking tool
+\item \textbf{hashcat}: GPU-accelerated password cracking
+\item \textbf{hydra}: Online password guessing tool
+\item \textbf{wireshark}: Network traffic analysis
+\end{itemize}
+
+\section{Testing Frequency}
+
+\begin{itemize}
+\item \textbf{Automated Scanning}: Continuous (weekly)
+\item \textbf{Manual Penetration Testing}: Quarterly (4x per year)
+\item \textbf{Major Release Testing}: Before each production release
+\item \textbf{Critical Patch Testing}: After critical security patches
+\item \textbf{Annual Assessment}: Full security assessment by third party
+\end{itemize}
+
+\chapter{GDPR and Privacy Compliance}
+
+\section{Data Subject Rights}
+
+\subsection{Right of Access}
+Users can request and receive a copy of all personal data we hold about them in a portable format (CSV, JSON).
+
+\subsection{Right to Rectification}
+Users can request correction of inaccurate personal data. We provide self-service tools to update their profile.
+
+\subsection{Right to Erasure (Right to be Forgotten)}
+Users can request deletion of their data. We soft-delete accounts and permanently delete after 30 days.
+
+\subsection{Right to Data Portability}
+Users can download their data in standardized format (JSON/CSV) for transfer to another service.
+
+\subsection{Right to Restrict Processing}
+Users can request suspension of processing while they contest data legality.
+
+\subsection{Right to Object}
+Users can object to marketing communications and profiling.
+
+\section{Privacy by Design}
+
+\begin{enumerate}
+\item Minimal data collection: Only essential data collected
+\item Data minimization: Delete data no longer needed
+\item Purpose limitation: Use data only for stated purposes
+\item Storage limitation: Retention policies enforced automatically
+\item Integrity and confidentiality: Encryption and access control
+\item Accountability: Audit logs and documentation maintained
+\end{enumerate}
+
+\section{Cookie Consent}
+
+\subsection{Cookie Banner Implementation}
+\begin{itemize}
+\item Visible banner on first visit
+\item Explicit consent required before setting cookies
+\item Granular consent options: Analytics, marketing, necessary
+\item Consent recorded and timestamped
+\item Ability to withdraw consent at any time
+\end{itemize}
+
+\subsection{Cookie Categories}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{|l|p{4cm}|}
+\hline
+\textbf{Type} & \textbf{Purpose} \\
+\hline
+Necessary & Session management, CSRF protection, security \\
+\hline
+Functional & Language preferences, UI customization \\
+\hline
+Analytics & Google Analytics, user behavior tracking \\
+\hline
+Marketing & Remarketing ads, conversion tracking \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Data Processing Agreement (DPA)}
+
+A DPA template includes:
+\begin{enumerate}
+\item Scope: Data processed, duration, nature
+\item Subject Matter: Type of processing (e.g., user accounts)
+\item Duration: How long data is processed
+\item Nature: What happens to data
+\item Purpose: Why data is processed
+\item Processor Obligations: Security, confidentiality, sub-processors
+\item Data Subject Rights: Support for GDPR requests
+\item Security Measures: Technical and organizational safeguards
+\item Sub-processors: List of third-party processors
+\item International Transfers: Mechanisms (SCCs, BCRs) if applicable
+\end{enumerate}
+
+\section{Privacy Policy Requirements}
+
+The privacy policy must clearly specify:
+\begin{enumerate}
+\item Data controller identity and contact
+\item Legal basis for processing
+\item Data categories collected
+\item Processing purposes
+\item Data retention periods
+\item Data subject rights and how to exercise them
+\item Complaint procedure to data protection authority
+\item Automated decision-making and profiling (if applicable)
+\item Third-party sharing
+\item International data transfers
+\end{enumerate}
+
+\section{Data Breach Notification}
+
+\subsection{72-Hour Rule}
+Data breaches must be reported to the supervisory authority within 72 hours of discovery.
+
+\subsection{Breach Notification Process}
+\begin{enumerate}
+\item Incident detected -> Immediate investigation
+\item Determine scope: What data was accessed?
+\item Assess risk: Would affected users be harmed?
+\item Document findings with timestamps
+\item If high risk: Notify affected users immediately
+\item If any affected: Notify supervisory authority within 72 hours
+\item If public interest: Public disclosure may be required
+\item Record all notifications and responses
+\end{enumerate}
+
+\section{Data Protection Officer (DPO)}
+
+\subsection{DPO Responsibilities}
+\begin{itemize}
+\item Monitor GDPR compliance
+\item Serve as contact point for data subjects and authorities
+\item Conduct privacy impact assessments
+\item Maintain documentation of processing activities
+\item Provide privacy training to staff
+\item Investigate complaints and breaches
+\item Report to the data protection authority
+\end{itemize}
+
+\chapter{Security Audit Checklist}
+
+\section{Pre-Deployment Security Checklist (50+ Items)}
+
+\subsection{Code Security}
+\begin{enumerate}
+\item No hardcoded secrets (API keys, passwords, tokens)
+\item No debug mode enabled (DEBUG=False)
+\item No test accounts with weak passwords
+\item SQL injection prevention: Parameterized queries used
+\item XSS prevention: Input sanitization and output encoding
+\item CSRF protection: CSRF tokens on all state-changing endpoints
+\item Authentication: Strong password requirements enforced
+\item Authorization: Permission checks on all endpoints
+\item Input validation: All inputs validated and sanitized
+\item Error handling: Errors logged without exposing sensitive info
+\item Logging: All sensitive operations logged
+\item Dependencies: All dependencies security-scanned
+\item Code review: Minimum 2 reviewers approved
+\item Static analysis: SAST tool passed without critical/high issues
+\end{enumerate}
+
+\subsection{Infrastructure Security}
+\begin{enumerate}
+\item SSL/TLS: TLS 1.3 enabled, valid certificate
+\item Database: Not publicly accessible
+\item Database: Encrypted at rest with KMS
+\item Database: SSL connections required
+\item Database: Least privilege users configured
+\item S3: No public ACLs or bucket policies
+\item S3: Versioning enabled
+\item S3: Encryption enabled
+\item EC2: Security groups follow least privilege
+\item EC2: No SSH from internet
+\item VPC: Database in private subnet
+\item VPC: VPC Flow Logs enabled
+\item IAM: No root account usage
+\item IAM: MFA enabled on root account
+\end{enumerate}
+
+\subsection{Application Security}
+\begin{enumerate}
+\item HSTS: Strict-Transport-Security header set
+\item CSP: Content-Security-Policy header configured
+\item X-Frame-Options: Set to DENY
+\item X-Content-Type-Options: Set to nosniff
+\item XSS-Protection: Header set
+\item Referrer-Policy: Configured appropriately
+\item CORS: Whitelist-only origins
+\item Rate limiting: Configured and tested
+\item Session: HTTP-only, secure, SameSite cookies
+\item API keys: Properly generated and rotated
+\item Secrets: In Secrets Manager, never in code
+\item Logging: No PII in logs
+\item Monitoring: CloudWatch/ELK configured
+\item Alerts: Alert rules configured for security events
+\end{enumerate}
+
+\subsection{Compliance}
+\begin{enumerate}
+\item GDPR: Privacy policy published
+\item GDPR: Consent mechanism functional
+\item GDPR: Right to erasure implemented
+\item GDPR: Data portability implemented
+\item PII: Minimal collection enforced
+\item PII: Encryption at rest
+\item PII: No unencrypted transmission
+\item Security.txt: Published at /.well-known/security.txt
+\item Terms of Service: Published and current
+\item Data Processing Agreement: Signed with vendors
+\item Audit logging: Enabled and tested
+\item Incident response: Plan documented and communicated
+\end{enumerate}
+
+\section{Code Review Security Checklist}
+
+\begin{enumerate}
+\item Secrets not committed (AWS credentials, API keys, etc.)
+\item No SQL injection vulnerabilities
+\item No XSS vulnerabilities
+\item CSRF tokens present and validated
+\item Authentication and authorization correct
+\item Error messages don't leak sensitive information
+\item Input validation on all user-supplied data
+\item Output encoding for template rendering
+\item Cryptography implemented correctly (no custom crypto)
+\item Dependencies are secure versions
+\item Race conditions or TOCTOU issues
+\item File upload validation (type, size, content)
+\item Deserialization safe (no pickle of untrusted data)
+\item Logging doesn't expose sensitive data
+\item Comments don't contain security information
+\item Code complexity understandable and secure
+\end{enumerate}
+
+\section{Quarterly Security Review Tasks}
+
+\begin{enumerate}
+\item Review and rotate AWS credentials
+\item Update dependency vulnerability reports
+\item Review CloudWatch logs and dashboards
+\item Analyze failed authentication attempts
+\item Review admin access logs
+\item Check SSL/TLS certificate expiration
+\item Audit IAM permissions for least privilege
+\item Review security group rules
+\item Check for unpatched CVEs in dependencies
+\item Update threat model based on recent attacks
+\item Security awareness training for team
+\item Review incident response plan
+\item Scan codebase with SAST tools
+\item Test backup restoration
+\item Review third-party processor security
+\end{enumerate}
+
+\section{Annual Requirements}
+
+\begin{enumerate}
+\item Full penetration test by third party
+\item Security code review by external auditors
+\item GDPR compliance audit
+\item Disaster recovery and backup testing
+\item Security training for all staff
+\item Update and test incident response plan
+\item Review and update threat model
+\item Architecture security review
+\item Review of security incidents and lessons learned
+\item Update of security documentation
+\item Risk assessment across all systems
+\end{enumerate}
+
+\chapter{Security Training and Culture}
+
+\section{Developer Security Training}
+
+\subsection{Required Topics}
+\begin{enumerate}
+\item OWASP Top 10: Recognition and prevention
+\item Secure coding practices in Python and JavaScript
+\item Django security features and best practices
+\item FastAPI security implementation
+\item SQL injection prevention and parameterized queries
+\item XSS prevention and input validation
+\item CSRF protection mechanisms
+\item Authentication and session management
+\item Cryptography basics and usage
+\item API security principles
+\item Database security
+\item Infrastructure security (AWS, Docker)
+\item Security incident response
+\item Responsible disclosure
+\end{enumerate}
+
+\subsection{Training Schedule}
+\begin{itemize}
+\item \textbf{Onboarding}: 4-hour security fundamentals course
+\item \textbf{Quarterly}: 1-hour security topics deep dive
+\item \textbf{Annual}: Full-day security training refresh
+\item \textbf{As needed}: Specialized training for new technologies
+\end{itemize}
+
+\section{Secure Coding Guidelines}
+
+\subsection{Golden Rules}
+\begin{enumerate}
+\item Never trust user input: Validate and sanitize everything
+\item Use frameworks: Don't implement security yourself
+\item Fail securely: Deny access by default
+\item Defense in depth: Multiple layers of security
+\item Keep it simple: Complexity breeds vulnerability
+\item Use established libraries: Never roll custom crypto
+\item Log and monitor: Detect attacks in progress
+\item Assume breach: Design for zero trust
+\item Update regularly: Security patches matter
+\item Test continuously: Security tests as part of CI/CD
+\end{enumerate}
+
+\subsection{Code Example: Secure vs. Insecure}
+\begin{lstlisting}[language=Python]
+# INSECURE
+def get_user(user_id):
+    query = f"SELECT * FROM users WHERE id = {user_id}"
+    return db.execute(query)
+
+# SECURE
+def get_user(user_id):
+    user = User.objects.get(id=user_id)
+    if user != request.user and not request.user.is_staff:
+        raise PermissionDenied()
+    return user
+
+# INSECURE
+password = request.POST.get('password')
+hashed = hashlib.sha256(password).hexdigest()
+
+# SECURE
+from django.contrib.auth.hashers import make_password
+password = request.POST.get('password')
+hashed = make_password(password)  # Uses bcrypt
+\end{lstlisting}
+
+\section{Security Champions Program}
+
+\subsection{Program Overview}
+\begin{itemize}
+\item Identify security champions from each team
+\item Provide advanced security training
+\item Champions review code for security issues
+\item Champions lead security discussions in standups
+\item Champions report security findings to security team
+\item Quarterly champions meeting for knowledge sharing
+\item Recognition and incentives for security contributions
+\end{itemize}
+
+\subsection{Champion Responsibilities}
+\begin{enumerate}
+\item Review team code for security vulnerabilities
+\item Mentor team members on secure coding
+\item Participate in security training delivery
+\item Lead threat modeling discussions
+\item Report security concerns to security team
+\item Stay updated on security best practices
+\item Represent security interests in architecture discussions
+\item Help with incident response exercises
+\end{enumerate}
+
+\section{Security Documentation}
+
+All security practices should be documented:
+\begin{itemize}
+\item \textbf{Security Architecture Document}: System design and security controls
+\item \textbf{Threat Model}: Assets, threats, mitigations
+\item \textbf{Security Runbooks}: Step-by-step procedures for common tasks
+\item \textbf{Incident Response Plan}: Playbooks for different incident types
+\item \textbf{DRP/BCP}: Disaster recovery and business continuity plans
+\item \textbf{Policy Documents}: Password policy, access control policy, etc.
+\item \textbf{Audit Logs}: Retained for compliance and forensics
+\end{itemize}
+
+\appendix
+
+\chapter{Additional Resources}
+
+\section{External References}
+\begin{itemize}
+\item OWASP Top 10 2021: https://owasp.org/Top10/
+\item NIST Cybersecurity Framework: https://www.nist.gov/cyberframework
+\item CWE Top 25: https://cwe.mitre.org/top25/
+\item AWS Security Best Practices: https://aws.amazon.com/security/best-practices/
+\item Django Security Documentation: https://docs.djangoproject.com/en/4.2/topics/security/
+\item GDPR Official Text: https://gdpr-info.eu/
+\item ISO 27001:2022: https://www.iso.org/standard/27001
+\end{itemize}
+
+\section{Tools and Resources}
+\begin{itemize}
+\item OWASP ZAP: https://www.zaproxy.org/
+\item Burp Suite: https://portswigger.net/burp
+\item Snyk: https://snyk.io/
+\item Dependabot: https://dependabot.com/
+\item Safety: https://pyup.io/safety/
+\item Bandit: https://bandit.readthedocs.io/
+\end{itemize}
+
+\end{document}

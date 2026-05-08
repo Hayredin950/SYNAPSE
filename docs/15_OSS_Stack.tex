@@ -1,0 +1,2768 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\definecolor{darkblue}{RGB}{0,0,139}
+\definecolor{darkred}{RGB}{139,0,0}
+\definecolor{darkgreen}{RGB}{0,100,0}
+\definecolor{codegray}{RGB}{248,248,248}
+\definecolor{codegreen}{RGB}{0,128,0}
+\definecolor{codepurple}{RGB}{128,0,128}
+
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{array}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    backgroundcolor=\color{white},
+    columns=fullflexible
+}
+
+\title{SYNAPSE: Open Source Libraries and Technology Stack}
+\author{SYNAPSE Development Team}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction}
+
+SYNAPSE is an AI-powered tech intelligence platform designed to aggregate, analyze, and synthesize information from diverse sources. This document provides a comprehensive overview of all open source libraries used in SYNAPSE, organized by functional category. Each library includes version information, purpose, advantages, disadvantages, and integration notes.
+
+\section{Document Scope}
+
+This document covers the complete technology stack for SYNAPSE, including:
+
+\begin{itemize}
+    \item Backend frameworks and API libraries
+    \item Database and storage solutions
+    \item Web scraping and content extraction tools
+    \item Task queuing and scheduling systems
+    \item Artificial Intelligence, NLP, and Machine Learning libraries
+    \item HuggingFace model recommendations and comparisons
+    \item Document generation capabilities
+    \item Frontend and JavaScript libraries
+    \item Testing and quality assurance tools
+    \item DevOps, monitoring, and logging infrastructure
+    \item Complete requirements files and configuration
+\end{itemize}
+
+\chapter{Backend Framework}
+
+The backend of SYNAPSE is built on two primary frameworks: Django for the main application and FastAPI for high-performance AI microservices. This hybrid approach provides the best of both worlds: Django's mature ecosystem for business logic, ORM, and administration, combined with FastAPI's async capabilities for real-time AI operations.
+
+\section{Django 4.2}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.2 \\
+\hline
+\textbf{Purpose} & Main application framework, ORM, admin interface, authentication \\
+\hline
+\textbf{URL} & https://www.djangoproject.com \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Django 4.2 is a mature, full-featured web framework that serves as the foundation for SYNAPSE's main application. It provides an object-relational mapper (ORM) for database interactions, a built-in admin interface, authentication and authorization systems, and comprehensive middleware support.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Mature ecosystem with extensive third-party packages
+    \item Built-in ORM with excellent query optimization
+    \item Admin interface requires minimal code
+    \item Strong security features and regular updates
+    \item Excellent documentation and community support
+    \item Built-in authentication and permissions framework
+    \item Middleware system for cross-cutting concerns
+\end{itemize}
+
+\subsection{Disadvantages}
+
+\begin{itemize}
+    \item Not async-first (though async views are supported)
+    \item Slightly heavier than minimal frameworks
+    \item Migration system can become complex in large projects
+    \item Learning curve for developers unfamiliar with conventions
+\end{itemize}
+
+\subsection{Integration Notes}
+
+Django 4.2 is the core framework for SYNAPSE's main application. It manages user accounts, permissions, application configuration, and database migrations. FastAPI is used in parallel for async-heavy operations.
+
+\section{FastAPI 0.104}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.104 \\
+\hline
+\textbf{Purpose} & High-performance AI microservice, async endpoints, real-time operations \\
+\hline
+\textbf{URL} & https://fastapi.tiangolo.com \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+FastAPI is a modern, fast web framework for building APIs with Python. It is built on Starlette for the web framework functionality and Pydantic for data validation. FastAPI is async-first and provides automatic API documentation via Swagger and ReDoc.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Built for async operations and high concurrency
+    \item Automatic OpenAPI (Swagger) documentation generation
+    \item Type hints enable automatic request/response validation
+    \item Excellent performance compared to other Python frameworks
+    \item Built-in dependency injection system
+    \item Minimal boilerplate code
+    \item Great for microservices architecture
+\end{itemize}
+
+\subsection{Disadvantages}
+
+\begin{itemize}
+    \item Smaller ecosystem compared to Django
+    \item Less mature ORM integration options
+    \item Requires more manual configuration for complex features
+    \item Admin interface requires third-party solutions
+\end{itemize}
+
+\subsection{Integration Notes}
+
+FastAPI microservices run alongside Django, handling AI inference endpoints, real-time predictions, and heavy async operations like web scraping coordination.
+
+\section{djangorestframework 3.14}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.14 \\
+\hline
+\textbf{Purpose} & REST API framework for Django, serialization, API views \\
+\hline
+\textbf{URL} & https://www.django-rest-framework.org \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Django REST Framework (DRF) extends Django to provide powerful REST API capabilities. It handles serialization, deserialization, authentication, permissions, and provides generic class-based views for common API patterns.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Seamless Django integration
+    \item Serializers handle complex data transformations
+    \item Built-in authentication schemes (Token, Session, JWT)
+    \item Powerful filtering and pagination
+    \item Browsable API for testing
+    \item Excellent documentation
+\end{itemize}
+
+\subsection{Disadvantages}
+
+\begin{itemize}
+    \item Can be slower than minimal REST frameworks
+    \item Serializers require duplication when not using ModelSerializers
+    \item Learning curve for advanced features
+\end{itemize}
+
+\section{django-cors-headers 4.3}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.3 \\
+\hline
+\textbf{Purpose} & Cross-Origin Resource Sharing (CORS) handling \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-cors-headers handles CORS headers in Django applications. It allows frontend applications running on different origins to make requests to the SYNAPSE backend.
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item Whitelist allowed origins
+    \item Allow specific HTTP methods and headers
+    \item Support for credentials (cookies, authorization headers)
+    \item Regex pattern matching for origins
+\end{itemize}
+
+\section{djangorestframework-simplejwt 5.3}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.3 \\
+\hline
+\textbf{Purpose} & JWT authentication for REST APIs \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+djangorestframework-simplejwt provides JWT (JSON Web Token) authentication for Django REST Framework. It includes token generation, refresh tokens, and token validation.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Stateless authentication (no session storage required)
+    \item Token refresh mechanism for improved security
+    \item Claim customization support
+    \item Compatible with DRF permission classes
+\end{itemize}
+
+\section{django-axes 6.1}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 6.1 \\
+\hline
+\textbf{Purpose} & Login rate limiting and account lockout \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-axes provides protection against brute-force login attempts by tracking failed authentication attempts and temporarily locking accounts after a threshold is reached.
+
+\subsection{Features}
+
+\begin{itemize}
+    \item IP-based and username-based tracking
+    \item Configurable lockout duration and attempt threshold
+    \item Admin interface for managing locked accounts
+    \item Cache-based or database-backed storage
+\end{itemize}
+
+\section{django-prometheus 0.3}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.3 \\
+\hline
+\textbf{Purpose} & Prometheus metrics for Django applications \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-prometheus exports Django application metrics in Prometheus format, enabling monitoring of request latency, error rates, and database operations.
+
+\section{gunicorn 21.2}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 21.2 \\
+\hline
+\textbf{Purpose} & WSGI application server for Django \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Gunicorn is a production-quality WSGI HTTP server. It runs Django applications with multiple worker processes for concurrency and supports graceful reloading and process management.
+
+\subsection{Configuration}
+
+\begin{lstlisting}
+# gunicorn configuration
+workers = 4
+bind = '0.0.0.0:8000'
+timeout = 60
+access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s'
+\end{lstlisting}
+
+\section{uvicorn 0.24}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.24 \\
+\hline
+\textbf{Purpose} & ASGI server for FastAPI microservices \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Uvicorn is a lightning-fast ASGI server implementation, perfect for running FastAPI applications. It handles async operations efficiently and supports WebSocket connections.
+
+\section{pydantic 2.5}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.5 \\
+\hline
+\textbf{Purpose} & Data validation and serialization for FastAPI \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Pydantic uses Python type hints to validate and parse data. It provides runtime type checking, data parsing, and serialization with a clean, intuitive API.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Type hint-based validation
+    \item Excellent error messages
+    \item JSON schema generation
+    \item Performance optimizations
+    \item Custom validators and transformations
+\end{itemize}
+
+\chapter{Database and Storage}
+
+SYNAPSE uses PostgreSQL as the primary database with vector extensions for AI embeddings, Redis for caching and task queuing, and cloud storage solutions for large files.
+
+\section{psycopg2-binary 2.9}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.9 \\
+\hline
+\textbf{Purpose} & PostgreSQL adapter for Python \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+psycopg2 is the most popular PostgreSQL database adapter for Python. It implements the Python DB API specification and provides both synchronous and asynchronous interfaces.
+
+\section{pgvector 0.2}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.2 \\
+\hline
+\textbf{Purpose} & Vector embeddings storage and similarity search in PostgreSQL \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+pgvector is a PostgreSQL extension that adds vector data type and operations. It enables storing and searching high-dimensional embeddings directly in PostgreSQL without external vector databases.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Integrated with PostgreSQL (no separate service)
+    \item ACID compliance for embeddings
+    \item Scalable to millions of vectors
+    \item Multiple distance metrics (L2, cosine, inner product)
+    \item Indexing support for fast similarity search
+\end{itemize}
+
+\subsection{Disadvantages}
+
+\begin{itemize}
+    \item Requires PostgreSQL extension installation
+    \item Performance may lag specialized vector databases at extreme scale
+    \item Index types are limited compared to specialized solutions
+\end{itemize}
+
+\section{django-redis 5.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.4 \\
+\hline
+\textbf{Purpose} & Redis cache backend for Django \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-redis provides a Django cache backend using Redis. It enables caching of database queries, API responses, and computational results.
+
+\section{redis 5.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.0 \\
+\hline
+\textbf{Purpose} & Python client for Redis \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+The redis package is a Python client for Redis that supports all Redis commands, connection pooling, and Pub/Sub messaging.
+
+\section{boto3 1.34}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.34 \\
+\hline
+\textbf{Purpose} & AWS S3 and other Amazon services client \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+boto3 is the Amazon Web Services (AWS) SDK for Python. SYNAPSE uses it to interact with AWS S3 for storing documents, processed data, and model artifacts.
+
+\subsection{Use Cases}
+
+\begin{itemize}
+    \item Upload scraped documents to S3
+    \item Store generated reports and exports
+    \item Archive processed data
+    \item Manage model checkpoints
+\end{itemize}
+
+\section{google-api-python-client 2.110}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.110 \\
+\hline
+\textbf{Purpose} & Google Drive and other Google APIs client \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+google-api-python-client provides access to Google Cloud APIs including Google Drive. SYNAPSE uses it to sync documents and files with Google Drive.
+
+\section{SQLAlchemy 2.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.0 \\
+\hline
+\textbf{Purpose} & Optional ORM for FastAPI microservices and advanced queries \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+SQLAlchemy is a mature Python SQL toolkit and ORM. While Django ORM is used for the main application, SQLAlchemy provides additional power for complex queries in FastAPI services.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Powerful query builder for complex operations
+    \item Multiple dialect support
+    \item Connection pooling
+    \item Hybrid properties and expressions
+\end{itemize}
+
+\section{alembic 1.13}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.13 \\
+\hline
+\textbf{Purpose} & Database migrations for SQLAlchemy \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Alembic is a lightweight database migration tool for SQLAlchemy. It handles schema versioning and migrations for databases using SQLAlchemy ORM.
+
+\chapter{Web Scraping and Content Extraction}
+
+SYNAPSE aggregates information from diverse web sources. This section covers libraries for web scraping, HTML parsing, content extraction, and feed parsing.
+
+\section{Scrapy 2.11}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.11 \\
+\hline
+\textbf{Purpose} & Full-featured web scraping framework \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Scrapy is a complete, production-ready web scraping framework. It provides spider classes, middleware, pipelines, and distributed scraping capabilities.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Built-in concurrency and performance optimization
+    \item Request/response middleware for customization
+    \item Item pipelines for data processing
+    \item Automatic throttling and rate limiting
+    \item Distributed scraping with Scrapy Cloud
+    \item Excellent documentation and large community
+\end{itemize}
+
+\subsection{Disadvantages}
+
+\begin{itemize}
+    \item Steeper learning curve than simpler alternatives
+    \item Not ideal for simple one-off scripts
+    \item Requires understanding of spiders and pipelines
+\end{itemize}
+
+\subsection{Example Spider}
+
+\begin{lstlisting}
+import scrapy
+
+class NewsSpider(scrapy.Spider):
+    name = 'news'
+    allowed_domains = ['example.com']
+    start_urls = ['http://example.com/news']
+
+    def parse(self, response):
+        for article in response.css('article'):
+            yield {
+                'title': article.css('h1::text').get(),
+                'content': article.css('p::text').getall(),
+                'url': article.css('a::attr(href)').get(),
+            }
+\end{lstlisting}
+
+\section{BeautifulSoup4 4.12}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.12 \\
+\hline
+\textbf{Purpose} & HTML and XML parsing \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+BeautifulSoup is a library for parsing HTML and XML documents. It provides intuitive methods for navigating, searching, and modifying parsed documents.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Easy to learn and use
+    \item Multiple parser backends (html.parser, lxml, html5lib)
+    \item Excellent for one-off scraping tasks
+    \item Handles malformed HTML gracefully
+\end{itemize}
+
+\subsection{Disadvantages}
+
+\begin{itemize}
+    \item No built-in concurrency
+    \item Not suitable for large-scale scraping projects
+    \item Slower than Scrapy for complex projects
+\end{itemize}
+
+\section{playwright 1.40}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.40 \\
+\hline
+\textbf{Purpose} & Headless browser automation for JavaScript-heavy sites \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Playwright is a Python library for automating web browsers (Chrome, Firefox, Safari). It can execute JavaScript, handle dynamic content, and interact with modern web applications.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Handles JavaScript rendering
+    \item Supports multiple browsers
+    \item Fast performance
+    \item Excellent API for interactions
+    \item Network monitoring capabilities
+\end{itemize}
+
+\subsection{Use Cases}
+
+\begin{itemize}
+    \item Scraping sites with heavy JavaScript rendering
+    \item Testing dynamic functionality
+    \item Automating multi-step workflows
+    \item Capturing screenshots and PDFs
+\end{itemize}
+
+\section{httpx 0.25}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.25 \\
+\hline
+\textbf{Purpose} & Async HTTP client for web requests \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+httpx is a modern HTTP client with async support. It combines the simplicity of requests with powerful async capabilities for concurrent operations.
+
+\section{requests 2.31}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.31 \\
+\hline
+\textbf{Purpose} & Synchronous HTTP client for web requests \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Requests is the most popular Python HTTP library. SYNAPSE uses it for synchronous HTTP operations where async is not required.
+
+\section{feedparser 6.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 6.0 \\
+\hline
+\textbf{Purpose} & RSS and Atom feed parsing \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+feedparser parses RSS and Atom feeds, normalizing them to a common format. SYNAPSE uses it to aggregate content from news feeds and blogs.
+
+\section{newspaper3k 0.2}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.2 \\
+\hline
+\textbf{Purpose} & Article extraction and text extraction from news sites \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+newspaper3k extracts article text, author, publication date, and other metadata from news websites. It handles common news site layouts automatically.
+
+\section{trafilatura 1.6}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.6 \\
+\hline
+\textbf{Purpose} & Main content extraction and conversion to structured formats \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Trafilatura is a web scraping library focused on content extraction. It extracts the main text content, metadata, and comments from web pages and supports conversion to multiple formats.
+
+\subsection{Features}
+
+\begin{itemize}
+    \item Extracts article text, metadata, and comments
+    \item Converts to plain text, Markdown, or XML
+    \item Handles boilerplate removal
+    \item Fast processing
+\end{itemize}
+
+\section{html2text 2020.1}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2020.1 \\
+\hline
+\textbf{Purpose} & HTML to Markdown conversion \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+html2text converts HTML documents to Markdown format, preserving structure and links.
+
+\section{fake-useragent 1.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.4 \\
+\hline
+\textbf{Purpose} & User agent string rotation for scraping \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+fake-useragent rotates through realistic user agent strings to avoid being blocked by websites that detect automation.
+
+\section{scrapy-rotating-proxies}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & Rotating proxy support for Scrapy \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Scrapy middleware for rotating through a list of proxies, enabling scraping from geographically diverse IP addresses.
+
+\chapter{Task Queue and Scheduling}
+
+SYNAPSE processes large volumes of data and AI operations asynchronously. This section covers libraries for distributed task queuing and periodic scheduling.
+
+\section{celery 5.3}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.3 \\
+\hline
+\textbf{Purpose} & Distributed task queue for async operations \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Celery is a distributed task queue that enables running long-running operations asynchronously. Tasks are queued and executed by worker processes, enabling scalability and resilience.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Distributed execution across multiple workers
+    \item Task routing and priorities
+    \item Automatic retries with exponential backoff
+    \item Task result storage and monitoring
+    \item Support for multiple brokers (Redis, RabbitMQ, etc.)
+\end{itemize}
+
+\subsection{Use Cases in SYNAPSE}
+
+\begin{itemize}
+    \item Web scraping operations
+    \item Document processing and OCR
+    \item AI model inference
+    \item Report generation
+    \item Email notifications
+\end{itemize}
+
+\subsection{Example Task}
+
+\begin{lstlisting}
+from celery import shared_task
+from synapse.scraper import scrape_url
+
+@shared_task(bind=True, max_retries=3)
+def scrape_and_process(self, url):
+    try:
+        content = scrape_url(url)
+        return process_content(content)
+    except Exception as exc:
+        raise self.retry(exc=exc, countdown=60)
+\end{lstlisting}
+
+\section{celery[redis]}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.3 \\
+\hline
+\textbf{Purpose} & Redis broker for Celery task queue \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Celery with Redis broker enables high-performance, distributed task queuing. Redis acts as the message broker between Django and Celery workers.
+
+\section{django-celery-beat 2.5}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.5 \\
+\hline
+\textbf{Purpose} & Periodic task scheduling for Celery \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-celery-beat provides persistent periodic task scheduling. Tasks can be defined in Django models and scheduled to run at specific times.
+
+\subsection{Example Periodic Task}
+
+\begin{lstlisting}
+from django_celery_beat.models import PeriodicTask, CrontabSchedule
+
+schedule, created = CrontabSchedule.objects.get_or_create(
+    hour=0,
+    minute=0,
+)
+periodic_task = PeriodicTask.objects.create(
+    crontab=schedule,
+    name='Daily data aggregation',
+    task='synapse.tasks.daily_aggregation',
+)
+\end{lstlisting}
+
+\section{django-celery-results 2.5}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.5 \\
+\hline
+\textbf{Purpose} & Store Celery task results in database \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-celery-results stores task results in Django models, enabling querying and monitoring of completed tasks.
+
+\section{flower 2.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.0 \\
+\hline
+\textbf{Purpose} & Web-based monitoring UI for Celery \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Flower provides a real-time web interface for monitoring Celery workers and tasks. It displays task statistics, worker status, and enables task management.
+
+\section{apscheduler 3.10}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.10 \\
+\hline
+\textbf{Purpose} & Alternative task scheduler with cron-like scheduling \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+APScheduler is a lightweight scheduler for simple periodic tasks. It can be used as an alternative to Celery Beat for less complex scheduling requirements.
+
+\chapter{Artificial Intelligence, NLP, and Machine Learning}
+
+This chapter covers SYNAPSE's AI/ML stack, including language models, NLP processing, embeddings, and vector search capabilities.
+
+\section{langchain 0.1.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.1.x \\
+\hline
+\textbf{Purpose} & LLM framework, agents, RAG (Retrieval-Augmented Generation) \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+LangChain is a framework for developing applications powered by language models. It provides abstractions for language model interactions, agent patterns, chains, and retrieval-augmented generation pipelines.
+
+\subsection{Key Components}
+
+\begin{itemize}
+    \item Models: Unified interface for language models
+    \item Prompts: Template management and optimization
+    \item Chains: Sequences of model calls
+    \item Agents: Autonomous decision-making systems
+    \item Memory: Conversation and context management
+    \item Retrievers: Document retrieval for RAG
+    \item Tools: Integrations with external systems
+\end{itemize}
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Abstracts model provider differences
+    \item Reduces boilerplate for common patterns
+    \item Excellent documentation and examples
+    \item Rapid prototyping of AI applications
+    \item Memory management built-in
+\end{itemize}
+
+\subsection{Integration in SYNAPSE}
+
+LangChain powers SYNAPSE's intelligence layer, handling document retrieval, multi-step reasoning, and agent-based analysis workflows.
+
+\section{langchain-openai 0.0.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.0.x \\
+\hline
+\textbf{Purpose} & OpenAI model integration with LangChain \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+langchain-openai provides LangChain integration with OpenAI's GPT models, enabling use of GPT-4, GPT-3.5, and embeddings through LangChain's unified interface.
+
+\section{langchain-community 0.0.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.0.x \\
+\hline
+\textbf{Purpose} & Community-contributed LangChain integrations \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+langchain-community provides integrations with numerous third-party services, databases, and APIs, extending LangChain's capabilities.
+
+\section{langgraph 0.0.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.0.x \\
+\hline
+\textbf{Purpose} & Stateful agent workflows and orchestration \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+LangGraph enables building complex, stateful agent workflows with explicit control flow. It represents agent behavior as a graph, making workflows more transparent and debuggable.
+
+\section{openai 1.6}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.6 \\
+\hline
+\textbf{Purpose} & Direct OpenAI API client library \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+The official OpenAI Python client provides direct access to OpenAI APIs including GPT models, embeddings, and fine-tuning endpoints.
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item Streaming support for real-time responses
+    \item Async operations for concurrent requests
+    \item Automatic retries with exponential backoff
+    \item Token counting via tiktoken
+    \item Error handling and validation
+\end{itemize}
+
+\section{spacy 3.7}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.7 \\
+\hline
+\textbf{Purpose} & Industrial-strength NLP pipeline \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+spaCy is a production-ready NLP library providing tokenization, part-of-speech tagging, named entity recognition, dependency parsing, and more.
+
+\subsection{Key Capabilities}
+
+\begin{itemize}
+    \item Fast tokenization and lemmatization
+    \item Named entity recognition (NER)
+    \item Dependency parsing
+    \item Similarity computation
+    \item Text classification
+    \item Entity linking
+\end{itemize}
+
+\subsection{Models}
+
+\begin{itemize}
+    \item en\_core\_web\_sm: Small, fast baseline model (40MB)
+    \item en\_core\_web\_trf: Transformer-based model with higher accuracy (400MB)
+\end{itemize}
+
+\section{transformers 4.36}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.36 \\
+\hline
+\textbf{Purpose} & HuggingFace Transformers for BERT, GPT, T5, and other models \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+The Transformers library provides state-of-the-art pre-trained models for NLP tasks. It abstracts the complexities of different architectures and tokenizers.
+
+\subsection{Supported Tasks}
+
+\begin{itemize}
+    \item Text classification and sentiment analysis
+    \item Token classification (NER, POS)
+    \item Question answering
+    \item Text summarization
+    \item Translation
+    \item Language modeling
+    \item Image-text models (CLIP, BLIP)
+\end{itemize}
+
+\section{sentence-transformers 2.2}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.2 \\
+\hline
+\textbf{Purpose} & Semantic text embeddings for similarity search and clustering \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Sentence Transformers extends transformers to produce semantic embeddings. These embeddings capture meaning and enable semantic similarity search without fine-tuning.
+
+\subsection{Key Models}
+
+\begin{itemize}
+    \item all-MiniLM-L6-v2: Fast, 22M parameters
+    \item all-mpnet-base-v2: High quality, 109M parameters
+    \item multi-qa-mpnet-base-dot-v1: Optimized for QA
+\end{itemize}
+
+\section{keybert 0.8}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.8 \\
+\hline
+\textbf{Purpose} & Keyword and keyphrase extraction \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+KeyBERT uses transformer-based embeddings to extract keywords and keyphrases from documents. It identifies words most representative of document content.
+
+\section{yake 0.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.4 \\
+\hline
+\textbf{Purpose} & Yet Another Keyword Extractor \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+YAKE is an unsupervised keyword extraction method requiring no training. It uses statistical approaches to identify important keywords.
+
+\section{langdetect 1.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.0 \\
+\hline
+\textbf{Purpose} & Language detection for multilingual content \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+langdetect detects the language of text using probabilistic models. It supports 55+ languages.
+
+\section{datasketch 1.6}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.6 \\
+\hline
+\textbf{Purpose} & MinHash and LSH for deduplication and similarity \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+datasketch implements MinHash and Locality-Sensitive Hashing (LSH) for efficient similarity estimation and deduplication of documents.
+
+\subsection{Use Cases}
+
+\begin{itemize}
+    \item Detecting duplicate or near-duplicate documents
+    \item Finding similar items in large datasets
+    \item Clustering similar content
+\end{itemize}
+
+\section{tiktoken 0.5}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.5 \\
+\hline
+\textbf{Purpose} & OpenAI token counting for cost and context management \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+tiktoken provides fast token counting for OpenAI models, enabling accurate cost calculation and context window management.
+
+\section{chromadb 0.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.4 \\
+\hline
+\textbf{Purpose} & Alternative vector store for embeddings \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Chroma is a vector database designed for AI applications. It stores embeddings and supports similarity search with metadata filtering.
+
+\subsection{Features}
+
+\begin{itemize}
+    \item Embedding persistence
+    \item Filtering by metadata
+    \item Query functionality
+    \item LangChain integration
+\end{itemize}
+
+\section{faiss-cpu 1.7}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.7 \\
+\hline
+\textbf{Purpose} & Facebook AI Similarity Search for large-scale vector search \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+FAISS is a library for efficient similarity search and clustering of dense vectors. It enables searching millions of embeddings quickly.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Extremely fast similarity search at scale
+    \item Multiple indexing methods (IVF, HNSW)
+    \item GPU acceleration available
+    \item Memory efficient
+\end{itemize}
+
+\chapter{HuggingFace Models Recommendations}
+
+This section provides detailed recommendations for HuggingFace models suitable for SYNAPSE's various NLP tasks.
+
+\section{Model Selection Overview}
+
+HuggingFace hosts thousands of pre-trained models. This section focuses on models specifically recommended for SYNAPSE's use cases, with emphasis on size, speed, and quality trade-offs.
+
+\section{Summarization Models}
+
+\subsection{facebook/bart-large-cnn}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Abstractive summarization \\
+\hline
+Parameters & 400M \\
+\hline
+Size & 1.6 GB \\
+\hline
+Speed & Medium (GPU recommended) \\
+\hline
+Quality & Excellent for news and articles \\
+\hline
+License & MIT \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+BART (Denoising Sequence-to-Sequence Pre-training) fine-tuned on CNN/DailyMail dataset. Excellent for summarizing news articles and long-form content.
+
+\subsubsection{Use Cases}
+
+\begin{itemize}
+    \item Summarizing scraped articles
+    \item Creating brief overviews of long documents
+    \item Extracting key insights
+\end{itemize}
+
+\subsubsection{Example Usage}
+
+\begin{lstlisting}
+from transformers import pipeline
+
+summarizer = pipeline("summarization", 
+    model="facebook/bart-large-cnn")
+result = summarizer(text, max_length=150, 
+    min_length=50, do_sample=False)
+\end{lstlisting}
+
+\subsection{Falconsai/text\_summarization}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Lightweight summarization \\
+\hline
+Parameters & 140M \\
+\hline
+Size & 500 MB \\
+\hline
+Speed & Fast \\
+\hline
+Quality & Good, good for real-time \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+Lightweight BERT-based summarization model suitable for real-time processing and lower resource constraints.
+
+\section{Classification and Sentiment Analysis}
+
+\subsection{facebook/bart-large-mnli}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Zero-shot classification \\
+\hline
+Parameters & 400M \\
+\hline
+Size & 1.6 GB \\
+\hline
+Speed & Medium \\
+\hline
+Quality & Excellent \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+BART fine-tuned on MNLI (Multi-Genre Natural Language Inference) dataset. Enables zero-shot classification without fine-tuning.
+
+\subsubsection{Use Cases}
+
+\begin{itemize}
+    \item Categorizing content without labeled data
+    \item Topic detection
+    \item Intent classification
+\end{itemize}
+
+\subsection{cardiffnlp/twitter-roberta-base-sentiment}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Sentiment analysis \\
+\hline
+Parameters & 125M \\
+\hline
+Size & 500 MB \\
+\hline
+Speed & Fast \\
+\hline
+Quality & Good \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+RoBERTa pre-trained on Twitter data, fine-tuned for sentiment classification. Handles informal language and social media text well.
+
+\section{Embedding Models}
+
+\subsection{sentence-transformers/all-MiniLM-L6-v2}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Semantic embeddings \\
+\hline
+Parameters & 22M \\
+\hline
+Size & 90 MB \\
+\hline
+Speed & Very fast \\
+\hline
+Quality & Good (5 points below larger models) \\
+\hline
+Recommended & For real-time and cost-sensitive \\
+\hline
+\end{tabular}
+
+\subsubsection{Use in SYNAPSE}
+
+Ideal for real-time similarity search and document clustering. Small enough to run on CPU. Recommended for production deployments with high query volume.
+
+\subsection{sentence-transformers/all-mpnet-base-v2}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Semantic embeddings \\
+\hline
+Parameters & 109M \\
+\hline
+Size & 440 MB \\
+\hline
+Speed & Medium \\
+\hline
+Quality & Excellent (higher quality than MiniLM) \\
+\hline
+Recommended & For offline batch processing \\
+\hline
+\end{tabular}
+
+\subsubsection{Use in SYNAPSE}
+
+Better quality for document clustering and search relevance. Recommended for batch indexing operations and offline processing.
+
+\section{Question Answering}
+
+\subsection{deepset/roberta-base-squad2}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Extractive QA \\
+\hline
+Parameters & 125M \\
+\hline
+Size & 500 MB \\
+\hline
+Speed & Fast \\
+\hline
+Quality & Good \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+RoBERTa fine-tuned on SQuAD 2.0 dataset. Performs extractive question answering by identifying answer spans in documents.
+
+\section{Conversational Models}
+
+\subsection{microsoft/DialoGPT-medium}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Conversational AI \\
+\hline
+Parameters & 345M \\
+\hline
+Size & 1.4 GB \\
+\hline
+Speed & Medium \\
+\hline
+Quality & Good dialogue quality \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+GPT-based model trained on Reddit conversations. Suitable for chatbot-like interactions and dialogue generation.
+
+\section{Long Document Processing}
+
+\subsection{allenai/longformer-base-4096}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Long document processing \\
+\hline
+Context & 4096 tokens \\
+\hline
+Parameters & 149M \\
+\hline
+Size & 600 MB \\
+\hline
+Speed & Medium \\
+\hline
+Quality & Good for long contexts \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+Longformer uses attention patterns efficient for long documents. Supports up to 4096 token context (vs BERT's 512).
+
+\section{Instruction Following and Text Generation}
+
+\subsection{google/flan-t5-base}
+
+\begin{tabular}{|p{3cm}|p{11cm}|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Task & Instruction following \\
+\hline
+Parameters & 250M \\
+\hline
+Size & 1.0 GB \\
+\hline
+Speed & Medium \\
+\hline
+Quality & Very good \\
+\hline
+Recommended & Lightweight GPT alternative \\
+\hline
+\end{tabular}
+
+\subsubsection{Description}
+
+T5 model fine-tuned with instructions (FLAN). Excellent for zero-shot instruction following without fine-tuning. Smaller alternative to GPT models.
+
+\section{Model Comparison Table}
+
+\begin{longtable}{|p{2.5cm}|p{2cm}|p{1.5cm}|p{1.5cm}|p{1.5cm}|p{2.5cm}|}
+\hline
+\textbf{Model} & \textbf{Task} & \textbf{Params} & \textbf{Speed} & \textbf{Quality} & \textbf{Best For} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Model} & \textbf{Task} & \textbf{Params} & \textbf{Speed} & \textbf{Quality} & \textbf{Best For} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+BART-CNN & Summarization & 400M & Medium & Excellent & News articles \\
+\hline
+FLAN-T5-base & Instruction & 250M & Medium & Very good & Zero-shot tasks \\
+\hline
+Longformer & Long docs & 149M & Medium & Good & 4K token context \\
+\hline
+All-MiniLM & Embeddings & 22M & Very fast & Good & Real-time search \\
+\hline
+All-MPNet & Embeddings & 109M & Medium & Excellent & Quality search \\
+\hline
+RoBERTa-QA & QA & 125M & Fast & Good & Extractive QA \\
+\hline
+Twitter-RoBERTa & Sentiment & 125M & Fast & Good & Sentiment analysis \\
+\hline
+BART-MNLI & Zero-shot & 400M & Medium & Excellent & Classification \\
+\hline
+DialoGPT & Dialogue & 345M & Medium & Good & Conversational \\
+\hline
+Falcon-Summarize & Summarization & 140M & Fast & Good & Real-time \\
+\hline
+\end{longtable}
+
+\chapter{Document Generation}
+
+SYNAPSE generates various document formats from processed data. This chapter covers libraries for PDF, Word, and PowerPoint generation.
+
+\section{reportlab 4.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.0 \\
+\hline
+\textbf{Purpose} & Programmatic PDF generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+ReportLab is a library for generating PDF documents programmatically. It provides tools for creating sophisticated layouts, tables, charts, and styled text.
+
+\subsection{Advantages}
+
+\begin{itemize}
+    \item Complete control over PDF layout
+    \item Support for tables, charts, and graphics
+    \item Unicode and font embedding
+    \item Incremental generation for large documents
+\end{itemize}
+
+\section{python-pptx 0.6}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.6 \\
+\hline
+\textbf{Purpose} & PowerPoint presentation generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+python-pptx enables creating, reading, and modifying PowerPoint presentations. SYNAPSE uses it to generate executive reports and presentations.
+
+\section{python-docx 0.8}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.8 \\
+\hline
+\textbf{Purpose} & Word document generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+python-docx provides programmatic creation and modification of Microsoft Word documents (.docx format).
+
+\section{fpdf2 2.7}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.7 \\
+\hline
+\textbf{Purpose} & Lightweight PDF generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+FPDF2 is a lightweight alternative to ReportLab for simple PDF generation. Smaller dependencies, good for basic documents.
+
+\section{weasyprint 60.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 60.0 \\
+\hline
+\textbf{Purpose} & HTML to PDF conversion \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+WeasyPrint converts HTML/CSS to PDF. Ideal for generating PDFs from templates designed as HTML.
+
+\section{jinja2 3.1}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.1 \\
+\hline
+\textbf{Purpose} & Template engine for document content generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Jinja2 is a powerful templating engine. SYNAPSE uses it for generating dynamic content in documents with loops, conditionals, and variable substitution.
+
+\section{pillow 10.1}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 10.1 \\
+\hline
+\textbf{Purpose} & Image processing and manipulation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Pillow is the Python Imaging Library. SYNAPSE uses it for image resizing, cropping, and embedding in generated documents.
+
+\section{matplotlib 3.8}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.8 \\
+\hline
+\textbf{Purpose} & Static charts and graphs for documents \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Matplotlib is a comprehensive plotting library. SYNAPSE uses it to generate charts, graphs, and visualizations for inclusion in reports.
+
+\section{plotly 5.18}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.18 \\
+\hline
+\textbf{Purpose} & Interactive charts and dashboards \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Plotly enables creating interactive, responsive visualizations. Supports static export to HTML and images.
+
+\chapter{Frontend Libraries}
+
+SYNAPSE's frontend is built with Next.js and the React ecosystem. This section covers all frontend dependencies for a modern, performant user interface.
+
+\section{next 14.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 14.x \\
+\hline
+\textbf{Purpose} & React framework with server-side rendering and static generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Next.js is a React framework that enables production-grade applications with server-side rendering (SSR), static site generation (SSG), and API routes.
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item File-based routing system
+    \item Server-side rendering and static generation
+    \item API routes for backend functionality
+    \item Image optimization
+    \item Font optimization
+    \item Incremental static regeneration (ISR)
+\end{itemize}
+
+\section{react 18.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 18.x \\
+\hline
+\textbf{Purpose} & UI library for building component-based interfaces \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+React is a JavaScript library for building user interfaces with components. Version 18 introduces concurrent features and automatic batching.
+
+\section{typescript 5.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.x \\
+\hline
+\textbf{Purpose} & Type-safe JavaScript for frontend development \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+TypeScript adds static type checking to JavaScript, catching errors at development time and improving IDE support and code maintainability.
+
+\section{tailwindcss 3.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.4 \\
+\hline
+\textbf{Purpose} & Utility-first CSS framework \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Tailwind CSS provides a utility-first approach to styling, enabling rapid UI development without writing custom CSS.
+
+\section{framer-motion 10.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 10.x \\
+\hline
+\textbf{Purpose} & Animation library for React components \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Framer Motion provides a declarative animation API for React, enabling smooth, performant animations with minimal code.
+
+\section{recharts 2.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.x \\
+\hline
+\textbf{Purpose} & React charting library \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Recharts provides composable React components for building charts. Built on D3 and SVG, it's lightweight and responsive.
+
+\section{chart.js 4.x and react-chartjs-2}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.x / Latest \\
+\hline
+\textbf{Purpose} & Alternative charting solution \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Chart.js is a popular charting library with React bindings via react-chartjs-2. Supports various chart types and animations.
+
+\section{@tanstack/react-query 5.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.x \\
+\hline
+\textbf{Purpose} & Server state management and caching \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+React Query (TanStack Query) manages server state, caching, and synchronization with minimal boilerplate. Essential for data-fetching patterns.
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item Automatic caching and background refetching
+    \item Built-in pagination and infinite query support
+    \item Optimistic updates
+    \item Error handling and retry logic
+    \item Devtools for debugging
+\end{itemize}
+
+\section{zustand 4.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.x \\
+\hline
+\textbf{Purpose} & Lightweight client state management \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Zustand is a lightweight state management library with minimal boilerplate. Simpler alternative to Redux for client-side state.
+
+\section{axios 1.6}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.6 \\
+\hline
+\textbf{Purpose} & HTTP client for API requests \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Axios is a promise-based HTTP client with interceptors, request cancellation, and automatic JSON serialization.
+
+\section{socket.io-client 4.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.x \\
+\hline
+\textbf{Purpose} & WebSocket client for real-time communication \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Socket.IO client enables real-time bidirectional communication between frontend and backend, with fallbacks for older browsers.
+
+\section{react-hook-form 7.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 7.x \\
+\hline
+\textbf{Purpose} & Form state management and validation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+React Hook Form provides a performant, flexible approach to form handling with minimal re-renders and built-in validation.
+
+\section{zod 3.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.x \\
+\hline
+\textbf{Purpose} & TypeScript-first schema validation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Zod is a TypeScript-first schema validation library for runtime data validation. Integrates well with forms and API responses.
+
+\section{@heroicons/react}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & SVG icon library from Tailwind Labs \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Heroicons provides a set of beautiful, consistent SVG icons as React components, designed to pair with Tailwind CSS.
+
+\section{lucide-react}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & Alternative icon library \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Lucide provides a comprehensive icon library as React components, with a consistent design language.
+
+\section{react-markdown 9.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 9.x \\
+\hline
+\textbf{Purpose} & Markdown rendering in React \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+react-markdown renders Markdown content as React components, with support for custom component overrides.
+
+\section{prism-react-renderer}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & Syntax highlighting for code blocks \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Prism React Renderer provides syntax highlighting with Prism.js, integrated as React components for code display.
+
+\section{react-hot-toast}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & Toast notifications \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+React Hot Toast provides headless, accessible toast notifications with simple API and no styling dependencies.
+
+\section{@radix-ui/react-*}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & Accessible UI component primitives \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Radix UI provides unstyled, accessible component primitives that can be styled with Tailwind or custom CSS.
+
+\subsection{Key Packages}
+
+\begin{itemize}
+    \item @radix-ui/react-dialog: Modal dialog
+    \item @radix-ui/react-dropdown-menu: Dropdown menu
+    \item @radix-ui/react-popover: Popover
+    \item @radix-ui/react-tabs: Tabbed content
+    \item @radix-ui/react-select: Select dropdown
+\end{itemize}
+
+\section{date-fns 3.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.x \\
+\hline
+\textbf{Purpose} & Date formatting and manipulation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+date-fns provides utility functions for date manipulation and formatting with excellent TypeScript support.
+
+\section{next-themes}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & Latest \\
+\hline
+\textbf{Purpose} & Dark mode support for Next.js \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+next-themes simplifies dark mode implementation in Next.js applications, with automatic theme detection and persistence.
+
+\chapter{Testing Libraries}
+
+Comprehensive testing is critical for maintaining code quality and reliability. SYNAPSE uses both Python and JavaScript testing frameworks.
+
+\section{pytest 7.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 7.4 \\
+\hline
+\textbf{Purpose} & Python test runner and framework \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+pytest is a mature, powerful test framework for Python. It features simple test syntax, powerful fixtures, and excellent plugin support.
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item Simple assert statements
+    \item Fixtures for test setup and teardown
+    \item Parametrization for running tests with multiple inputs
+    \item Plugins ecosystem
+    \item Detailed failure reporting
+\end{itemize}
+
+\section{pytest-django 4.7}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.7 \\
+\hline
+\textbf{Purpose} & pytest plugin for Django testing \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+pytest-django provides fixtures and utilities for testing Django applications, including database access and client testing.
+
+\section{pytest-asyncio 0.23}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.23 \\
+\hline
+\textbf{Purpose} & pytest plugin for async test support \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+pytest-asyncio enables testing async/await code in pytest, essential for testing FastAPI and async Celery tasks.
+
+\section{pytest-cov 4.1}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 4.1 \\
+\hline
+\textbf{Purpose} & Code coverage measurement \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+pytest-cov measures code coverage during testing, helping identify untested code paths and improve test quality.
+
+\section{factory-boy 3.3}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.3 \\
+\hline
+\textbf{Purpose} & Test data factory library \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Factory Boy provides a simple, elegant way to create test fixtures and mock objects with realistic data.
+
+\section{faker 21.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 21.0 \\
+\hline
+\textbf{Purpose} & Fake data generation \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Faker generates realistic fake data (names, emails, addresses, etc.) for tests, improving test data quality.
+
+\section{responses 0.24}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.24 \\
+\hline
+\textbf{Purpose} & HTTP request mocking \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+responses mocks HTTP requests, enabling testing of code that makes external API calls without hitting real endpoints.
+
+\section{freezegun 1.4}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.4 \\
+\hline
+\textbf{Purpose} & Time mocking for consistent testing \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+freezegun freezes time in tests, enabling deterministic testing of time-dependent code.
+
+\section{jest 29.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 29.x \\
+\hline
+\textbf{Purpose} & JavaScript test runner \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Jest is a zero-config test runner for JavaScript with built-in mocking, coverage, and snapshot testing.
+
+\section{@testing-library/react 14.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 14.x \\
+\hline
+\textbf{Purpose} & React component testing utilities \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Testing Library provides utilities for testing React components by querying the DOM as users would interact with it.
+
+\section{@playwright/test 1.40}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.40 \\
+\hline
+\textbf{Purpose} & End-to-end browser testing \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Playwright Test is a modern E2E testing framework that runs tests against multiple browsers with excellent API for interactions.
+
+\section{msw 2.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.x \\
+\hline
+\textbf{Purpose} & API mocking for tests and development \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Mock Service Worker (MSW) mocks API requests at the network layer, enabling consistent testing and development without backend.
+
+\section{locust 2.20}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 2.20 \\
+\hline
+\textbf{Purpose} & Load and performance testing \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Locust enables writing load tests in Python, simulating multiple users and measuring application performance under stress.
+
+\chapter{DevOps, Monitoring, and Infrastructure}
+
+This chapter covers tools for containerization, monitoring, logging, and quality assurance.
+
+\section{Docker and docker-compose}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Purpose} & Application containerization and orchestration \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Docker enables packaging SYNAPSE and its services as containers, ensuring consistency across development, testing, and production environments.
+
+\subsection{SYNAPSE Services}
+
+\begin{itemize}
+    \item Django application (gunicorn)
+    \item FastAPI microservice (uvicorn)
+    \item PostgreSQL database
+    \item Redis cache and broker
+    \item Celery worker processes
+    \item Flower monitoring
+    \item Frontend (Next.js)
+    \item Nginx reverse proxy
+\end{itemize}
+
+\section{prometheus-client 0.19}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 0.19 \\
+\hline
+\textbf{Purpose} & Prometheus metrics export \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+prometheus-client instruments Python applications with metrics that Prometheus scrapes for monitoring and alerting.
+
+\section{grafana}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Purpose} & Metrics visualization and dashboards \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Grafana creates interactive dashboards for visualizing Prometheus metrics, enabling monitoring of application health and performance.
+
+\section{sentry-sdk 1.39}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.39 \\
+\hline
+\textbf{Purpose} & Error tracking and issue management \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Sentry captures exceptions and errors in production, grouping them and providing detailed context for debugging.
+
+\section{django-silk 5.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.0 \\
+\hline
+\textbf{Purpose} & SQL query profiling and request analysis \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+django-silk profiles Django requests and database queries, identifying performance bottlenecks in the application.
+
+\section{structlog 23.3}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 23.3 \\
+\hline
+\textbf{Purpose} & Structured logging \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+structlog provides structured logging with context, enabling JSON output for parsing logs in monitoring systems.
+
+\section{python-dotenv 1.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.0 \\
+\hline
+\textbf{Purpose} & Environment variable management \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+python-dotenv loads environment variables from .env files, simplifying configuration management in development.
+
+\section{pre-commit 3.6}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.6 \\
+\hline
+\textbf{Purpose} & Git hook framework \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+pre-commit runs automated checks before commits, enforcing code quality and preventing commits of broken code.
+
+\section{black 23.12}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 23.12 \\
+\hline
+\textbf{Purpose} & Python code formatter \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Black is an opinionated code formatter that ensures consistent Python code style across the project.
+
+\section{flake8 6.1}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 6.1 \\
+\hline
+\textbf{Purpose} & Python linter \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+flake8 checks Python code for style issues and potential errors, helping maintain code quality.
+
+\section{isort 5.13}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 5.13 \\
+\hline
+\textbf{Purpose} & Import sorting \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+isort sorts Python imports automatically, improving code consistency and reducing merge conflicts.
+
+\section{bandit 1.7}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 1.7 \\
+\hline
+\textbf{Purpose} & Security linter for Python \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Bandit scans Python code for common security issues, helping identify and fix vulnerabilities.
+
+\section{safety 3.0}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.0 \\
+\hline
+\textbf{Purpose} & Dependency vulnerability scanning \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+safety checks Python dependencies against a database of known security vulnerabilities, ensuring dependencies are secure.
+
+\section{eslint 8.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 8.x \\
+\hline
+\textbf{Purpose} & JavaScript linter \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+ESLint enforces code quality and style standards in JavaScript, catching potential bugs and style issues.
+
+\section{prettier 3.x}
+
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Version} & 3.x \\
+\hline
+\textbf{Purpose} & JavaScript code formatter \\
+\hline
+\end{tabular}
+
+\subsection{Description}
+
+Prettier is an opinionated code formatter for JavaScript and TypeScript, ensuring consistent code formatting.
+
+\chapter{Library Selection Rationale}
+
+This chapter explains the strategic decisions behind key technology choices in SYNAPSE's architecture.
+
+\section{Decision Matrix for Key Technology Choices}
+
+\subsection{Backend Framework Selection}
+
+SYNAPSE uses a hybrid approach: Django for the main application and FastAPI for AI microservices. This decision balances developer productivity against performance requirements.
+
+\begin{itemize}
+    \item Django: Mature ecosystem, rapid development, built-in admin, excellent ORM
+    \item FastAPI: Async-first, high performance, automatic API docs, ideal for real-time AI operations
+\end{itemize}
+
+The separation enables independent scaling: Django handles business logic and user management while FastAPI handles compute-intensive AI operations.
+
+\section{LangChain vs. Alternatives}
+
+SYNAPSE chose LangChain as the primary LLM framework for several reasons:
+
+\subsection{Comparison with LlamaIndex}
+
+\begin{itemize}
+    \item LangChain: Broader scope, agents and chains, multiple model support
+    \item LlamaIndex: Specialized for document indexing and retrieval, lighter weight
+\end{itemize}
+
+LangChain was chosen for its comprehensive agent framework and multi-step reasoning capabilities required for SYNAPSE's intelligence layer.
+
+\subsection{Comparison with Haystack}
+
+\begin{itemize}
+    \item LangChain: Larger ecosystem, more examples, better documentation
+    \item Haystack: More focused on document retrieval, specialized NLP pipelines
+\end{itemize}
+
+\section{Web Scraping Framework Selection}
+
+Scrapy was selected as the primary web scraping framework because:
+
+\begin{itemize}
+    \item Distributed scraping capabilities for large-scale operations
+    \item Built-in middleware for handling common challenges (robots.txt, rate limiting)
+    \item Item pipelines for data transformation and storage
+    \item Excellent performance with concurrent requests
+\end{itemize}
+
+Alternatives like Selenium and Requests-HTML are used for specific scenarios where JavaScript rendering or simpler interfaces are needed.
+
+\section{Vector Database Selection: pgvector}
+
+SYNAPSE chose PostgreSQL with pgvector extension over standalone vector databases for several strategic reasons:
+
+\subsection{pgvector Advantages}
+
+\begin{itemize}
+    \item Single database eliminates operational complexity
+    \item ACID compliance ensures data integrity
+    \item Integrated with Django ORM
+    \item No additional service to manage and scale
+    \item Cost-effective for most use cases
+\end{itemize}
+
+\subsection{When Specialized Databases Might Be Better}
+
+\begin{itemize}
+    \item Extreme scale (billions of vectors) favors Pinecone or Weaviate
+    \item Specialized filtering needs might prefer Qdrant
+    \item Multi-tenant isolation favors managed solutions
+\end{itemize}
+
+\section{Task Queue Selection: Celery}
+
+Celery was chosen over alternatives (RQ, Dramatiq, ARQ) because:
+
+\subsection{Advantages over Alternatives}
+
+\begin{itemize}
+    \item Most mature distributed task queue
+    \item Multiple broker support (Redis, RabbitMQ, etc.)
+    \item Excellent monitoring with Flower
+    \item Large community and ecosystem
+    \item Battle-tested in production systems
+\end{itemize}
+
+\subsection{Trade-offs}
+
+\begin{itemize}
+    \item Heavier than minimal queues like RQ
+    \item More configuration required for advanced features
+    \item Performance concerns addressed through Redis broker
+\end{itemize}
+
+\section{Frontend Framework Selection: Next.js}
+
+SYNAPSE selected Next.js over alternatives (Remix, Nuxt, SvelteKit) because:
+
+\subsection{Key Advantages}
+
+\begin{itemize}
+    \item Most mature React metaframework
+    \item Excellent SEO and performance optimization
+    \item API routes eliminate need for separate backend
+    \item Large ecosystem and community support
+    \item Deployment ease with Vercel
+\end{itemize}
+
+\subsection{Comparison Table}
+
+\begin{longtable}{|p{2.5cm}|p{2cm}|p{2cm}|p{2cm}|p{2cm}|}
+\hline
+\textbf{Framework} & \textbf{DX} & \textbf{Performance} & \textbf{Community} & \textbf{Maturity} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Framework} & \textbf{DX} & \textbf{Performance} & \textbf{Community} & \textbf{Maturity} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+
+Next.js & Excellent & Very Good & Largest & Mature \\
+\hline
+Remix & Very Good & Excellent & Growing & Established \\
+\hline
+Nuxt & Excellent & Good & Large & Mature \\
+\hline
+SvelteKit & Excellent & Excellent & Small & Emerging \\
+\hline
+\end{longtable}
+
+Next.js was chosen for its maturity, ecosystem, and proven track record in production applications similar to SYNAPSE.
+
+\chapter{Requirements Files and Configuration}
+
+This section provides complete dependency specifications for SYNAPSE.
+
+\section{requirements.txt (Backend Production)}
+
+\begin{lstlisting}
+Django==4.2.8
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
+djangorestframework-simplejwt==5.3.2
+django-axes==6.1.1
+django-prometheus==0.3.0
+django-redis==5.4.0
+django-celery-beat==2.5.0
+django-celery-results==2.5.1
+
+FastAPI==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.0
+
+psycopg2-binary==2.9.9
+pgvector==0.2.4
+redis==5.0.1
+boto3==1.34.0
+google-api-python-client==2.110.0
+
+Scrapy==2.11.0
+beautifulsoup4==4.12.2
+playwright==1.40.0
+httpx==0.25.2
+requests==2.31.0
+feedparser==6.0.10
+newspaper3k==0.2.8
+trafilatura==1.6.1
+html2text==2020.1.16
+fake-useragent==1.4.0
+
+celery==5.3.4
+flower==2.0.1
+apscheduler==3.10.4
+
+langchain==0.1.0
+langchain-openai==0.0.5
+langchain-community==0.0.10
+langgraph==0.0.12
+openai==1.6.1
+
+spacy==3.7.2
+transformers==4.36.2
+sentence-transformers==2.2.2
+keybert==0.8.0
+yake==0.4.8
+langdetect==1.0.9
+datasketch==1.6.1
+tiktoken==0.5.2
+chromadb==0.4.14
+faiss-cpu==1.7.4
+
+reportlab==4.0.7
+python-pptx==0.6.21
+python-docx==0.8.11
+fpdf2==2.7.0
+weasyprint==60.0
+jinja2==3.1.2
+pillow==10.1.0
+matplotlib==3.8.2
+plotly==5.18.0
+
+SQLAlchemy==2.0.23
+alembic==1.13.1
+
+gunicorn==21.2.0
+sentry-sdk==1.39.2
+structlog==23.3.0
+python-dotenv==1.0.0
+prometheus-client==0.19.0
+\end{lstlisting}
+
+\section{requirements-dev.txt (Development and Testing)}
+
+\begin{lstlisting}
+-r requirements.txt
+
+pytest==7.4.3
+pytest-django==4.7.0
+pytest-asyncio==0.23.0
+pytest-cov==4.1.0
+factory-boy==3.3.0
+faker==21.0.0
+responses==0.24.1
+freezegun==1.4.0
+
+black==23.12.0
+flake8==6.1.0
+isort==5.13.2
+bandit==1.7.5
+safety==3.0.0
+pre-commit==3.6.0
+django-silk==5.0.4
+
+locust==2.20.0
+\end{lstlisting}
+
+\section{package.json (Frontend Dependencies)}
+
+\begin{lstlisting}
+{
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "typescript": "^5.0.0",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8.4.0",
+    "autoprefixer": "^10.4.0",
+    "framer-motion": "^10.0.0",
+    "recharts": "^2.10.0",
+    "chart.js": "^4.4.0",
+    "react-chartjs-2": "^5.2.0",
+    "@tanstack/react-query": "^5.28.0",
+    "zustand": "^4.4.0",
+    "axios": "^1.6.0",
+    "socket.io-client": "^4.7.0",
+    "react-hook-form": "^7.48.0",
+    "zod": "^3.22.0",
+    "@heroicons/react": "^2.0.0",
+    "lucide-react": "^0.292.0",
+    "react-markdown": "^9.0.0",
+    "prism-react-renderer": "^2.3.0",
+    "react-hot-toast": "^2.4.0",
+    "@radix-ui/react-dialog": "^1.1.0",
+    "@radix-ui/react-dropdown-menu": "^2.0.0",
+    "@radix-ui/react-popover": "^1.0.0",
+    "@radix-ui/react-tabs": "^1.0.0",
+    "@radix-ui/react-select": "^2.0.0",
+    "date-fns": "^3.0.0",
+    "next-themes": "^0.2.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "@testing-library/react": "^14.1.0",
+    "@testing-library/jest-dom": "^6.1.0",
+    "@playwright/test": "^1.40.0",
+    "msw": "^2.0.0",
+    "eslint": "^8.55.0",
+    "prettier": "^3.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0"
+  }
+}
+\end{lstlisting}
+
+\section{pyproject.toml Configuration}
+
+\begin{lstlisting}
+[tool.poetry]
+name = "synapse"
+version = "1.0.0"
+description = "AI-powered tech intelligence platform"
+authors = ["SYNAPSE Team"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_gitignore = true
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "synapse.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+addopts = "--cov=synapse --cov-report=html"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+source = ["synapse"]
+omit = [
+    "*/migrations/*",
+    "*/settings.py",
+    "manage.py",
+]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "E266", "E501", "W503"]
+exclude = [".git", "__pycache__", "migrations", ".venv"]
+\end{lstlisting}
+
+\chapter{Conclusion}
+
+SYNAPSE's technology stack has been carefully curated to balance several key requirements:
+
+\section{Key Design Principles}
+
+\begin{itemize}
+    \item Open Source First: All core technologies are open source
+    \item Production-Ready: Libraries with proven track records in large-scale systems
+    \item Scalability: Architecture supports horizontal scaling
+    \item Maintainability: Popular libraries with large communities
+    \item Performance: Async-first design where it matters
+    \item Developer Experience: Modern tooling and excellent documentation
+\end{itemize}
+
+\section{Technology Strengths}
+
+\begin{itemize}
+    \item Unified Python backend with both sync (Django) and async (FastAPI) capabilities
+    \item Modern frontend with Next.js and React ecosystem
+    \item Powerful NLP and AI capabilities through LangChain and HuggingFace
+    \item Comprehensive data pipeline from scraping to storage to analysis
+    \item Enterprise-grade monitoring and error tracking
+\end{itemize}
+
+\section{Future Considerations}
+
+As SYNAPSE evolves, the following technologies may be revisited:
+
+\begin{itemize}
+    \item Vector database: Consider specialized databases if scale exceeds pgvector capabilities
+    \item Frontend: Monitor SvelteKit maturity for potential future migration
+    \item Task queue: Evaluate alternatives if Celery becomes a bottleneck
+    \item Deployment: Kubernetes orchestration as operational complexity increases
+\end{itemize}
+
+\section{Maintenance and Updates}
+
+All dependencies should be:
+
+\begin{itemize}
+    \item Reviewed monthly for security updates
+    \item Updated quarterly when possible
+    \item Tested thoroughly before production deployment
+    \item Monitored for deprecation notices
+\end{itemize}
+
+Version pinning in requirements files ensures reproducible builds and prevents unexpected breaking changes in production.
+
+\end{document}

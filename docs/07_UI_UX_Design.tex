@@ -1,0 +1,1103 @@
+\documentclass{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tcolorbox}
+\usepackage{tikz}
+
+\hypersetup{colorlinks=true, linkcolor=blue, urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{SYNAPSE UI/UX Design Document}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{AI-Powered Technology Intelligence Platform}
+
+\definecolor{primary}{HTML}{6366F1}
+\definecolor{primaryDark}{HTML}{4F46E5}
+\definecolor{secondary}{HTML}{06B6D4}
+\definecolor{secondaryDark}{HTML}{0891B2}
+\definecolor{accent}{HTML}{8B5CF6}
+\definecolor{success}{HTML}{10B981}
+\definecolor{warning}{HTML}{F59E0B}
+\definecolor{error}{HTML}{EF4444}
+\definecolor{darkBg}{HTML}{0F172A}
+\definecolor{darkSurface}{HTML}{1E293B}
+\definecolor{lightBg}{HTML}{F8FAFC}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    columns=fullflexible,
+    frame=single,
+    backgroundcolor=\color{lightBg},
+    rulecolor=\color{primary},
+    stringstyle=\color{success},
+    keywordstyle=\color{primaryDark}\bfseries,
+    commentstyle=\color{gray},
+    breakatwhitespace=false,
+    tabsize=2
+}
+
+\title{\Huge\textbf{SYNAPSE}\\[0.5cm]\Large UI/UX Design Document\\[0.3cm]\normalsize AI-Powered Technology Intelligence and Automation Platform}
+\author{Design System Specification}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+\tableofcontents
+\newpage
+
+\chapter{Executive Overview}
+
+SYNAPSE is a FAANG-style AI-powered technology intelligence and automation platform designed to empower developers, researchers, and technology professionals. This comprehensive UI/UX design document outlines the visual design system, component library, and page-by-page specifications for the Next.js 14-based web application.
+
+\textbf{Frontend Stack:}
+\begin{itemize}
+    \item Framework: Next.js 14, React 18, TypeScript
+    \item Styling: TailwindCSS 3.4, Framer Motion
+    \item Visualization: Chart.js, Recharts
+    \item Icons: Heroicons, Lucide React
+\end{itemize}
+
+\chapter{Design Philosophy \& Principles}
+
+\section{Design Goals}
+
+The SYNAPSE platform is guided by four primary design goals:
+
+\begin{enumerate}
+    \item \textbf{Clarity:} Information is presented in clear, digestible formats. Visual hierarchy guides users through complex data seamlessly.
+    \item \textbf{Efficiency:} Users accomplish tasks with minimal friction. Navigation is intuitive, and actions are discoverable.
+    \item \textbf{Intelligence:} The AI-powered nature of the platform is apparent and trustworthy. AI insights are presented with context and citations.
+    \item \textbf{Delight:} Thoughtful animations, micro-interactions, and polished transitions create an engaging experience.
+\end{enumerate}
+
+\section{Design Principles}
+
+\subsection{Information Hierarchy}
+Visual weight, size, and color guide users to the most important content first. Primary actions are prominent and easily distinguished from secondary actions.
+
+\subsection{Progressive Disclosure}
+Complex features are revealed incrementally. Advanced options are available but not overwhelming. Defaults are sensible and powerful.
+
+\subsection{AI-First UX}
+The platform leverages AI intelligence throughout. All AI-generated content is clearly labeled with source citations. Users understand \textit{why} AI recommendations are made.
+
+\subsection{Responsive Design}
+The interface adapts gracefully across all devices. Mobile experience is not an afterthought but a first-class design concern.
+
+\section{Accessibility Standards}
+
+SYNAPSE meets \textbf{WCAG 2.1 Level AA} compliance standards:
+
+\begin{itemize}
+    \item Minimum color contrast ratio of 4.5:1 for normal text
+    \item Keyboard navigation support for all interactive elements
+    \item ARIA labels and semantic HTML throughout
+    \item Focus indicators visible on all interactive elements
+    \item Screen reader compatible
+    \item Motion and animation can be disabled via \texttt{prefers-reduced-motion}
+\end{itemize}
+
+\section{Responsive Design Strategy}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Breakpoint} & \textbf{Screen Size} & \textbf{Layout Strategy} \\
+\hline
+Mobile & 320–767px & Single column, bottom navigation, stacked components \\
+\hline
+Tablet & 768–1023px & 2 columns, collapsible sidebar, optimized spacing \\
+\hline
+Desktop & 1024–1279px & 3 columns, full sidebar, expanded content \\
+\hline
+Wide & 1280px+ & 4 columns, expanded sidebar, full-width content \\
+\hline
+\end{tabular}
+\end{table}
+
+\chapter{Visual Design System}
+
+\section{Color Palette}
+
+\subsection{Primary Colors}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Color} & \textbf{Hex Code} & \textbf{Usage} \\
+\hline
+Indigo-500 & \#6366F1 & Primary CTA, active states, primary text \\
+\hline
+Indigo-600 & \#4F46E5 & Hover states, darker variant \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Secondary Colors}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Color} & \textbf{Hex Code} & \textbf{Usage} \\
+\hline
+Cyan-500 & \#06B6D4 & Secondary accents, highlights \\
+\hline
+Cyan-600 & \#0891B2 & Secondary hover states \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Semantic Colors}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Color} & \textbf{Hex Code} & \textbf{Usage} \\
+\hline
+Accent (Violet) & \#8B5CF6 & Featured highlights, premium features \\
+\hline
+Success (Green) & \#10B981 & Positive states, completion, success messages \\
+\hline
+Warning (Amber) & \#F59E0B & Warnings, caution states \\
+\hline
+Error (Red) & \#EF4444 & Errors, destructive actions \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Neutral Colors}
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Mode} & \textbf{Background} & \textbf{Surface} \\
+\hline
+Dark Mode & \#0F172A (Slate-900) & \#1E293B (Slate-800) \\
+\hline
+Light Mode & \#F8FAFC (Slate-50) & \#FFFFFF \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Typography}
+
+\subsection{Font Family}
+\textbf{Inter} from Google Fonts is used throughout the application. It is a highly legible sans-serif font optimized for screen readability.
+
+\subsection{Type Scale}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Style} & \textbf{Size} & \textbf{Weight} & \textbf{Usage} \\
+\hline
+4XL Heading & 36px & Bold (700) & Page titles \\
+\hline
+3XL Heading & 30px & Bold (700) & Section headers \\
+\hline
+2XL Heading & 24px & Semibold (600) & Card titles \\
+\hline
+XL Heading & 20px & Semibold (600) & Subsection headers \\
+\hline
+LG Heading & 18px & Semibold (600) & Component headers \\
+\hline
+Base Body & 16px & Regular (400) & Primary body text \\
+\hline
+SM Body & 14px & Regular (400) & Secondary text \\
+\hline
+XS Body & 12px & Regular (400) & Captions, metadata \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Font Weights}
+\begin{itemize}
+    \item \textbf{Regular (400)}: Body text, descriptions
+    \item \textbf{Medium (500)}: Button labels, input labels
+    \item \textbf{Semibold (600)}: Section headers, emphasized text
+    \item \textbf{Bold (700)}: Page titles, major headings
+\end{itemize}
+
+\section{Spacing System}
+
+The spacing system is based on a \textbf{4px unit base}. All spacing values are multiples of 4 for consistency and ease of alignment.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Token} & \textbf{Value} & \textbf{Usage} \\
+\hline
+xs & 4px & Tight spacing within components \\
+\hline
+sm & 8px & Padding within small components, gaps between inline elements \\
+\hline
+md & 12px & Component padding, small margins \\
+\hline
+base & 16px & Default padding, standard margins \\
+\hline
+lg & 20px & Large padding, component spacing \\
+\hline
+xl & 24px & Section spacing \\
+\hline
+2xl & 32px & Major section breaks \\
+\hline
+3xl & 40px & Large spacing \\
+\hline
+4xl & 48px & Very large spacing \\
+\hline
+5xl & 64px & Page-level spacing \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Border Radius System}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Token} & \textbf{Value} & \textbf{Usage} \\
+\hline
+sm & 4px & Small buttons, inputs \\
+\hline
+md & 8px & Cards, panels, standard components \\
+\hline
+lg & 12px & Large cards, modals \\
+\hline
+xl & 16px & Extra large components \\
+\hline
+full & 9999px & Pill buttons, badges \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Shadow System}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Shadow Level} & \textbf{Description} \\
+\hline
+sm & Subtle elevation, subtle depth \\
+\hline
+md & Default elevation for cards and components \\
+\hline
+lg & Elevated modals, popovers \\
+\hline
+xl & High elevation, floating panels \\
+\hline
+2xl & Maximum elevation, sticky headers \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Icon System}
+
+SYNAPSE uses two primary icon libraries:
+
+\begin{enumerate}
+    \item \textbf{Heroicons:} For navigation, actions, and UI elements. Consistent 20px and 24px sizes.
+    \item \textbf{Lucide React:} For specialized data visualization and custom icons.
+\end{enumerate}
+
+Icon sizing:
+\begin{itemize}
+    \item \texttt{xs}: 12px (captions, badges)
+    \item \texttt{sm}: 16px (buttons, inputs)
+    \item \texttt{md}: 20px (navigation, default)
+    \item \texttt{lg}: 24px (headers, large buttons)
+    \item \texttt{xl}: 32px (hero sections)
+\end{itemize}
+
+\section{Z-Index Scale}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Level} & \textbf{Z-Index} & \textbf{Component} \\
+\hline
+Base & 0 & Standard content \\
+\hline
+Elevated & 10 & Cards, hover states \\
+\hline
+Dropdown & 20 & Dropdowns, popovers \\
+\hline
+Sticky & 30 & Sticky headers, sidebars \\
+\hline
+Modal & 40 & Modal backdrops \\
+\hline
+Dialog & 50 & Modal dialogs, top modals \\
+\hline
+Notification & 60 & Toasts, notifications \\
+\hline
+Tooltip & 70 & Tooltips \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\chapter{Page-by-Page Design Specifications}
+
+\section{Main Dashboard (Home)}
+
+The main dashboard is the central hub for SYNAPSE. It features:
+
+\begin{itemize}
+    \item \textbf{Top Navbar}: Search bar, notification bell, dark mode toggle, user avatar
+    \item \textbf{Left Sidebar}: Logo, navigation links with icons, user profile section at bottom, collapse button
+    \item \textbf{Main Content Area}: Hero stats row showing key metrics
+    \item \textbf{Tech Trend Radar}: Polar area chart visualizing trending technologies
+    \item \textbf{AI-Curated News Feed}: Scrollable cards with title, source, AI summary, tags, reading time
+    \item \textbf{Trending Technologies}: Sidebar widget with trending tech tags
+    \item \textbf{GitHub Activity}: Widget showing recent starred repositories
+    \item \textbf{Recently Saved}: Knowledge library quick access
+\end{itemize}
+
+\subsection{Hero Stats Row}
+
+Four stat cards displayed prominently:
+\begin{enumerate}
+    \item Total Articles (cumulative count)
+    \item Trending Topics (number of hot topics)
+    \item New Papers Today (arxiv submissions)
+    \item Active Agents (running automation workflows)
+\end{enumerate}
+
+\section{Tech Intelligence Feed}
+
+\subsection{Layout}
+
+\begin{enumerate}
+    \item \textbf{Filter Bar}: Category filters (All, AI, Web Dev, Security, Cloud, Research)
+    \item \textbf{Sort Options}: Latest, Trending, Most Relevant
+    \item \textbf{Article Grid}: 2-3 columns on desktop, 1 column on mobile
+    \item \textbf{Infinite Scroll}: Automatic loading with skeleton placeholders
+\end{enumerate}
+
+\subsection{Article Card Anatomy}
+
+Each article card contains:
+\begin{itemize}
+    \item Source icon/thumbnail (small image)
+    \item Title (2xl heading)
+    \item Source badge (e.g., ``HackerNews'')
+    \item Published timestamp (relative time)
+    \item AI-generated summary (max 3 lines)
+    \item Topic tags (colored badges)
+    \item Reading time estimate
+    \item Bookmark button (unfilled or filled)
+\end{itemize}
+
+\section{Research Explorer}
+
+\subsection{Features}
+
+\begin{itemize}
+    \item Search bar with autocomplete
+    \item Filter panel: category dropdown, difficulty selector, date range picker
+    \item Paper cards: title, authors, abstract preview, difficulty badge, category tags
+    \item Citation count and AI summary
+    \item arXiv link and bookmark button
+    \item List/grid view toggle
+    \item Sorting options: date, citations, difficulty, relevance
+\end{itemize}
+
+\section{GitHub Radar}
+
+\subsection{Header Stats}
+
+Two prominent metrics:
+\begin{enumerate}
+    \item Trending repos today (count)
+    \item New stars this week (count)
+\end{enumerate}
+
+\subsection{Filtering and Display}
+
+Language filter pills: Python, JavaScript, Rust, Go, TypeScript
+
+\subsection{Repository Card}
+
+Each repo card shows:
+\begin{itemize}
+    \item Repository name (linked)
+    \item Owner avatar and name
+    \item Description text (2 lines max)
+    \item Star count with trend indicator (e.g., ``+500 today'')
+    \item Language badge with color coding
+    \item Topics as tags
+    \item Bookmark button
+\end{itemize}
+
+\subsection{Star Growth Chart}
+
+Inline sparkline showing star growth trajectory over time.
+
+\section{Learning Hub}
+
+\subsection{Content Types}
+
+\begin{enumerate}
+    \item \textbf{Video Cards}: Thumbnail, title, channel name, duration, view count, AI summary, topic tags
+    \item \textbf{Collections}: User's organized collections with cover image and item count
+    \item \textbf{Reading List}: Saved articles and papers
+    \item \textbf{Progress Tracking}: Visual progress indicators for ongoing learning paths
+\end{enumerate}
+
+\section{AI Chat Assistant}
+
+\subsection{Layout Structure}
+
+\begin{itemize}
+    \item \textbf{Left Panel}: Conversation history list with timestamps, new chat button, clear history
+    \item \textbf{Main Chat Area}: Message thread with user messages right-aligned, AI messages left-aligned
+    \item \textbf{Input Area}: Large textarea input, send button, attach context button
+\end{itemize}
+
+\subsection{Message Components}
+
+\textbf{User Message Bubble}:
+\begin{itemize}
+    \item Right-aligned
+    \item Indigo background with white text
+    \item Rounded corners with no radius on top-right
+    \item Max width 70\% of viewport
+\end{itemize}
+
+\textbf{AI Response Bubble}:
+\begin{itemize}
+    \item Left-aligned with avatar
+    \item Light gray background
+    \item Markdown support for formatted text
+    \item Source citations as separate cards below message
+    \item Copy button to copy message text
+\end{itemize}
+
+\textbf{Source Citation Cards}:
+\begin{itemize}
+    \item Blue tinted background
+    \item Document icon
+    \item Source title (bold)
+    \item Source URL (linked)
+    \item Appears below AI message
+\end{itemize}
+
+\subsection{Empty State}
+
+Suggested prompts displayed as chips:
+\begin{itemize}
+    \item ``Summarize latest AI breakthroughs''
+    \item ``Find JavaScript frameworks''
+    \item ``What's trending in cloud infrastructure?''
+    \item ``Explain this research paper''
+\end{itemize}
+
+\subsection{Streaming Response Animation}
+
+Typing indicator with animated dots. Response text appears word-by-word for engaging UX.
+
+\section{Automation Center}
+
+\subsection{Workflow List}
+
+Table or card view showing:
+\begin{itemize}
+    \item Workflow name
+    \item Description
+    \item Status badge: Active (green), Paused (gray), Failed (red)
+    \item Last run time
+    \item Next scheduled run
+    \item Action buttons (edit, pause/resume, delete)
+\end{itemize}
+
+\subsection{Create Workflow}
+
+Modal/drawer form with:
+\begin{enumerate}
+    \item Workflow name input
+    \item Description textarea
+    \item Trigger type: Schedule (with cron picker UI) or Event
+    \item Action steps builder (add/remove steps)
+    \item Supported actions: Collect News, Summarize, Generate PDF, Send Email, Upload to Drive
+    \item Save and activate buttons
+\end{enumerate}
+
+\subsection{Workflow Run History}
+
+Table showing:
+\begin{itemize}
+    \item Run date/time
+    \item Status badge
+    \item Actions executed count
+    \item Duration
+    \item Logs link
+\end{itemize}
+
+\subsection{Active Agents Panel}
+
+Running tasks with:
+\begin{itemize}
+    \item Task name
+    \item Progress bar (percentage)
+    \item Status text
+    \item Stop button
+\end{itemize}
+
+\section{Document Studio}
+
+\subsection{Generate Document Form}
+
+\begin{enumerate}
+    \item Prompt input textarea
+    \item Document type selector: PDF, PowerPoint, Word, Markdown
+    \item Generation options (tone, length, style)
+    \item Generate button
+    \item Loading state with progress indicator
+\end{enumerate}
+
+\subsection{Documents Library}
+
+Grid layout showing:
+\begin{itemize}
+    \item Document thumbnail/preview
+    \item Title
+    \item Generated date
+    \item Type badge (PDF, PPTX, DOCX, MD)
+    \item Download button
+    \item Delete button
+    \item Share button
+\end{itemize}
+
+\subsection{Document Preview Modal}
+
+Full-page or modal preview with:
+\begin{itemize}
+    \item Document viewer (PDF, PPTX preview)
+    \item Download button
+    \item Share button
+    \item Close button
+\end{itemize}
+
+\section{Knowledge Library}
+
+\subsection{Layout}
+
+\begin{itemize}
+    \item \textbf{Collections Sidebar}: List of user-created collections with icons
+    \item \textbf{Main Area}: Grid of bookmarked items (articles, papers, repos, videos mixed)
+    \item \textbf{Right Panel}: Note-taking editor for selected item (optional, collapsible)
+\end{itemize}
+
+\subsection{Bookmarked Item Card}
+
+Mixed-type grid showing:
+\begin{itemize}
+    \item Item type icon (article, paper, repo, video)
+    \item Title
+    \item Source/author metadata
+    \item Brief description
+    \item Topic tags
+    \item Timestamp added
+    \item Edit/delete actions
+\end{itemize}
+
+\subsection{Tags Filter Cloud}
+
+Below bookmarks showing all available tags. Click to filter. Clickable, with tag counts.
+
+
+\section{User Profile \& Settings}
+
+\subsection{Profile Section}
+
+\begin{itemize}
+    \item User avatar (large, editable)
+    \item Display name (editable)
+    \item Email address
+    \item Role/tier badge (Free, Pro, Enterprise)
+    \item Member since date
+\end{itemize}
+
+\subsection{Preferences}
+
+\begin{enumerate}
+    \item \textbf{Topic Interests}: Multi-select chip input for preferred technology categories
+    \item \textbf{Notification Settings}: Toggle switches for email digests, real-time alerts, summary frequency
+    \item \textbf{Display Preferences}: Theme selection (light/dark/auto), language, timezone
+    \item \textbf{API Keys}: Generate, view, regenerate, revoke API keys
+    \item \textbf{Connected Services}: OAuth integrations (GitHub, Google, etc.)
+\end{enumerate}
+
+\subsection{Account Management}
+
+\begin{itemize}
+    \item Password change form
+    \item Two-factor authentication setup
+    \item Active sessions list with device info
+    \item Account deletion (with confirmation)
+\end{itemize}
+
+\chapter{Animation \& Interaction Design}
+
+\section{Page Transitions}
+
+Using Framer Motion for smooth transitions:
+
+\begin{itemize}
+    \item \textbf{Fade}: Opacity transition from 0 to 1 over 300ms
+    \item \textbf{Slide}: Lateral movement with fade (useful for sidebar, modals)
+    \item \textbf{Scale}: Subtle zoom effect (0.95 to 1.0) for modal entrance
+\end{itemize}
+
+Example Framer Motion code:
+
+\begin{lstlisting}[language=HTML]
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -20 }}
+  transition={{ duration: 0.3 }}
+>
+  Content here
+</motion.div>
+\end{lstlisting}
+
+\section{Card Hover Effects}
+
+\begin{itemize}
+    \item \textbf{Shadow Elevation}: Shadow increases on hover
+    \item \textbf{Border Color}: Subtle color shift to primary color
+    \item \textbf{Scale}: Minimal 2\% increase in size
+    \item \textbf{Duration}: 150ms transition
+\end{itemize}
+
+\begin{lstlisting}[language=HTML]
+<div class="transition-all duration-150 hover:shadow-lg 
+  hover:border-indigo-500 hover:scale-102">
+  Card content
+</div>
+\end{lstlisting}
+
+\section{Sidebar Collapse Animation}
+
+\begin{itemize}
+    \item \textbf{Smooth Width Transition}: 256px to 80px over 200ms
+    \item \textbf{Text Fade}: Labels fade out as sidebar collapses
+    \item \textbf{Icon Centering}: Icons remain centered in collapsed state
+    \item \textbf{Tooltip}: Tooltips appear on hover of collapsed nav items
+\end{itemize}
+
+\section{Chat Streaming Text Animation}
+
+\begin{itemize}
+    \item \textbf{Typing Indicator}: Three animated dots with staggered animation
+    \item \textbf{Word-by-Word Reveal}: New words fade in gradually
+    \item \textbf{Cursor Blink}: Optional blinking cursor at end of message
+\end{itemize}
+
+\section{Skeleton Loading Shimmer}
+
+\begin{lstlisting}[language=HTML]
+<div class="animate-pulse bg-gradient-to-r from-gray-200 
+  via-gray-100 to-gray-200 bg-size-200 
+  animate-shimmer h-4 rounded"></div>
+\end{lstlisting}
+
+\section{Toast Notification Slide-In}
+
+\begin{itemize}
+    \item \textbf{Entrance}: Slide in from top-right, fade in
+    \item \textbf{Position}: Fixed top-right with safe margin
+    \item \textbf{Auto-Dismiss}: Slide out and fade after 4 seconds
+    \item \textbf{Stacking}: Multiple toasts stack vertically
+\end{itemize}
+
+\section{Chart Entrance Animations}
+
+\begin{itemize}
+    \item \textbf{Bars}: Grow from baseline upward
+    \item \textbf{Lines}: Draw from left to right
+    \item \textbf{Pie}: Segments appear sequentially
+    \item \textbf{Duration}: 800ms total animation
+    \item \textbf{Easing}: Ease-out for natural feel
+\end{itemize}
+
+\chapter{Dark Mode Design}
+
+\section{Color Mappings}
+
+Dark mode uses inverted contrast while maintaining color intent:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Component} & \textbf{Light Mode} & \textbf{Dark Mode} \\
+\hline
+Background & \#F8FAFC & \#0F172A \\
+\hline
+Surface & \#FFFFFF & \#1E293B \\
+\hline
+Text Primary & \#0F172A & \#F8FAFC \\
+\hline
+Text Secondary & \#64748B & \#CBD5E1 \\
+\hline
+Border & \#E2E8F0 & \#334155 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Implementation with TailwindCSS}
+
+TailwindCSS dark mode is implemented using class strategy:
+
+\begin{lstlisting}[language=HTML]
+<div class="bg-white dark:bg-slate-800 
+  text-gray-900 dark:text-slate-50">
+  Content adapts to dark mode
+</div>
+\end{lstlisting}
+
+In \texttt{tailwind.config.js}:
+
+\begin{lstlisting}[language=Java]
+module.exports = {
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eef2ff',
+          500: '#6366f1',
+          600: '#4f46e5',
+        }
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+\section{System Preference Detection}
+
+JavaScript detects system dark mode preference:
+
+\begin{lstlisting}[language=Java]
+const prefersDark = window.matchMedia(
+  '(prefers-color-scheme: dark)'
+).matches;
+
+if (prefersDark) {
+  document.documentElement.classList.add('dark');
+}
+\end{lstlisting}
+
+\chapter{Accessibility Design}
+
+\section{WCAG 2.1 Level AA Compliance}
+
+\subsection{Color Contrast}
+
+All text meets minimum 4.5:1 contrast ratio for normal text and 3:1 for large text.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|l|}
+\hline
+\textbf{Component} & \textbf{Foreground} & \textbf{Background} & \textbf{Ratio} \\
+\hline
+Primary Button Text & White & Indigo-600 & 8.6:1 \\
+\hline
+Body Text & Gray-900 & White & 10.4:1 \\
+\hline
+Secondary Text & Gray-600 & White & 4.5:1 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{ARIA Labels and Roles}
+
+All interactive elements include appropriate ARIA attributes:
+
+\begin{lstlisting}[language=HTML]
+<button aria-label="Dark mode toggle" 
+  aria-pressed="false">[moon]</button>
+
+<nav aria-label="Main navigation">
+  <!-- navigation items -->
+</nav>
+
+<main role="main">
+  <!-- main content -->
+</main>
+
+<aside aria-label="Sidebar">
+  <!-- sidebar content -->
+</aside>
+\end{lstlisting}
+
+\subsection{Keyboard Navigation}
+
+\begin{itemize}
+    \item All interactive elements are keyboard accessible
+    \item Tab order follows logical visual flow
+    \item Focus indicators visible (minimum 2px outline)
+    \item Escape key closes modals and popovers
+    \item Enter/Space activates buttons
+    \item Arrow keys navigate lists and menus
+\end{itemize}
+
+\subsection{Focus Indicators}
+
+All interactive elements show visible focus state:
+
+\begin{lstlisting}[language=HTML]
+<button class="focus:outline-none focus:ring-2 
+  focus:ring-indigo-500 focus:ring-offset-2">
+  Button with focus indicator
+</button>
+\end{lstlisting}
+
+\subsection{Semantic HTML}
+
+Using semantic HTML elements improves screen reader support:
+
+\begin{lstlisting}[language=HTML]
+<header> <!-- site header -->
+<nav> <!-- navigation -->
+<main> <!-- main content -->
+<article> <!-- article -->
+<section> <!-- section -->
+<aside> <!-- sidebar -->
+<footer> <!-- site footer -->
+\end{lstlisting}
+
+\subsection{Motion and Animation}
+
+Respect user's motion preferences:
+
+\begin{lstlisting}[language=bash]
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+\end{lstlisting}
+
+\subsection{Screen Reader Considerations}
+
+\begin{itemize}
+    \item Hidden decorative elements with \texttt{aria-hidden="true"}
+    \item Descriptive link text (not ``click here'')
+    \item Form labels associated with inputs via \texttt{<label>} or \texttt{aria-labelledby}
+    \item Status messages announced with \texttt{role="status"}
+    \item Loading states announced with \texttt{aria-live="polite"}
+\end{itemize}
+
+\chapter{Performance UX}
+
+\section{Skeleton Loading Patterns}
+
+Components display skeleton loaders while data loads:
+
+\begin{lstlisting}[language=HTML]
+<div class="space-y-4">
+  <div class="h-6 bg-gray-200 rounded animate-pulse"></div>
+  <div class="h-4 bg-gray-200 rounded animate-pulse w-5/6"></div>
+  <div class="h-4 bg-gray-200 rounded animate-pulse w-4/6"></div>
+</div>
+\end{lstlisting}
+
+\section{Optimistic UI Updates}
+
+Forms update UI immediately while request processes in background:
+
+\begin{itemize}
+    \item Bookmark button toggles state instantly
+    \item Saved notification appears before server confirmation
+    \item If request fails, UI reverts with error toast
+\end{itemize}
+
+\section{Progressive Loading}
+
+\begin{itemize}
+    \item Hero content loads first
+    \item Cards load incrementally
+    \item Images lazy-loaded below fold
+    \item Charts animate in as data arrives
+\end{itemize}
+
+\section{Error States}
+
+\begin{lstlisting}[language=HTML]
+<div class="bg-red-50 border border-red-200 rounded-lg p-4">
+  <p class="text-red-900 font-semibold">Something went wrong</p>
+  <p class="text-red-700 text-sm mt-1">Please try again later</p>
+  <button class="mt-3 px-4 py-2 bg-red-600 text-white rounded">
+    Retry
+  </button>
+</div>
+\end{lstlisting}
+
+\section{Empty States}
+
+\begin{lstlisting}[language=HTML]
+<div class="text-center py-12">
+  <svg class="mx-auto h-12 w-12 text-gray-400"></svg>
+  <h3 class="mt-2 text-lg font-medium text-gray-900">
+    No items found
+  </h3>
+  <p class="mt-1 text-gray-500">
+    Start by creating your first item
+  </p>
+  <button class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded">
+    Create Item
+  </button>
+</div>
+\end{lstlisting}
+
+\chapter{Design Tokens \& TailwindCSS Configuration}
+
+\section{Complete Tailwind Configuration}
+
+\begin{lstlisting}[language=Java]
+// tailwind.config.js
+module.exports = {
+  content: [
+    './src/**/*.{js,ts,jsx,tsx}',
+  ],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+        },
+        secondary: {
+          500: '#06b6d4',
+          600: '#0891b2',
+        },
+        accent: '#8b5cf6',
+      },
+      spacing: {
+        xs: '4px',
+        sm: '8px',
+        md: '12px',
+        base: '16px',
+        lg: '20px',
+        xl: '24px',
+        '2xl': '32px',
+        '3xl': '40px',
+        '4xl': '48px',
+        '5xl': '64px',
+      },
+      borderRadius: {
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+      },
+      fontSize: {
+        xs: ['12px', '16px'],
+        sm: ['14px', '20px'],
+        base: ['16px', '24px'],
+        lg: ['18px', '28px'],
+        xl: ['20px', '28px'],
+        '2xl': ['24px', '32px'],
+        '3xl': ['30px', '36px'],
+        '4xl': ['36px', '40px'],
+      },
+      boxShadow: {
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+        xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+      },
+    },
+  },
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+  ],
+}
+\end{lstlisting}
+
+\section{CSS Custom Properties}
+
+For advanced theming, CSS variables can supplement Tailwind:
+
+\begin{lstlisting}[language=bash]
+:root {
+  --color-primary: #6366f1;
+  --color-primary-dark: #4f46e5;
+  --color-secondary: #06b6d4;
+  --color-accent: #8b5cf6;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-base: 16px;
+  --spacing-lg: 20px;
+  
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-text: #f8fafc;
+    --color-text-secondary: #cbd5e1;
+  }
+}
+\end{lstlisting}
+
+\chapter{Conclusion}
+
+This comprehensive UI/UX design document establishes a cohesive visual system and interaction framework for SYNAPSE. The design system emphasizes:
+
+\begin{enumerate}
+    \item \textbf{Consistency}: Reusable components and design tokens ensure uniform appearance
+    \item \textbf{Accessibility}: WCAG 2.1 AA compliance ensures usability for all users
+    \item \textbf{Performance}: Optimized loading patterns and animations enhance perceived performance
+    \item \textbf{Scalability}: Component-based architecture supports growth and evolution
+    \item \textbf{Intelligence}: AI-first design patterns highlight the platform's intelligent capabilities
+\end{enumerate}
+
+All frontend implementations use Next.js 14, React 18, TypeScript, TailwindCSS 3.4, and Framer Motion. This document serves as the authoritative reference for all UI/UX development on the SYNAPSE platform.
+
+\end{document}

@@ -1,0 +1,1943 @@
+\documentclass{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{fancyhdr}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    breakatwhitespace=true,
+    columns=flexible,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    tabsize=4,
+    language=Python
+}
+
+\title{SYNAPSE AI Agent Specification}
+\author{SYNAPSE Development Team}
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SYNAPSE AI Agent Spec}
+\lhead{Version 1.0}
+\cfoot{\thepage}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\chapter{Introduction}
+
+This document provides a comprehensive technical specification for the AI Agent layer in SYNAPSE. The SYNAPSE platform integrates an advanced Agentic AI system built on LangChain ReAct agents, enabling autonomous execution of complex multi-step tasks. This specification covers architecture, agent types, tool definitions, memory systems, safety mechanisms, and monitoring capabilities.
+
+The AI Agent layer is the intelligent core of SYNAPSE, enabling users to delegate complex workflows to autonomous AI systems that can reason, act, observe, and iterate toward task completion. All agents operate within defined safety boundaries with comprehensive logging and cost tracking.
+
+\chapter{Agent Architecture Overview}
+
+\section{ReAct Pattern Foundation}
+
+The SYNAPSE AI Agent layer is built on the ReAct (Reasoning + Acting) pattern, a powerful paradigm that combines large language models' reasoning capabilities with tool-based action execution. The ReAct pattern operates through a structured loop that maximizes transparency and controllability.
+
+The core loop consists of four sequential stages:
+
+\begin{enumerate}
+    \item \textbf{Thought}: The agent reasons about the current state, available tools, and optimal next steps. This represents internal cognition where the agent formulates a plan.
+    \item \textbf{Action}: Based on its reasoning, the agent selects a specific tool and constructs appropriate input parameters.
+    \item \textbf{Observation}: The tool executes and returns a result, which the agent receives as structured feedback.
+    \item \textbf{Repeat}: The agent evaluates the observation against the task goal and either continues the loop or terminates with a final answer.
+\end{enumerate}
+
+This transparent loop allows developers to inspect agent decision-making at each step, improving debugging and safety oversight.
+
+\section{Agent Loop Mechanics}
+
+The agent loop in SYNAPSE operates as follows:
+
+\begin{lstlisting}
+while not task_complete:
+    thought = agent.reason(context, goal)
+    action, tool_name, tool_input = agent.select_action(thought)
+    observation = tools[tool_name].execute(tool_input)
+    context = agent.update_context(observation)
+    task_complete = agent.is_goal_reached(observation)
+\end{lstlisting}
+
+Each iteration is atomic and traceable. The agent maintains execution context including:
+
+\begin{itemize}
+    \item Current task objective and subtasks
+    \item Conversation history and memory
+    \item Tool availability and constraints
+    \item Token budget and cost limits
+    \item Timeout tracking per tool and overall agent run
+\end{itemize}
+
+\section{LangChain AgentExecutor Configuration}
+
+The LangChain AgentExecutor manages the agent lifecycle and coordinates tool execution. Key configuration parameters include:
+
+\begin{lstlisting}
+from langchain.agents import AgentExecutor, create_react_agent
+from langchain_openai import ChatOpenAI
+from langchain.prompts import PromptTemplate
+
+executor = AgentExecutor.from_agent_and_tools(
+    agent=agent,
+    tools=tool_list,
+    verbose=True,
+    max_iterations=10,
+    max_execution_time=300,
+    early_stopping_method="force",
+    return_intermediate_steps=True,
+    handle_parsing_errors=True
+)
+\end{lstlisting}
+
+Critical AgentExecutor parameters:
+
+\begin{itemize}
+    \item \textbf{max\_iterations}: Maximum ReAct loop cycles (default 10 per SYNAPSE spec)
+    \item \textbf{max\_execution\_time}: Hard timeout in seconds (300s per agent run)
+    \item \textbf{early\_stopping\_method}: Handles max iterations or timeout (force or generate)
+    \item \textbf{return\_intermediate\_steps}: Captures all thought-action-observation records
+    \item \textbf{handle\_parsing\_errors}: Graceful error recovery when agent output is malformed
+\end{itemize}
+
+\section{Memory Management}
+
+Agent memory is essential for maintaining context across multiple interactions and enabling long-running task execution. SYNAPSE implements multiple memory strategies:
+
+\begin{itemize}
+    \item \textbf{Execution Memory}: Current task context and intermediate results within single agent run
+    \item \textbf{Conversation Memory}: User interaction history across multiple agent invocations
+    \item \textbf{Semantic Memory}: Vector-based retrieval for relevant knowledge and past solutions
+    \item \textbf{Entity Memory}: Tracking of mentioned technologies, projects, and domain concepts
+\end{itemize}
+
+Memory state is serialized and stored in PostgreSQL for persistence and retrieval across sessions.
+
+\chapter{Agent Types}
+
+SYNAPSE defines five specialized agent types, each optimized for specific task categories:
+
+\section{ResearchAgent}
+
+The ResearchAgent autonomously searches and synthesizes information from multiple sources to answer complex research queries.
+
+\textbf{Capabilities}:
+
+\begin{itemize}
+    \item Search knowledge base with semantic filtering
+    \item Fetch and summarize academic articles
+    \item Cross-reference information across sources
+    \item Generate comprehensive research summaries
+    \item Track source citations for verification
+\end{itemize}
+
+\textbf{Primary Tools}: search\_knowledge\_base, fetch\_articles, vector store retrieval
+
+\textbf{Task Examples}:
+\begin{itemize}
+    \item Analyze technology landscape for a given domain
+    \item Compile literature review on emerging trends
+    \item Compare competing solutions and frameworks
+\end{itemize}
+
+\section{DocumentAgent}
+
+The DocumentAgent generates professional documents in multiple formats (PDF, PowerPoint, Word) based on structured content specifications.
+
+\textbf{Capabilities}:
+
+\begin{itemize}
+    \item Generate styled PDF reports with charts and tables
+    \item Create PowerPoint presentations with layouts and images
+    \item Produce Word documents with TOC and formatting
+    \item Generate Markdown documentation
+    \item Apply consistent branding and styling
+\end{itemize}
+
+\textbf{Primary Tools}: generate\_pdf, generate\_ppt, generate\_word\_doc, markdown generation
+
+\textbf{Task Examples}:
+\begin{itemize}
+    \item Create quarterly technology trend report
+    \item Generate project proposal document
+    \item Produce training materials and documentation
+\end{itemize}
+
+\section{TrendAgent}
+
+The TrendAgent analyzes technology trends, tracks adoption patterns, and identifies emerging areas of significance.
+
+\textbf{Capabilities}:
+
+\begin{itemize}
+    \item Analyze technology trend data over time periods
+    \item Fetch trending repositories and projects from GitHub
+    \item Retrieve and analyze academic papers from arXiv
+    \item Synthesize trend information into insights
+    \item Generate trend reports and forecasts
+\end{itemize}
+
+\textbf{Primary Tools}: analyze\_trends, search\_github, fetch\_arxiv\_papers, get\_technology\_trend
+
+\textbf{Task Examples}:
+\begin{itemize}
+    \item Identify emerging frameworks in a programming domain
+    \item Track adoption of new technologies
+    \item Analyze GitHub repository popularity trends
+\end{itemize}
+
+\section{ProjectAgent}
+
+The ProjectAgent scaffolds new software projects with complete directory structures, boilerplate code, and configuration files.
+
+\textbf{Capabilities}:
+
+\begin{itemize}
+    \item Generate project structures for multiple frameworks
+    \item Create boilerplate code and configuration
+    \item Set up dependency management and build systems
+    \item Initialize version control and documentation
+    \item Generate README and setup instructions
+\end{itemize}
+
+\textbf{Primary Tools}: create\_project, file system operations
+
+\textbf{Task Examples}:
+\begin{itemize}
+    \item Bootstrap FastAPI microservice with middleware
+    \item Create Next.js application with routing and layout
+    \item Generate Django REST API with models and endpoints
+\end{itemize}
+
+\section{SchedulerAgent}
+
+The SchedulerAgent manages automation workflows, scheduling, and task orchestration across the SYNAPSE platform.
+
+\textbf{Capabilities}:
+
+\begin{itemize}
+    \item Schedule recurring agent runs and reports
+    \item Manage dependencies between tasks
+    \item Monitor and retry failed automation workflows
+    \item Trigger agents based on external events or schedules
+    \item Aggregate results from multiple agent executions
+\end{itemize}
+
+\textbf{Primary Tools}: Celery task scheduling, workflow orchestration
+
+\textbf{Task Examples}:
+\begin{itemize}
+    \item Generate weekly trend report every Monday
+    \item Run research queries on schedule with result email delivery
+    \item Chain multiple agents (ResearchAgent then DocumentAgent)
+\end{itemize}
+
+\chapter{Tool Definitions}
+
+SYNAPSE agents interact with external systems and data sources through a standardized tool interface. Each tool is defined by name, description, input/output schemas, and implementation details.
+
+\section{Knowledge Base Tools}
+
+\subsection{search\_knowledge\_base}
+
+Search the SYNAPSE knowledge base using semantic similarity and keyword matching.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class SearchKnowledgeBaseInput(BaseModel):
+    query: str = Field(..., description="Search query")
+    limit: int = Field(default=10, description="Max results")
+    filters: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Optional filters (source, date_range, category)"
+    )
+
+class SearchResult(BaseModel):
+    id: str
+    title: str
+    content: str
+    relevance_score: float
+    source: str
+    metadata: Dict[str, Any]
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses pgvector with PostgreSQL for semantic search
+    \item Supports BM25 keyword matching as fallback
+    \item Filters by source (internal docs, articles, code)
+    \item Returns ranked results with relevance scores
+    \item Caches results for 1 hour to reduce latency
+\end{itemize}
+
+\subsection{fetch\_articles}
+
+Retrieve articles from external sources (arXiv, Medium, etc.) within a date range.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class FetchArticlesInput(BaseModel):
+    topic: str = Field(..., description="Article topic")
+    date_range: Tuple[date, date] = Field(
+        ..., description="Start and end dates"
+    )
+    limit: int = Field(default=20, description="Max articles to fetch")
+    sources: Optional[List[str]] = Field(
+        default=["arxiv", "medium"],
+        description="Article sources"
+    )
+
+class ArticleMetadata(BaseModel):
+    url: str
+    title: str
+    authors: List[str]
+    published_date: datetime
+    summary: str
+    source: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Integrates with arXiv, Medium, and Hacker News APIs
+    \item Caches fetched articles in PostgreSQL
+    \item Deduplicates results across sources
+    \item Timeout: 30 seconds per API call
+\end{itemize}
+
+\section{Trend Analysis Tools}
+
+\subsection{analyze\_trends}
+
+Analyze technology adoption and trend patterns over specified time periods.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class AnalyzeTrendsInput(BaseModel):
+    technologies: List[str] = Field(
+        ..., description="Technology names to analyze"
+    )
+    period: str = Field(
+        default="12m",
+        description="Time period (1m, 3m, 6m, 12m, 5y)"
+    )
+    metrics: Optional[List[str]] = Field(
+        default=["search_volume", "github_stars", "job_postings"],
+        description="Metrics to analyze"
+    )
+
+class TrendAnalysis(BaseModel):
+    technology: str
+    period: str
+    trend_direction: str
+    growth_rate: float
+    metrics_timeline: List[Dict[str, Any]]
+    insights: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Aggregates data from multiple sources (Google Trends, GitHub, Job APIs)
+    \item Calculates growth rates and trend direction
+    \item Generates insights using statistical analysis
+    \item Caches results for 24 hours
+\end{itemize}
+
+\subsection{get\_technology\_trend}
+
+Retrieve current trend information for a specific technology.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class GetTechnologyTrendInput(BaseModel):
+    tech_name: str = Field(..., description="Technology name")
+    period: str = Field(default="12m", description="Analysis period")
+
+class TrendData(BaseModel):
+    name: str
+    trend_score: float
+    growth_percentage: float
+    popularity_rank: int
+    last_updated: datetime
+    sources: List[str]
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Real-time data from GitHub API and Google Trends
+    \item Trend score combines multiple signals (0-100 scale)
+    \item Updates cached data hourly
+\end{itemize}
+
+\section{Document Generation Tools}
+
+\subsection{generate\_pdf}
+
+Create professional PDF documents with styled content, tables, and charts.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class GeneratePDFInput(BaseModel):
+    title: str = Field(..., description="Document title")
+    sections: List[Dict[str, Any]] = Field(
+        ..., description="Document sections"
+    )
+    content: str = Field(..., description="Main content")
+    metadata: Optional[Dict[str, str]] = Field(
+        default=None, description="Author, version, etc."
+    )
+
+class PDFOutput(BaseModel):
+    file_path: str
+    file_size: int
+    pages: int
+    url: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses ReportLab 4.x for PDF generation
+    \item Supports tables, charts, images, headers/footers
+    \item Custom styling with fonts and colors
+    \item Generates TOC automatically
+    \item Output stored in PostgreSQL large object storage
+\end{itemize}
+
+\subsection{generate\_ppt}
+
+Create PowerPoint presentations with multiple slide layouts.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class GeneratePPTInput(BaseModel):
+    title: str = Field(..., description="Presentation title")
+    slides: List[Dict[str, Any]] = Field(
+        ..., description="Slide definitions"
+    )
+    theme: str = Field(default="default", description="Theme name")
+
+class PPTOutput(BaseModel):
+    file_path: str
+    slide_count: int
+    url: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses python-pptx 0.6.x library
+    \item Supports title, bullet, image, and chart slide layouts
+    \item Built-in themes with consistent branding
+    \item Image embedding and sizing
+\end{itemize}
+
+\subsection{generate\_word\_doc}
+
+Create formatted Word documents with styles and structure.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class GenerateWordDocInput(BaseModel):
+    title: str = Field(..., description="Document title")
+    content: str = Field(..., description="Document content")
+    toc: bool = Field(default=True, description="Include TOC")
+
+class WordDocOutput(BaseModel):
+    file_path: str
+    word_count: int
+    url: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses python-docx 0.8.x library
+    \item Auto-generates table of contents
+    \item Applies heading hierarchy and styles
+    \item Supports embedded images and tables
+\end{itemize}
+
+\section{Project Creation Tools}
+
+\subsection{create\_project}
+
+Bootstrap new software projects with complete structure and boilerplate.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class CreateProjectInput(BaseModel):
+    project_type: str = Field(
+        ...,
+        description="Project type (django_rest, fastapi, nextjs, react_lib, datascience)"
+    )
+    name: str = Field(..., description="Project name")
+    features: List[str] = Field(
+        default=[],
+        description="Additional features (auth, testing, ci_cd)"
+    )
+    destination_path: Optional[str] = Field(
+        default=None, description="Where to create project"
+    )
+
+class ProjectOutput(BaseModel):
+    project_path: str
+    files_created: int
+    structure: Dict[str, Any]
+    next_steps: List[str]
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Supports: Django REST API, FastAPI, Next.js, React component library, Python data science
+    \item Generates complete directory structure
+    \item Creates boilerplate code and configuration
+    \item Includes README with setup instructions
+    \item Initializes git repository and .gitignore
+\end{itemize}
+
+\section{Cloud Storage Tools}
+
+\subsection{upload\_to\_drive}
+
+Upload files to Google Drive with folder organization.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class UploadToDriveInput(BaseModel):
+    file_path: str = Field(..., description="Local file path")
+    folder: str = Field(default="SYNAPSE", description="Drive folder path")
+    public: bool = Field(default=False, description="Make file public")
+
+class DriveUploadOutput(BaseModel):
+    file_id: str
+    file_url: str
+    folder_id: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses Google Drive API v3
+    \item Creates folder hierarchy automatically
+    \item Timeout: 60 seconds per upload
+    \item Supports files up to 5GB
+\end{itemize}
+
+\subsection{upload\_to\_s3}
+
+Upload files to Amazon S3 with configurable storage classes.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class UploadToS3Input(BaseModel):
+    file_path: str = Field(..., description="Local file path")
+    bucket: str = Field(..., description="S3 bucket name")
+    key: str = Field(..., description="S3 object key/path")
+    storage_class: str = Field(
+        default="STANDARD",
+        description="S3 storage class"
+    )
+
+class S3UploadOutput(BaseModel):
+    bucket: str
+    key: str
+    object_url: str
+    etag: str
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses boto3 library
+    \item Supports multipart upload for large files
+    \item Configurable ACL and metadata
+    \item Timeout: 120 seconds per upload
+\end{itemize}
+
+\section{Communication Tools}
+
+\subsection{send\_email}
+
+Send emails via configured SMTP or service provider.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class SendEmailInput(BaseModel):
+    to: Union[str, List[str]] = Field(
+        ..., description="Recipient(s)"
+    )
+    subject: str = Field(..., description="Email subject")
+    body: str = Field(..., description="Email body (HTML or plain text)")
+    attachments: Optional[List[str]] = Field(
+        default=None, description="File paths to attach"
+    )
+
+class EmailOutput(BaseModel):
+    message_id: str
+    status: str
+    sent_at: datetime
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Supports SMTP and SendGrid API
+    \item Rate limit: 100 emails per hour per user
+    \item Timeout: 30 seconds
+    \item Attachment size limit: 25MB
+\end{itemize}
+
+\section{Code Search Tools}
+
+\subsection{search\_github}
+
+Search GitHub repositories with language and quality filters.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class SearchGitHubInput(BaseModel):
+    query: str = Field(..., description="Search query")
+    language: Optional[str] = Field(
+        default=None, description="Programming language filter"
+    )
+    stars_min: int = Field(
+        default=0, description="Minimum star count"
+    )
+    limit: int = Field(default=30, description="Result limit")
+
+class GitHubResult(BaseModel):
+    name: str
+    url: str
+    description: str
+    stars: int
+    language: str
+    last_updated: datetime
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses GitHub REST API v3
+    \item Sorts results by stars by default
+    \item API rate limit: 60 requests per hour (higher with authentication)
+    \item Caches results for 24 hours
+\end{itemize}
+
+\subsection{fetch\_arxiv\_papers}
+
+Retrieve academic papers from arXiv with filtering.
+
+\textbf{Tool Definition}:
+\begin{lstlisting}
+class FetchArXivPapersInput(BaseModel):
+    query: str = Field(..., description="Search query")
+    max_results: int = Field(default=50, description="Max papers")
+    sort_by: str = Field(
+        default="relevance",
+        description="Sort key (relevance, submission_date)"
+    )
+
+class ArXivPaper(BaseModel):
+    arxiv_id: str
+    title: str
+    authors: List[str]
+    published: datetime
+    summary: str
+    pdf_url: str
+    categories: List[str]
+\end{lstlisting}
+
+\textbf{Implementation Notes}:
+\begin{itemize}
+    \item Uses arXiv public API (no authentication needed)
+    \item Timeout: 30 seconds
+    \item Caches results for 7 days
+    \item No rate limiting (community guidelines apply)
+\end{itemize}
+
+\chapter{LangChain Integration}
+
+\section{AgentExecutor Configuration}
+
+The LangChain AgentExecutor is the orchestration engine for SYNAPSE agents. Configuration involves several key components working in concert.
+
+\subsection{Tool Registration}
+
+Tools must be registered with the AgentExecutor in a standardized format:
+
+\begin{lstlisting}
+from langchain.tools import Tool, StructuredTool
+
+tools = [
+    StructuredTool.from_function(
+        func=search_knowledge_base,
+        name="search_knowledge_base",
+        description="Search internal knowledge base",
+        args_schema=SearchKnowledgeBaseInput,
+    ),
+    StructuredTool.from_function(
+        func=generate_pdf,
+        name="generate_pdf",
+        description="Generate PDF documents",
+        args_schema=GeneratePDFInput,
+    ),
+]
+
+executor = AgentExecutor.from_agent_and_tools(
+    agent=agent,
+    tools=tools,
+    verbose=True,
+    max_iterations=10,
+    max_execution_time=300,
+    early_stopping_method="force",
+    return_intermediate_steps=True,
+    handle_parsing_errors=True,
+    trim_intermediate_steps=5
+)
+\end{lstlisting}
+
+\section{Prompt Templates}
+
+SYNAPSE uses custom prompt templates to guide agent reasoning and ensure consistent behavior.
+
+\subsection{System Prompt}
+
+The system prompt establishes agent role, capabilities, and constraints:
+
+\begin{lstlisting}
+SYSTEM_PROMPT = """You are an AI agent in the SYNAPSE platform,
+designed to autonomously execute complex multi-step tasks.
+You have access to specialized tools for research, document
+generation, trend analysis, and project scaffolding.
+
+Guidelines:
+1. Break complex tasks into logical subtasks
+2. Use available tools to gather information
+3. Cite sources for all information retrieved
+4. Always validate data before using it
+5. Respect user privacy and data security
+6. Do not make assumptions without verification
+7. Ask for clarification if task is ambiguous
+
+Available tools: {tools}
+
+Format your response as JSON with 'thought', 'action',
+'action_input', and 'observation' fields."""
+\end{lstlisting}
+
+\subsection{Human Prompt}
+
+The human prompt structure provides context for each agent invocation:
+
+\begin{lstlisting}
+HUMAN_PROMPT = """Task: {task}
+
+Current Date: {current_date}
+User: {user_id}
+Context: {context}
+
+Previous steps taken:
+{previous_steps}
+
+Next steps to consider:
+{next_steps_hint}"""
+\end{lstlisting}
+
+\section{Output Parsers}
+
+Output parsing converts agent text responses into structured data:
+
+\begin{lstlisting}
+from langchain.agents.output_parsers import ReActJsonSingleInputOutputParser
+
+parser = ReActJsonSingleInputOutputParser()
+
+parsed_output = parser.parse(agent_response)
+
+class ParsedOutput(BaseModel):
+    thought: str
+    action: str
+    action_input: Dict[str, Any]
+    observation: Optional[str]
+    final_answer: Optional[str]
+\end{lstlisting}
+
+\section{Streaming and Callbacks}
+
+SYNAPSE supports real-time streaming of agent thoughts and actions via callbacks:
+
+\begin{lstlisting}
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.callbacks import StreamingStdOutCallbackHandler
+
+class CustomAgentCallback(StreamingStdOutCallbackHandler):
+    def on_agent_action(self, action, **kwargs):
+        print(f"Agent Action: {action.tool}")
+        print(f"Input: {action.tool_input}")
+    
+    def on_agent_finish(self, finish, **kwargs):
+        print(f"Final Answer: {finish.output}")
+
+executor = AgentExecutor(
+    agent=agent,
+    tools=tools,
+    callbacks=[CustomAgentCallback()],
+)
+\end{lstlisting}
+
+\section{Token Counting and Cost Tracking}
+
+Token usage and cost tracking are integrated at the executor level:
+
+\begin{lstlisting}
+from tiktoken import encoding_for_model
+
+class CostTracker:
+    def __init__(self, model="gpt-4"):
+        self.model = model
+        self.encoder = encoding_for_model("gpt-4")
+        self.input_cost_per_1k = 0.03
+        self.output_cost_per_1k = 0.06
+    
+    def estimate_tokens(self, text):
+        return len(self.encoder.encode(text))
+    
+    def calculate_cost(self, input_tokens, output_tokens):
+        input_cost = (input_tokens / 1000) * self.input_cost_per_1k
+        output_cost = (output_tokens / 1000) * self.output_cost_per_1k
+        return input_cost + output_cost
+
+tracker = CostTracker()
+result = executor.invoke({"input": task})
+total_cost = tracker.calculate_cost(
+    result["input_tokens"],
+    result["output_tokens"]
+)
+\end{lstlisting}
+
+\chapter{Memory Systems}
+
+SYNAPSE implements four complementary memory systems to maintain context across agent invocations.
+
+\section{ConversationBufferWindowMemory}
+
+Stores the last N turns of conversation for immediate context.
+
+\begin{lstlisting}
+from langchain.memory import ConversationBufferWindowMemory
+
+memory = ConversationBufferWindowMemory(
+    k=10,
+    memory_key="chat_history",
+    return_messages=True
+)
+
+memory.save_context(
+    {"input": user_query},
+    {"output": agent_response}
+)
+
+context = memory.load_memory_variables({})
+\end{lstlisting}
+
+\textbf{Characteristics}:
+\begin{itemize}
+    \item Stores last 10 conversation turns
+    \item Lightweight and fast retrieval
+    \item Suitable for short-term context
+    \item Stored in PostgreSQL with TTL of 30 days
+\end{itemize}
+
+\section{ConversationSummaryMemory}
+
+Summarizes conversation history to preserve key information while reducing token usage.
+
+\begin{lstlisting}
+from langchain.memory import ConversationSummaryMemory
+from langchain_openai import ChatOpenAI
+
+memory = ConversationSummaryMemory(
+    llm=ChatOpenAI(model="gpt-3.5-turbo"),
+    buffer="",
+    memory_key="chat_summary"
+)
+
+memory.add_messages(messages)
+summary = memory.load_memory_variables({})
+\end{lstlisting}
+
+\textbf{Characteristics}:
+\begin{itemize}
+    \item Automatically summarizes conversation history
+    \item Reduces context window usage by 70-80 percent
+    \item Useful for long-running sessions
+    \item Updated every 5 conversation turns
+\end{itemize}
+
+\section{VectorStoreRetrieverMemory}
+
+Uses semantic similarity to retrieve relevant past interactions.
+
+\begin{lstlisting}
+from langchain.memory import VectorStoreRetrieverMemory
+from langchain_community.vectorstores import Chroma
+
+vectorstore = Chroma(
+    embedding_function=embeddings,
+    collection_name="agent_memory"
+)
+
+memory = VectorStoreRetrieverMemory(
+    vectorstore=vectorstore,
+    memory_key="relevant_history",
+    input_key="input"
+)
+
+retrieved = memory.load_memory_variables({"input": user_query})
+\end{lstlisting}
+
+\textbf{Characteristics}:
+\begin{itemize}
+    \item Semantic search across all past interactions
+    \item Retrieves topN most relevant memories
+    \item Powered by pgvector for efficiency
+    \item Enables knowledge accumulation across sessions
+\end{itemize}
+
+\section{Entity Memory}
+
+Tracks and updates named entities (technologies, projects, concepts) mentioned in interactions.
+
+\begin{lstlisting}
+from langchain.memory import EntityMemory
+
+entity_store = {
+    "technologies": {},
+    "projects": {},
+    "people": {},
+    "organizations": {}
+}
+
+def track_entity(entity_name, entity_type, properties):
+    if entity_name not in entity_store[entity_type]:
+        entity_store[entity_type][entity_name] = {
+            "first_mention": datetime.now(),
+            "mentions": 0,
+            "properties": {}
+        }
+    
+    entity_store[entity_type][entity_name]["mentions"] += 1
+    entity_store[entity_type][entity_name]["properties"].update(properties)
+\end{lstlisting}
+
+\textbf{Characteristics}:
+\begin{itemize}
+    \item Maintains entity graphs for relationship mapping
+    \item Tracks mention frequency and temporal patterns
+    \item Enables context-aware agent decisions
+    \item Stored as JSON in PostgreSQL
+\end{itemize}
+
+\chapter{RAG Pipeline}
+
+The Retrieval-Augmented Generation (RAG) pipeline enhances agent reasoning with grounded information from knowledge bases.
+
+\section{ConversationalRetrievalChain}
+
+The ConversationalRetrievalChain combines conversation history with document retrieval:
+
+\begin{lstlisting}
+from langchain.chains import ConversationalRetrievalChain
+from langchain_openai import ChatOpenAI
+from langchain_community.vectorstores import Chroma
+
+retriever = vectorstore.as_retriever(
+    search_type="similarity",
+    search_kwargs={"k": 5}
+)
+
+qa_chain = ConversationalRetrievalChain.from_llm(
+    llm=ChatOpenAI(model="gpt-4", temperature=0.3),
+    retriever=retriever,
+    memory=memory,
+    return_source_documents=True,
+    verbose=True
+)
+
+result = qa_chain({"question": query})
+\end{lstlisting}
+
+\section{Vector Store Configuration}
+
+SYNAPSE uses pgvector with PostgreSQL for production vector storage:
+
+\begin{lstlisting}
+from langchain_community.vectorstores.pgvector import PGVector
+
+vectorstore = PGVector.from_documents(
+    documents=docs,
+    embedding=embeddings,
+    connection_string=db_url,
+    collection_name="synapse_knowledge",
+    pre_delete_collection=False
+)
+
+retriever = vectorstore.as_retriever(
+    search_type="similarity",
+    search_kwargs={"k": 5}
+)
+
+# MMR (Maximal Marginal Relevance) retrieval
+retriever_mmr = vectorstore.as_retriever(
+    search_type="mmr",
+    search_kwargs={"k": 5, "fetch_k": 20}
+)
+\end{lstlisting}
+
+\section{Document Loaders}
+
+Multiple document loader implementations support various source formats:
+
+\begin{lstlisting}
+from langchain_community.document_loaders import (
+    PDFLoader,
+    TextLoader,
+    UnstructuredMarkdownLoader,
+    WebBaseLoader,
+    GitHubRepositoryLoader
+)
+
+# PDF documents
+pdf_loader = PDFLoader("document.pdf")
+docs = pdf_loader.load()
+
+# Web content
+web_loader = WebBaseLoader("https://example.com/docs")
+web_docs = web_loader.load()
+
+# GitHub repositories
+github_loader = GitHubRepositoryLoader(
+    repo_owner="torvalds",
+    repo_name="linux"
+)
+\end{lstlisting}
+
+\section{Text Splitters}
+
+Documents are split using RecursiveCharacterTextSplitter with configurable chunk parameters:
+
+\begin{lstlisting}
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=200,
+    separators=["\n\n", "\n", " ", ""],
+    length_function=len
+)
+
+chunks = splitter.split_documents(documents)
+\end{lstlisting}
+
+\textbf{Configuration Notes}:
+\begin{itemize}
+    \item Chunk size: 1000 characters (optimal for semantic search)
+    \item Chunk overlap: 200 characters (maintains context continuity)
+    \item Separators: Hierarchical breakdown by paragraph, line, word
+    \item Metadata: Source, page number, chunk index preserved
+\end{itemize}
+
+\section{Retrieval Strategies}
+
+Two primary retrieval strategies are implemented:
+
+\subsection{Similarity Search}
+
+Standard cosine similarity-based retrieval:
+
+\begin{lstlisting}
+results = vectorstore.similarity_search(
+    query="machine learning frameworks",
+    k=5
+)
+
+for doc in results:
+    print(f"Score: {doc.metadata.get('score')}")
+    print(f"Content: {doc.page_content[:200]}")
+\end{lstlisting}
+
+\subsection{Maximal Marginal Relevance (MMR)}
+
+Balances relevance with diversity to avoid redundant results:
+
+\begin{lstlisting}
+results = vectorstore.max_marginal_relevance_search(
+    query="python web frameworks",
+    k=5,
+    fetch_k=20,
+    lambda_mult=0.5
+)
+\end{lstlisting}
+
+\section{Prompt Templates with Context Injection}
+
+RAG chains use specialized prompts that inject retrieved context:
+
+\begin{lstlisting}
+from langchain.prompts import PromptTemplate
+
+qa_template = """You are a helpful AI assistant.
+Answer the following question based on the provided context.
+If information is not available in the context, say so.
+
+Context:
+{context}
+
+Question: {question}
+
+Provide a detailed answer with citations."""
+
+qa_prompt = PromptTemplate(
+    template=qa_template,
+    input_variables=["context", "question"]
+)
+\end{lstlisting}
+
+\section{Source Citation}
+
+All RAG responses include source citations for traceability:
+
+\begin{lstlisting}
+class CitedAnswer(BaseModel):
+    answer: str
+    sources: List[Dict[str, Any]]
+    confidence: float
+
+def format_with_citations(result):
+    answer = result["answer"]
+    sources = result["source_documents"]
+    
+    citations = []
+    for i, doc in enumerate(sources, 1):
+        citations.append({
+            "number": i,
+            "source": doc.metadata.get("source"),
+            "page": doc.metadata.get("page"),
+            "excerpt": doc.page_content[:100]
+        })
+    
+    return CitedAnswer(
+        answer=answer,
+        sources=citations,
+        confidence=0.95
+    )
+\end{lstlisting}
+
+\chapter{Document Generation Tools}
+
+\section{PDF Generation with ReportLab}
+
+The DocumentAgent uses ReportLab 4.x to create professional PDF documents with rich formatting.
+
+\subsection{PDF Styles and Structure}
+
+\begin{lstlisting}
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+from reportlab.platypus import Table, TableStyle
+from reportlab.lib import colors
+
+def create_pdf_report(title, sections, content):
+    doc = SimpleDocTemplate("report.pdf", pagesize=letter)
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        textColor=colors.HexColor('#1f77b4'),
+        spaceAfter=30,
+        alignment=1
+    )
+    
+    # Title
+    story.append(Paragraph(title, title_style))
+    story.append(Spacer(1, 0.2*inch))
+    
+    # Content sections
+    for section in sections:
+        story.append(Paragraph(section['title'], styles['Heading2']))
+        story.append(Paragraph(section['text'], styles['BodyText']))
+        story.append(Spacer(1, 0.1*inch))
+    
+    # Build document
+    doc.build(story)
+\end{lstlisting}
+
+\subsection{Tables and Charts}
+
+\begin{lstlisting}
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.linecharts import HorizontalLineChart
+
+def add_chart_to_pdf(story, chart_data, chart_type='bar'):
+    drawing = Drawing(400, 250)
+    
+    if chart_type == 'bar':
+        chart = VerticalBarChart()
+        chart.data = chart_data
+        chart.categoryAxis.labels = ['Q1', 'Q2', 'Q3', 'Q4']
+    
+    chart.width = 400
+    chart.height = 250
+    drawing.add(chart)
+    story.append(drawing)
+    story.append(Spacer(1, 0.1*inch))
+
+def add_table_to_pdf(story, rows, columns):
+    t = Table(rows)
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black)
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 0.1*inch))
+\end{lstlisting}
+
+\section{PowerPoint Generation with python-pptx}
+
+DocumentAgent uses python-pptx 0.6.x to create dynamic presentations.
+
+\subsection{Slide Layouts and Content}
+
+\begin{lstlisting}
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.enum.text import PP_ALIGN
+from pptx.dml.color import RGBColor
+
+def create_presentation(title, slides):
+    prs = Presentation()
+    prs.slide_width = Inches(10)
+    prs.slide_height = Inches(7.5)
+    
+    # Title slide
+    title_slide_layout = prs.slide_layouts[0]
+    slide = prs.slides.add_slide(title_slide_layout)
+    title = slide.shapes.title
+    subtitle = slide.placeholders[1]
+    
+    title.text = "Quarterly Technology Report"
+    subtitle.text = "Q4 2024"
+    
+    # Content slides
+    for slide_config in slides:
+        blank_slide_layout = prs.slide_layouts[6]
+        slide = prs.slides.add_slide(blank_slide_layout)
+        
+        # Add title
+        left = Inches(0.5)
+        top = Inches(0.5)
+        width = Inches(9)
+        height = Inches(1)
+        
+        title_box = slide.shapes.add_textbox(left, top, width, height)
+        title_frame = title_box.text_frame
+        title_frame.word_wrap = True
+        p = title_frame.paragraphs[0]
+        p.text = slide_config['title']
+        p.font.size = Pt(44)
+        p.font.bold = True
+        
+        # Add content
+        content_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(1.5), Inches(9), Inches(5.5)
+        )
+        tf = content_box.text_frame
+        tf.word_wrap = True
+        
+        for bullet_text in slide_config.get('bullets', []):
+            p = tf.add_paragraph()
+            p.text = bullet_text
+            p.level = 0
+    
+    prs.save('presentation.pptx')
+\end{lstlisting}
+
+\section{Word Document Generation with python-docx}
+
+DocumentAgent uses python-docx 0.8.x for Word document creation.
+
+\begin{lstlisting}
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+def create_word_document(title, content, include_toc=True):
+    doc = Document()
+    
+    # Title
+    title_para = doc.add_paragraph(title)
+    title_para.style = 'Heading 1'
+    title_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Table of Contents (if enabled)
+    if include_toc:
+        doc.add_paragraph('Table of Contents', style='Heading 2')
+        # Word will auto-generate TOC
+    
+    # Content sections
+    for section in content['sections']:
+        heading = doc.add_paragraph(section['title'], style='Heading 2')
+        doc.add_paragraph(section['text'])
+        
+        if 'bullets' in section:
+            for bullet in section['bullets']:
+                doc.add_paragraph(bullet, style='List Bullet')
+        
+        doc.add_paragraph()  # Spacing
+    
+    doc.save('document.docx')
+\end{lstlisting}
+
+\chapter{Project Builder Tool}
+
+\section{Project Template Architecture}
+
+The ProjectAgent generates complete project structures for multiple frameworks.
+
+\subsection{Django REST API Template}
+
+\begin{lstlisting}
+DJANGO_REST_STRUCTURE = {
+    "project_name": "myproject",
+    "app_name": "myapp",
+    "files": {
+        "manage.py": "# Django management script",
+        "requirements.txt": "Django==4.2\nDjangoRESTframework==3.14\npsycopg2-binary==2.9",
+        "myproject/settings.py": "# Django settings",
+        "myproject/urls.py": "# URL routing",
+        "myapp/models.py": "from django.db import models\nclass BaseModel(models.Model): pass",
+        "myapp/serializers.py": "from rest_framework import serializers",
+        "myapp/views.py": "from rest_framework import viewsets",
+        "myapp/urls.py": "# App URLs"
+    }
+}
+\end{lstlisting}
+
+\subsection{FastAPI Microservice Template}
+
+\begin{lstlisting}
+FASTAPI_STRUCTURE = {
+    "project_name": "my_service",
+    "files": {
+        "main.py": """from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+""",
+        "requirements.txt": "fastapi==0.104\nuvicorn==0.24",
+        "middleware.py": "# Custom middleware",
+        "routers/users.py": "from fastapi import APIRouter\nrouter = APIRouter()",
+        ".env": "DATABASE_URL=postgresql://user:pass@localhost/db",
+        "docker-compose.yml": "version: '3.8'\nservices:\n  api:\n    build: ."
+    }
+}
+\end{lstlisting}
+
+\subsection{Next.js Application Template}
+
+\begin{lstlisting}
+NEXTJS_STRUCTURE = {
+    "project_name": "my-app",
+    "files": {
+        "package.json": """{"name": "my-app", "version": "1.0.0",
+"dependencies": {"next": "^14.0", "react": "^18.0"}}""",
+        "next.config.js": "module.exports = {}",
+        "app/page.js": """export default function Home() {
+return <main>Welcome</main>
+}""",
+        "app/layout.js": """export const metadata = {title: 'App'}
+export default function RootLayout({children}) {
+return <html>{children}</html>
+}""",
+        "tailwind.config.js": "module.exports = {theme: {}}",
+        ".gitignore": "node_modules\n.next\n.env.local"
+    }
+}
+\end{lstlisting}
+
+\subsection{React Component Library Template}
+
+\begin{lstlisting}
+REACT_LIB_STRUCTURE = {
+    "project_name": "my-components",
+    "files": {
+        "package.json": """{"name": "my-components", "type": "module",
+"exports": {"./Button": "./src/Button.jsx"}}""",
+        "src/Button.jsx": """export default function Button({children}) {
+return <button>{children}</button>
+}""",
+        "src/index.js": "export {default as Button} from './Button'",
+        "tsconfig.json": "{\"compilerOptions\": {\"jsx\": \"react-jsx\"}}",
+        "vite.config.js": "import react from '@vitejs/plugin-react'"
+    }
+}
+\end{lstlisting}
+
+\subsection{Python Data Science Template}
+
+\begin{lstlisting}
+DATASCIENCE_STRUCTURE = {
+    "project_name": "my_analysis",
+    "files": {
+        "requirements.txt": "pandas==2.0\nnumpy==1.24\nscikit-learn==1.3\njupyter==1.0",
+        "notebooks/01_exploration.ipynb": "# Jupyter notebook",
+        "src/data_loader.py": """import pandas as pd
+
+def load_data(path):
+    return pd.read_csv(path)
+""",
+        "src/model.py": """from sklearn.ensemble import RandomForestClassifier
+
+class Model:
+    def __init__(self):
+        self.model = RandomForestClassifier()
+""",
+        "README.md": "# Data Science Project",
+        ".gitignore": "__pycache__\n*.ipynb_checkpoints\n.env"
+    }
+}
+\end{lstlisting}
+
+\section{Project Generation Implementation}
+
+\begin{lstlisting}
+import os
+from pathlib import Path
+
+def create_project(project_type, name, features=None):
+    template = PROJECT_TEMPLATES[project_type]
+    project_path = Path(name)
+    project_path.mkdir(exist_ok=True)
+    
+    files_created = 0
+    
+    # Create file structure
+    for file_path, content in template['files'].items():
+        full_path = project_path / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        with open(full_path, 'w') as f:
+            f.write(content)
+        
+        files_created += 1
+    
+    # Add optional features
+    if features:
+        if 'auth' in features:
+            add_authentication(project_path, project_type)
+        if 'testing' in features:
+            add_testing(project_path, project_type)
+        if 'ci_cd' in features:
+            add_ci_cd(project_path, project_type)
+    
+    # Initialize git
+    os.chdir(project_path)
+    os.system('git init')
+    
+    return {
+        "project_path": str(project_path.absolute()),
+        "files_created": files_created,
+        "next_steps": [
+            f"cd {name}",
+            "Install dependencies",
+            "Configure environment variables",
+            "Run development server"
+        ]
+    }
+\end{lstlisting}
+
+\chapter{Task Queue Integration}
+
+\section{Celery Configuration}
+
+SYNAPSE uses Celery for asynchronous agent task execution with Redis/PostgreSQL backend.
+
+\begin{lstlisting}
+from celery import Celery, Task
+from kombu import Queue
+
+app = Celery('synapse')
+app.conf.update(
+    broker_url='redis://localhost:6379',
+    result_backend='db+postgresql://user:pass@localhost/synapse',
+    task_serializer='json',
+    accept_content=['json'],
+    result_expires=3600,
+    task_track_started=True,
+    task_time_limit=600,
+    worker_prefetch_multiplier=1
+)
+
+app.conf.task_queues = (
+    Queue('research_tasks'),
+    Queue('document_tasks'),
+    Queue('trend_tasks'),
+    Queue('project_tasks'),
+)
+\end{lstlisting}
+
+\section{Agent Execution as Celery Task}
+
+\begin{lstlisting}
+@app.task(bind=True, queue='research_tasks')
+def execute_research_agent(self, user_id, task_description):
+    agent = ResearchAgent()
+    
+    try:
+        self.update_state(state='PROGRESS', meta={'current': 0, 'total': 10})
+        
+        result = agent.execute(
+            task=task_description,
+            context={"user_id": user_id},
+            callback=self.update_progress
+        )
+        
+        return {
+            "status": "completed",
+            "result": result,
+            "user_id": user_id,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        self.update_state(state='FAILURE', meta={'error': str(e)})
+        raise
+
+def update_progress(self, current, total, message=""):
+    self.update_state(state='PROGRESS', 
+        meta={'current': current, 'total': total, 'message': message})
+\end{lstlisting}
+
+\section{Task Status Tracking}
+
+\begin{lstlisting}
+from celery.result import AsyncResult
+
+class TaskTracker:
+    def __init__(self, task_id):
+        self.task_id = task_id
+        self.result = AsyncResult(task_id)
+    
+    def get_status(self):
+        return {
+            "task_id": self.task_id,
+            "state": self.result.state,
+            "progress": self.result.info.get('current', 0),
+            "total": self.result.info.get('total', 0),
+            "ready": self.result.ready(),
+            "successful": self.result.successful(),
+            "failed": self.result.failed()
+        }
+    
+    def get_result(self):
+        if self.result.successful():
+            return self.result.result
+        elif self.result.failed():
+            return {"error": str(self.result.info)}
+        else:
+            return {"status": self.result.state}
+\end{lstlisting}
+
+\chapter{Agent Safety and Constraints}
+
+\section{Tool Use Validation}
+
+All tool calls are validated before execution to prevent misuse.
+
+\begin{lstlisting}
+class ToolValidator:
+    def __init__(self):
+        self.dangerous_tools = [
+            'delete_database',
+            'modify_system_config',
+            'access_production'
+        ]
+    
+    def validate_tool_call(self, tool_name, tool_input, user_tier):
+        # Check dangerous tools
+        if tool_name in self.dangerous_tools:
+            if user_tier != 'admin':
+                raise PermissionError(f"User cannot call {tool_name}")
+        
+        # Validate input parameters
+        if not self.validate_schema(tool_input):
+            raise ValueError("Invalid tool input schema")
+        
+        # Check resource limits
+        if not self.check_resource_limits(tool_name, user_tier):
+            raise ResourceError("Resource limit exceeded")
+        
+        return True
+\end{lstlisting}
+
+\section{Output Sanitization}
+
+Agent outputs are sanitized to remove sensitive information.
+
+\begin{lstlisting}
+import re
+
+class OutputSanitizer:
+    SENSITIVE_PATTERNS = [
+        r'(password|api_key|secret)["\']?\s*[:=]\s*["\']?([^"\'\s]+)',
+        r'(token|Bearer)\s+([A-Za-z0-9\-._]+)',
+        r'(email|email_address).*?([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+)',
+        r'(phone|telephone)["\']?\s*[:=]\s*([0-9\-\+\(\)\s]+)'
+    ]
+    
+    @staticmethod
+    def sanitize(text):
+        sanitized = text
+        for pattern in OutputSanitizer.SENSITIVE_PATTERNS:
+            sanitized = re.sub(pattern, r'\1: [REDACTED]', sanitized, flags=re.IGNORECASE)
+        return sanitized
+\end{lstlisting}
+
+\section{Cost Limits and Timeout Handling}
+
+\begin{lstlisting}
+class ExecutionLimiter:
+    def __init__(self, max_tokens_per_task=10000, timeout_per_tool=30, 
+                 timeout_per_run=300):
+        self.max_tokens = max_tokens_per_task
+        self.tool_timeout = timeout_per_tool
+        self.run_timeout = timeout_per_run
+        self.token_counter = CostTracker()
+    
+    def check_token_budget(self, tokens_used):
+        if tokens_used > self.max_tokens:
+            raise TokenLimitExceeded(f"Exceeded {self.max_tokens} token limit")
+        return True
+    
+    def enforce_tool_timeout(self, tool_name, func, args):
+        import signal
+        
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Tool {tool_name} exceeded {self.tool_timeout}s")
+        
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(self.tool_timeout)
+        
+        try:
+            result = func(*args)
+            signal.alarm(0)
+            return result
+        except Exception as e:
+            signal.alarm(0)
+            raise
+\end{lstlisting}
+
+\section{Rate Limiting}
+
+\begin{lstlisting}
+from datetime import datetime, timedelta
+
+class RateLimiter:
+    def __init__(self):
+        self.user_limits = {
+            'free': {'requests_per_hour': 10, 'tokens_per_day': 5000},
+            'pro': {'requests_per_hour': 100, 'tokens_per_day': 100000},
+            'enterprise': {'requests_per_hour': 1000, 'tokens_per_day': 1000000}
+        }
+        self.request_tracker = {}
+    
+    def is_allowed(self, user_id, user_tier):
+        now = datetime.now()
+        hour_ago = now - timedelta(hours=1)
+        
+        if user_id not in self.request_tracker:
+            self.request_tracker[user_id] = []
+        
+        # Clean old requests
+        self.request_tracker[user_id] = [
+            req_time for req_time in self.request_tracker[user_id]
+            if req_time > hour_ago
+        ]
+        
+        limit = self.user_limits[user_tier]['requests_per_hour']
+        
+        if len(self.request_tracker[user_id]) >= limit:
+            return False
+        
+        self.request_tracker[user_id].append(now)
+        return True
+\end{lstlisting}
+
+\section{Dangerous Action Confirmation}
+
+\begin{lstlisting}
+class ConfirmationRequester:
+    DANGEROUS_ACTIONS = {
+        'delete_project': 'permanent deletion',
+        'reset_database': 'complete data reset',
+        'modify_access_control': 'security settings change',
+        'deploy_to_production': 'production deployment'
+    }
+    
+    @staticmethod
+    def requires_confirmation(action_name):
+        return action_name in ConfirmationRequester.DANGEROUS_ACTIONS
+    
+    @staticmethod
+    def get_confirmation_prompt(action_name):
+        risk = ConfirmationRequester.DANGEROUS_ACTIONS.get(action_name)
+        return f"This action will result in {risk}. Please confirm (yes/no): "
+\end{lstlisting}
+
+\chapter{Open Source Libraries}
+
+SYNAPSE leverages industry-standard open source libraries for AI agent implementation.
+
+\section{Core Dependencies}
+
+The primary dependencies for SYNAPSE agent layer:
+
+\begin{itemize}
+    \item \textbf{LangChain 0.1.x}: Agent orchestration and LLM interactions
+    \item \textbf{langchain-openai}: OpenAI LLM integration
+    \item \textbf{langchain-community}: Community tools and integrations
+    \item \textbf{langgraph}: Complex workflow and agent graph management
+    \item \textbf{ReportLab 4.x}: PDF document generation
+    \item \textbf{python-pptx 0.6.x}: PowerPoint creation
+    \item \textbf{python-docx 0.8.x}: Word document generation
+    \item \textbf{chromadb}: Alternative vector store implementation
+    \item \textbf{tiktoken}: OpenAI token counting and encoding
+\end{itemize}
+
+\section{Installation}
+
+\begin{lstlisting}
+pip install langchain==0.1.0
+pip install langchain-openai==0.0.5
+pip install langchain-community==0.0.10
+pip install langgraph==0.0.8
+pip install reportlab==4.0.9
+pip install python-pptx==0.6.21
+pip install python-docx==0.8.11
+pip install chromadb==0.4.21
+pip install tiktoken==0.5.2
+\end{lstlisting}
+
+\chapter{Agent Monitoring and Observability}
+
+\section{Execution Logging}
+
+All agent thoughts, actions, and observations are logged for transparency.
+
+\begin{lstlisting}
+import logging
+from datetime import datetime
+
+logger = logging.getLogger('synapse.agents')
+logger.setLevel(logging.DEBUG)
+
+class AgentExecutionLogger:
+    @staticmethod
+    def log_thought(agent_id, iteration, thought):
+        logger.info(f"[Agent {agent_id}, Iter {iteration}] THOUGHT: {thought}")
+    
+    @staticmethod
+    def log_action(agent_id, iteration, tool_name, tool_input):
+        logger.info(f"[Agent {agent_id}, Iter {iteration}] ACTION: {tool_name}")
+        logger.debug(f"Input: {tool_input}")
+    
+    @staticmethod
+    def log_observation(agent_id, iteration, observation):
+        logger.info(f"[Agent {agent_id}, Iter {iteration}] OBSERVATION: {observation[:200]}")
+    
+    @staticmethod
+    def log_final_answer(agent_id, answer):
+        logger.info(f"[Agent {agent_id}] FINAL ANSWER: {answer[:200]}")
+\end{lstlisting}
+
+\section{Cost Tracking}
+
+Detailed cost tracking per agent run and per user.
+
+\begin{lstlisting}
+class CostAnalytics:
+    def __init__(self, db_connection):
+        self.db = db_connection
+    
+    def log_execution_cost(self, agent_id, user_id, input_tokens, 
+                          output_tokens, duration_seconds):
+        cost = self.calculate_cost(input_tokens, output_tokens)
+        
+        record = {
+            'agent_id': agent_id,
+            'user_id': user_id,
+            'input_tokens': input_tokens,
+            'output_tokens': output_tokens,
+            'total_cost_usd': cost,
+            'duration_seconds': duration_seconds,
+            'timestamp': datetime.now()
+        }
+        
+        self.db.insert('execution_costs', record)
+    
+    @staticmethod
+    def calculate_cost(input_tokens, output_tokens):
+        input_cost = (input_tokens / 1000) * 0.03
+        output_cost = (output_tokens / 1000) * 0.06
+        return input_cost + output_cost
+\end{lstlisting}
+
+\section{Success and Failure Metrics}
+
+\begin{lstlisting}
+class MetricsCollector:
+    def __init__(self, db_connection):
+        self.db = db_connection
+    
+    def record_execution(self, agent_type, task, success, duration, 
+                        error_message=None):
+        metric = {
+            'agent_type': agent_type,
+            'task_type': task,
+            'success': success,
+            'duration_seconds': duration,
+            'error_message': error_message,
+            'timestamp': datetime.now()
+        }
+        
+        self.db.insert('execution_metrics', metric)
+    
+    def get_agent_success_rate(self, agent_type, period_days=30):
+        query = f"""
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful
+        FROM execution_metrics
+        WHERE agent_type = %s 
+        AND timestamp > NOW() - INTERVAL '{period_days} days'
+        """
+        
+        result = self.db.execute(query, [agent_type])
+        total, successful = result[0]
+        return successful / total if total > 0 else 0
+\end{lstlisting}
+
+\section{Tool Usage Statistics}
+
+\begin{lstlisting}
+class ToolUsageTracker:
+    def __init__(self, db_connection):
+        self.db = db_connection
+    
+    def record_tool_usage(self, tool_name, agent_id, success, 
+                         duration_seconds, error=None):
+        record = {
+            'tool_name': tool_name,
+            'agent_id': agent_id,
+            'success': success,
+            'duration_seconds': duration_seconds,
+            'error': error,
+            'timestamp': datetime.now()
+        }
+        
+        self.db.insert('tool_usage', record)
+    
+    def get_tool_statistics(self, tool_name, period_days=30):
+        query = """
+        SELECT 
+            tool_name,
+            COUNT(*) as total_calls,
+            SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful_calls,
+            AVG(duration_seconds) as avg_duration,
+            MAX(duration_seconds) as max_duration
+        FROM tool_usage
+        WHERE tool_name = %s 
+        AND timestamp > NOW() - INTERVAL '%s days'
+        GROUP BY tool_name
+        """
+        
+        return self.db.execute(query, [tool_name, period_days])
+\end{lstlisting}
+
+\section{LangSmith Integration}
+
+Integration with LangSmith for comprehensive agent trace visualization and debugging.
+
+\begin{lstlisting}
+from langsmith import traceable
+from langsmith.client import Client
+
+client = Client()
+
+@traceable(
+    run_type="chain",
+    tags=["synapse", "agent"]
+)
+def execute_with_tracing(agent, input_data):
+    return agent.invoke(input_data)
+
+class LangSmithIntegration:
+    def __init__(self, api_key):
+        self.client = Client(api_key=api_key)
+    
+    def get_execution_trace(self, run_id):
+        run = self.client.read_run(run_id)
+        return {
+            "run_id": run.id,
+            "status": run.status,
+            "duration": (run.end_time - run.start_time).total_seconds(),
+            "inputs": run.inputs,
+            "outputs": run.outputs,
+            "child_runs": [child.id for child in run.child_runs]
+        }
+    
+    def export_trace_data(self, run_id, format='json'):
+        trace = self.get_execution_trace(run_id)
+        
+        if format == 'json':
+            import json
+            return json.dumps(trace, indent=2)
+        
+        return trace
+\end{lstlisting}
+
+\chapter{Conclusion}
+
+The SYNAPSE AI Agent layer represents a comprehensive system for autonomous task execution using LangChain ReAct agents. This specification covers all critical components including agent architecture, specialized agent types, tool definitions, memory systems, RAG integration, document generation, project scaffolding, safety mechanisms, and monitoring capabilities.
+
+Key design principles emphasize transparency through detailed logging, cost tracking and budgeting, safety through validation and rate limiting, and extensibility through modular tool architecture. The system supports complex multi-step reasoning while maintaining user control and visibility into agent decision-making.
+
+\end{document}
+
