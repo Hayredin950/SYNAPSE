@@ -1,0 +1,88 @@
+name: SYNAPSE Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build, Push & Deploy
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/synapse-backend:$IMAGE_TAG -t $ECR_REGISTRY/synapse-backend:latest ./backend --target production
+          docker push $ECR_REGISTRY/synapse-backend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/synapse-backend:latest
+
+      - name: Build & push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/synapse-frontend:$IMAGE_TAG -t $ECR_REGISTRY/synapse-frontend:latest ./frontend --target production
+          docker push $ECR_REGISTRY/synapse-frontend:$IMAGE_TAG
+          docker push $ECR_REGISTRY/synapse-frontend:latest
+
+      - name: Build & push AI engine image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/synapse-ai:$IMAGE_TAG -t $ECR_REGISTRY/synapse-ai:latest ./ai_engine
+          docker push $ECR_REGISTRY/synapse-ai:$IMAGE_TAG
+          docker push $ECR_REGISTRY/synapse-ai:latest
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /opt/synapse
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker-compose -f docker-compose.prod.yml exec -T backend python manage.py migrate --noinput
+            docker system prune -f
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://${{ secrets.PRODUCTION_URL }}/api/v1/health/ || exit 1
+
+      - name: Notify Slack on success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: success
+          text: "SYNAPSE deployed successfully! Commit: ${{ github.sha }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          text: "SYNAPSE deployment FAILED! Commit: ${{ github.sha }}"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

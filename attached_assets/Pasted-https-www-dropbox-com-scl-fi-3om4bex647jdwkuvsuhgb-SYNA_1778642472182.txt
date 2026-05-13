@@ -1,0 +1,18 @@
+https://www.dropbox.com/scl/fi/3om4bex647jdwkuvsuhgb/SYNAPSE.zip?rlkey=55lierhirbk6zwq48rravdsxd&st=dkrqwtmj&dl=0
+
+
+https://www.dropbox.com/scl/fi/3om4bex647jdwkuvsuhgb/SYNAPSE.zip?rlkey=55lierhirbk6zwq48rravdsxd&st=voej1van&dl=0
+
+Comprehensive project analysis and production-ready enhancement request:
+
+  
+
+Please thoroughly examine the complete project package provided in the folder, which contains all necessary materials including the project files, documentation, chat logs, and supporting images. Conduct a systematic point-by-point review of every component within the project structure. Identify and document all issues, bugs, vulnerabilities, and areas requiring improvement. Implement all necessary fixes to ensure the project meets production standards, including code optimization, security hardening, performance improvements, and proper error han dling. Add comprehensive documentation, implement proper testing coverage, and ensure all dependencies are up-to-date and secure. Verify that the application follows industry best practices, coding standards, and is scalable for deployment. Once all fixes and enhancements are complete, prepare the project for deployment by configuring appropriate environment settings, deployment scripts, and production-ready configurations.
+
+extracte it and then do the following [rest Run full Python test suite in a CI-like environment (Postgres+Redis service containers) to validate all runtime paths after dependency updates.  
+  Pin Python dependencies (e.g., generate requirements.lock via pip-tools/uv) for fully reproducible production builds.  
+  Review any usage of lodash.template / _.template if present; even with patched versions, treat template compilation inputs as untrusted.}  
+   
+  then build it and then ren all the servers make i ready for me to see the fronted so that i acn manualy see the result and also check if the personalisation is configured and working well as well as the agent and the automation part  
+ 
+ and mkae it ready for deplaoyment so that all features are working

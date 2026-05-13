@@ -1,0 +1,218 @@
+# ============================================================
+# SYNAPSE — Monitoring Stack
+# ============================================================
+# Prometheus + Grafana + Loki + Promtail + Alertmanager
+#
+# Industry standard observability stack (used by Uber, GitLab, Shopify):
+#  - Prometheus: metrics scraping & storage (TSDB)
+#  - Grafana:    dashboards & alerting UI
+#  - Loki:       log aggregation (Prometheus for logs)
+#  - Promtail:   log shipper (Docker container logs → Loki)
+#  - Alertmanager: alert routing (Slack, PagerDuty, email)
+#  - node-exporter: host metrics (CPU, memory, disk, network)
+#  - cadvisor:   Docker container metrics
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml \
+#                  -f docker-compose.monitoring.yml up -d
+# ============================================================
+
+version: '3.9'
+
+networks:
+  monitoring:
+    driver: bridge
+  # Attach to main backend network to scrape app metrics
+  backend_net:
+    external: true
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+  alertmanager_data:
+
+services:
+
+  # ── Prometheus — metrics collection ──────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: synapse_prometheus
+    restart: unless-stopped
+    user: "65534"   # nobody — non-root
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --storage.tsdb.retention.size=15GB
+      - --web.enable-lifecycle        # POST /-/reload to reload config
+      - --web.enable-admin-api
+      - --log.level=warn
+    volumes:
+      - ./infrastructure/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/monitoring/rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    networks:
+      - monitoring
+      - backend_net
+    ports:
+      - "9090:9090"   # internal only — expose via Nginx in prod
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Grafana — dashboards & alerting ──────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: synapse_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER:           ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD:       ${GRAFANA_PASSWORD:-changeme}
+      GF_SECURITY_SECRET_KEY:           ${GRAFANA_SECRET_KEY:-secret}
+      GF_SERVER_ROOT_URL:               https://${DOMAIN:-localhost}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH:    "true"
+      GF_USERS_ALLOW_SIGN_UP:           "false"
+      GF_AUTH_ANONYMOUS_ENABLED:        "false"
+      GF_INSTALL_PLUGINS:               grafana-clock-panel,grafana-piechart-panel
+      GF_FEATURE_TOGGLES_ENABLE:        publicDashboards
+      GF_LOG_LEVEL:                     warn
+      GF_ANALYTICS_REPORTING_ENABLED:   "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES:   "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infrastructure/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - monitoring
+    ports:
+      - "3001:3000"   # exposed behind Nginx /grafana/
+    depends_on:
+      - prometheus
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Loki — log aggregation ────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.8
+    container_name: synapse_loki
+    restart: unless-stopped
+    user: "10001"   # loki user — non-root
+    command: -config.file=/etc/loki/loki.yml
+    volumes:
+      - ./infrastructure/monitoring/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    networks:
+      - monitoring
+    ports:
+      - "3100:3100"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Promtail — log shipper ────────────────────────────────────────────────────
+  promtail:
+    image: grafana/promtail:2.9.8
+    container_name: synapse_promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - ./infrastructure/monitoring/promtail.yml:/etc/promtail/promtail.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/log:/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - monitoring
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  # ── Alertmanager — alert routing ──────────────────────────────────────────────
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: synapse_alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --log.level=warn
+    volumes:
+      - ./infrastructure/monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    networks:
+      - monitoring
+    ports:
+      - "9093:9093"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+
+  # ── node-exporter — host system metrics ──────────────────────────────────────
+  node_exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: synapse_node_exporter
+    restart: unless-stopped
+    pid: host
+    command:
+      - --path.rootfs=/host
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /:/host:ro,rslave
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 128M
+
+  # ── cAdvisor — Docker container metrics ──────────────────────────────────────
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: synapse_cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M

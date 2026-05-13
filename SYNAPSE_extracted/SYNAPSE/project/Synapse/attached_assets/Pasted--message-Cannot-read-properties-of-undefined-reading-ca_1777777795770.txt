@@ -1,0 +1,12 @@
+
+{"message":"Cannot read properties of undefined (reading 'call')","stack":"TypeError: Cannot read properties of undefined (reading 'call')\n at options.factory (https://a3124c6c-34a7-4dc4-a39d-3133ec7c756f-00-1xhd0i2g4kt34.spock.replit.dev/_next/static/chunks/webpack.js?v=1777772481869:704:31)\n at __webpack_require__ (https://a3124c6c-34a7-4dc4-a39d-3133ec7c756f-00-1xhd0i2g4kt34.spock.replit.dev/_next/static/chunks/webpack.js?v=1777772481869:29:33)\n at fn (https://a3124c6c-34a7-4dc4…[TRUNCATED]
+2026-05-03 04:52:02.89
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons: 1. You might have mismatching versions of React and the renderer (such as React DOM) 2. You might be breaking the Rules of Hooks 3. You might have more than one copy of React in the same app See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+2026-05-03 04:52:02.89
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons: 1. You might have mismatching versions of React and the renderer (such as React DOM) 2. You might be breaking the Rules of Hooks 3. You might have more than one copy of React in the same app See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+2026-05-03 04:52:02.89
+{"message":"Cannot read properties of undefined (reading 'call')","stack":"TypeError: Cannot read properties of undefined (reading 'call')\n at options.factory (https://a3124c6c-34a7-4dc4-a39d-3133ec7c756f-00-1xhd0i2g4kt34.spock.replit.dev/_next/static/chunks/webpack.js?v=1777772481869:704:31)\n at __webpack_require__ (https://a3124c6c-34a7-4dc4-a39d-3133ec7c756f-00-1xhd0i2g4kt34.spock.replit.dev/_next/static/chunks/webpack.js?v=1777772481869:29:33)\n at fn (https://a3124c6c-34a7-4dc4…[TRUNCATED]
+2026-05-03 06:08:43.45
+[Fast Refresh] rebuilding
+2026-05-03 06:08:45.92
+[Fast Refresh] done in 2408ms

@@ -1,0 +1,63 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+route:
+  group_by:        [alertname, cluster, service]
+  group_wait:      30s
+  group_interval:  5m
+  repeat_interval: 12h
+  receiver:        slack-critical
+
+  routes:
+    # Critical alerts → immediate Slack + PagerDuty
+    - matchers:
+        - severity=critical
+      receiver: slack-critical
+      continue: true
+
+    # Warning alerts → Slack only
+    - matchers:
+        - severity=warning
+      receiver: slack-warnings
+      group_wait: 5m
+
+receivers:
+  - name: slack-critical
+    slack_configs:
+      - channel: '#synapse-alerts-critical'
+        send_resolved: true
+        icon_emoji: ':rotating_light:'
+        username: SYNAPSE Alertmanager
+        title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        text: |
+          *Alert:* {{ .GroupLabels.alertname }}
+          *Severity:* {{ .CommonLabels.severity }}
+          *Cluster:* {{ .CommonLabels.cluster }}
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          *Description:* {{ .Annotations.description }}
+          {{ if .Annotations.runbook }}*Runbook:* {{ .Annotations.runbook }}{{ end }}
+          {{ end }}
+        actions:
+          - type: button
+            text: View in Grafana
+            url: '${GRAFANA_URL}/alerting'
+
+  - name: slack-warnings
+    slack_configs:
+      - channel: '#synapse-alerts'
+        send_resolved: true
+        icon_emoji: ':warning:'
+        username: SYNAPSE Alertmanager
+        title: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        text: |
+          {{ range .Alerts }}
+          *Summary:* {{ .Annotations.summary }}
+          {{ end }}
+
+inhibit_rules:
+  # Silence warnings when critical is already firing for same service
+  - source_matchers: [severity=critical]
+    target_matchers: [severity=warning]
+    equal: [alertname, service]

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synapse AI</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 360px;
+      min-height: 420px;
+      max-height: 600px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid #1e293b;
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+    }
+    .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff;
+    }
+    .header-title { font-size: 14px; font-weight: 700; color: #f1f5f9; flex: 1; }
+    .settings-btn {
+      background: none; border: none; cursor: pointer; padding: 4px;
+      color: #64748b; border-radius: 6px; transition: color 0.15s;
+    }
+    .settings-btn:hover { color: #94a3b8; }
+
+    /* ── Search ── */
+    .search-wrap {
+      padding: 12px 16px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .search-row { display: flex; gap: 8px; }
+    .search-input {
+      flex: 1; background: #1e293b; border: 1px solid #334155;
+      border-radius: 8px; padding: 8px 12px; font-size: 13px;
+      color: #e2e8f0; outline: none; transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: #6366f1; }
+    .search-input::placeholder { color: #475569; }
+    .search-btn {
+      background: #6366f1; border: none; border-radius: 8px;
+      padding: 8px 14px; font-size: 13px; font-weight: 600;
+      color: #fff; cursor: pointer; transition: background 0.15s;
+    }
+    .search-btn:hover { background: #4f46e5; }
+
+    /* ── Content areas ── */
+    .content { padding: 12px 16px; overflow-y: auto; max-height: 400px; }
+
+    /* ── Briefing card ── */
+    .briefing-card {
+      background: linear-gradient(135deg, #1e293b, #1a1f35);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .briefing-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #f59e0b; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .briefing-text {
+      font-size: 12px; line-height: 1.6; color: #cbd5e1;
+      display: -webkit-box; -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    /* ── AI explanation ── */
+    .explanation-card {
+      background: #1e293b; border: 1px solid #4f46e5;
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .explanation-q {
+      font-size: 11px; color: #818cf8; font-weight: 600; margin-bottom: 6px;
+    }
+    .explanation-a { font-size: 12px; line-height: 1.6; color: #cbd5e1; }
+
+    /* ── Results ── */
+    .result-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid #1e293b;
+    }
+    .result-item:last-child { border-bottom: none; }
+    .result-icon {
+      width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; background: #1e293b;
+    }
+    .result-title {
+      font-size: 12px; font-weight: 600; color: #e2e8f0;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+      line-height: 1.4;
+    }
+    .result-meta { font-size: 11px; color: #475569; margin-top: 2px; }
+
+    /* ── Save button ── */
+    .save-row {
+      padding: 10px 16px 14px;
+      border-top: 1px solid #1e293b;
+    }
+    .save-page-btn {
+      width: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border: none; border-radius: 10px; padding: 10px;
+      font-size: 13px; font-weight: 600; color: #fff; cursor: pointer;
+      transition: opacity 0.15s; display: flex; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .save-page-btn:hover { opacity: 0.9; }
+    .save-page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Status messages ── */
+    .empty { text-align: center; color: #475569; font-size: 12px; padding: 20px 0; }
+    .error { color: #f87171; font-size: 12px; padding: 8px 0; }
+    .loading { color: #6366f1; font-size: 12px; padding: 8px 0; }
+
+    /* ── Open app link ── */
+    .open-app {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 6px; font-size: 11px; color: #475569;
+      text-decoration: none; transition: color 0.15s;
+    }
+    .open-app:hover { color: #6366f1; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">S</div>
+    <span class="header-title">Synapse AI</span>
+    <button class="settings-btn" id="open-settings" title="Settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Search bar (TASK-606-4) -->
+  <div class="search-wrap">
+    <div class="search-row">
+      <input
+        type="text"
+        id="search-input"
+        class="search-input"
+        placeholder="Ask Synapse AI or search…"
+        autocomplete="off"
+      />
+      <button id="search-btn" class="search-btn">Ask</button>
+    </div>
+  </div>
+
+  <!-- Dynamic content area -->
+  <div class="content" id="content-area">
+    <div class="loading" id="loading-msg">Loading your briefing…</div>
+  </div>
+
+  <!-- Save current page -->
+  <div class="save-row">
+    <button id="save-page-btn" class="save-page-btn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+      Save This Page
+    </button>
+  </div>
+
+  <!-- Open full app -->
+  <a href="#" id="open-app-link" class="open-app">
+    Open Synapse App
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/>
+    </svg>
+  </a>
+
+  <script src="popup.js"></script>
+</body>
+</html>

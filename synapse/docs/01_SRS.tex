@@ -1,0 +1,1019 @@
+\documentclass{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+
+\onehalfspacing
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SYNAPSE SRS v1.0}
+\lhead{Software Requirements Specification}
+\cfoot{\thepage}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    frame=single,
+    language=Python
+}
+
+\title{\textbf{SYNAPSE} \\ \large AI-Powered Technology Intelligence and Automation Platform \\ Software Requirements Specification}
+\author{Development Team}
+\date{Version 1.0 \\ March 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{center}
+    \vspace{2cm}
+    \Large \textbf{Document Information} \\
+    \vspace{1cm}
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Project Name} & SYNAPSE \\
+    \hline
+    \textbf{Document Title} & Software Requirements Specification \\
+    \hline
+    \textbf{Version} & 1.0 \\
+    \hline
+    \textbf{Status} & Final \\
+    \hline
+    \textbf{Date} & March 2026 \\
+    \hline
+    \textbf{Classification} & Confidential \\
+    \hline
+    \end{tabular}
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+
+\section{Purpose}
+This Software Requirements Specification (SRS) document defines the functional and non-functional requirements for SYNAPSE, a comprehensive AI-powered technology intelligence and automation platform. The document provides a detailed specification of features, capabilities, constraints, and quality attributes that guide the design, development, and testing of the SYNAPSE platform.
+
+\section{Scope}
+SYNAPSE is designed to serve technology professionals, researchers, and enterprises who require:
+\begin{itemize}
+    \item Real-time monitoring of technological trends and innovations
+    \item Automated data collection from diverse internet sources
+    \item AI-powered analysis and summarization of technical content
+    \item Personalized learning and knowledge discovery
+    \item Autonomous workflow automation
+    \item Advanced document generation (PDFs, presentations, code)
+\end{itemize}
+
+The platform encompasses:
+\begin{itemize}
+    \item Data collection and web scraping infrastructure
+    \item NLP processing pipelines
+    \item Multiple database systems (PostgreSQL, Vector DB, Redis, Object Storage)
+    \item RAG-based AI Chat Assistant
+    \item Personalization and recommendation engines
+    \item Agentic AI layer for autonomous task execution
+    \item Cloud-based deployment and CI/CD infrastructure
+    \item Modern web-based dashboard frontend
+\end{itemize}
+
+\section{Definitions, Acronyms, and Abbreviations}
+\begin{description}
+    \item[RAG] Retrieval-Augmented Generation
+    \item[NLP] Natural Language Processing
+    \item[LLM] Large Language Model
+    \item[FAANG] Facebook (Meta), Apple, Amazon, Netflix, Google
+    \item[API] Application Programming Interface
+    \item[REST] Representational State Transfer
+    \item[JWT] JSON Web Token
+    \item[RBAC] Role-Based Access Control
+    \item[CI/CD] Continuous Integration/Continuous Deployment
+    \item[PostgreSQL] Advanced open-source relational database
+    \item[Redis] In-memory data structure store
+    \item[Vector DB] Vector database for embeddings and semantic search
+    \item[LangChain] Framework for building LLM applications
+    \item[Next.js] React framework with server-side rendering
+    \item[TailwindCSS] Utility-first CSS framework
+    \item[Docker] Container virtualization platform
+    \item[Kubernetes] Orchestration platform (optional)
+    \item[PDF/PPT/DOCX] Document formats (Portable Document Format, PowerPoint, Word)
+    \item[GitHub] Version control and collaboration platform
+    \item[arXiv] Preprint repository for scientific papers
+    \item[Hacker News] Technology news aggregation website
+\end{description}
+
+\section{References}
+\begin{itemize}
+    \item IEEE 830-1998: Recommended Practice for Software Requirements Specifications
+    \item OWASP Security Guidelines
+    \item Cloud Security Alliance Best Practices
+    \item REST API Design Best Practices
+    \item ISO/IEC 9126: Software Quality Characteristics
+\end{itemize}
+
+\section{Document Overview}
+This SRS is organized as follows:
+\begin{itemize}
+    \item \textbf{Chapter 2:} Overall Description of the system, product perspective, and constraints
+    \item \textbf{Chapter 3:} Detailed Functional Requirements
+    \item \textbf{Chapter 4:} Non-Functional Requirements covering performance, security, and reliability
+    \item \textbf{Chapter 5:} External Interface Requirements
+    \item \textbf{Chapter 6:} System Constraints and Assumptions
+    \item \textbf{Appendices:} Additional technical details and specifications
+\end{itemize}
+
+\newpage
+\chapter{Overall Description}
+
+\section{Product Perspective}
+SYNAPSE is a standalone, cloud-based SaaS platform designed to operate in a multi-tenant architecture. The system integrates with numerous external services and APIs including:
+\begin{itemize}
+    \item Web sources: Hacker News, arXiv, GitHub, YouTube, technical blogs
+    \item LLM providers: OpenAI, Anthropic, or equivalent
+    \item Cloud infrastructure: AWS, Google Cloud, or Azure
+    \item Database services: Managed PostgreSQL, Vector Database, Redis
+    \item Object storage: S3-compatible storage for documents and media
+\end{itemize}
+
+\section{Product Functions}
+SYNAPSE delivers the following core functional areas:
+
+\subsection{Data Intelligence Layer}
+\begin{itemize}
+    \item Automated web scraping from multiple sources
+    \item Continuous data collection and ingestion
+    \item Data normalization and cleansing
+    \item Duplicate detection and deduplication
+    \item Real-time data synchronization
+\end{itemize}
+
+\subsection{Knowledge Processing Layer}
+\begin{itemize}
+    \item NLP pipeline for summarization
+    \item Topic classification and tagging
+    \item Keyword extraction
+    \item Trend detection and anomaly identification
+    \item Semantic embedding generation
+    \item Full-text and semantic search
+\end{itemize}
+
+\subsection{Knowledge Storage Layer}
+\begin{itemize}
+    \item Structured data storage (PostgreSQL)
+    \item Vector embeddings storage (Vector DB)
+    \item Caching layer (Redis)
+    \item Document and media storage (Object Storage)
+    \item Metadata indexing
+\end{itemize}
+
+\subsection{Intelligence \& Automation Layer}
+\begin{itemize}
+    \item RAG-based AI Chat Assistant
+    \item Personalized recommendation engine
+    \item Agentic AI for autonomous task execution
+    \item Workflow automation and scheduling
+    \item Document generation (PDF, PPT, DOCX)
+    \item Code generation and project scaffolding
+\end{itemize}
+
+\subsection{User Interface Layer}
+\begin{itemize}
+    \item Responsive web dashboard
+    \item Multiple specialized pages for different workflows
+    \item Mobile-optimized experience
+    \item Real-time notifications
+    \item Interactive visualizations
+\end{itemize}
+
+\section{User Classes}
+SYNAPSE serves multiple user personas:
+
+\subsection{Technology Researchers}
+Research scientists and academics who require access to curated technical content, paper summaries, and trend analysis.
+
+\subsection{Software Engineers}
+Developers seeking code examples, GitHub project insights, technical tutorials, and best practices.
+
+\subsection{Data Scientists}
+Professionals working with AI/ML who need access to research papers, datasets, and technical implementations.
+
+\subsection{Enterprise IT Leaders}
+CIOs, CTOs, and technology directors requiring comprehensive technology landscape monitoring and strategic insights.
+
+\subsection{Learning Enthusiasts}
+Individuals pursuing continuous learning in technology with personalized recommendations and curated content.
+
+\subsection{Automation Power Users}
+Advanced users creating custom workflows and automations without programming expertise.
+
+\section{Operating Environment}
+\begin{itemize}
+    \item \textbf{Deployment Platform:} Docker containers orchestrated via Kubernetes or cloud-native services
+    \item \textbf{Cloud Infrastructure:} AWS, Google Cloud, or Microsoft Azure
+    \item \textbf{Frontend:} Web browsers (Chrome, Firefox, Safari, Edge) with ES6+ support
+    \item \textbf{Mobile:} Responsive design supporting iOS and Android devices via web app
+    \item \textbf{Backend Services:} Microservices architecture deployed as containerized applications
+    \item \textbf{Databases:} PostgreSQL 14+, Vector DB (e.g., Pinecone, Weaviate), Redis 6+
+    \item \textbf{External APIs:} LLM APIs, web scraping infrastructure, cloud storage APIs
+\end{itemize}
+
+\section{Design Constraints}
+\begin{enumerate}
+    \item System must support RBAC with multiple permission levels
+    \item All data transmission must be encrypted (TLS 1.3+)
+    \item Response times must be optimized for user experience
+    \item Platform must scale horizontally to support growing user base
+    \item Third-party LLM API costs must be monitored and optimized
+    \item Data retention policies must comply with GDPR and regional regulations
+    \item System must gracefully handle rate limiting from external APIs
+    \item Authentication must support multi-factor authentication (MFA)
+\end{enumerate}
+
+\section{Assumptions and Dependencies}
+\begin{itemize}
+    \item Users have reliable internet connectivity
+    \item Target users are comfortable with web-based SaaS platforms
+    \item External APIs (LLM providers, web sources) remain available and functional
+    \item Cloud infrastructure services maintain acceptable uptime (99.9%+)
+    \item LLM models continue to improve and remain cost-effective
+    \item Users have modern web browsers with JavaScript enabled
+    \item Organizations adopting SYNAPSE have data governance policies in place
+\end{itemize}
+
+\chapter{Functional Requirements}
+
+\section{User Authentication and Authorization}
+
+\subsection{FR-001: User Registration}
+The system shall allow new users to create an account by providing email, password, and basic profile information. The system shall validate email format and enforce password complexity requirements (minimum 12 characters, uppercase, lowercase, numbers, special characters).
+
+\subsection{FR-002: Email Verification}
+The system shall send a verification email upon registration and require users to confirm their email address before accessing the platform.
+
+\subsection{FR-003: User Login}
+The system shall authenticate users via email and password combination. Successful authentication shall return a JWT token valid for 24 hours.
+
+\subsection{FR-004: Multi-Factor Authentication (MFA)}
+The system shall support optional MFA using time-based one-time passwords (TOTP) via authenticator apps or email-based verification codes.
+
+\subsection{FR-005: Password Reset}
+Users shall be able to reset forgotten passwords via email-based secure token. The reset link shall expire after 30 minutes.
+
+\subsection{FR-006: Role-Based Access Control (RBAC)}
+The system shall implement RBAC with roles: Admin, Manager, User, and Guest. Each role shall have specific permissions for accessing features and data.
+
+\subsection{FR-007: Permission Enforcement}
+The system shall enforce permissions at the API level, preventing unauthorized access to restricted resources or features.
+
+\subsection{FR-008: Session Management}
+The system shall manage user sessions, allowing logout, session timeout (30 minutes of inactivity), and concurrent session limits per user.
+
+\section{Data Collection and Web Scraping}
+
+\subsection{FR-009: Hacker News Scraping}
+The system shall continuously scrape Hacker News (news.ycombinator.com) every 15 minutes to collect trending technology stories, including title, URL, score, comments, and timestamp.
+
+\subsection{FR-010: arXiv Paper Collection}
+The system shall integrate with arXiv API to collect computer science papers (categories: cs.AI, cs.LG, cs.CV, cs.NLP) daily, extracting title, abstract, authors, publication date, and DOI.
+
+\subsection{FR-011: GitHub Repository Monitoring}
+The system shall monitor GitHub trending repositories hourly, collecting repository name, description, language, stars, forks, and latest commit information.
+
+\subsection{FR-012: YouTube Content Collection}
+The system shall collect trending technology YouTube videos via YouTube API, including video title, description, channel, view count, and transcript (when available).
+
+\subsection{FR-013: Technical Blog Scraping}
+The system shall scrape designated technical blogs (Medium, Dev.to, CSS-Tricks, etc.) to collect articles with full text content.
+
+\subsection{FR-014: Data Normalization}
+The system shall normalize scraped data into a standard format, handling different date formats, character encodings, and data structures.
+
+\subsection{FR-015: Duplicate Detection}
+The system shall detect and prevent duplicate entries using content hash comparison and similarity scoring.
+
+\subsection{FR-016: Rate Limiting Compliance}
+The system shall respect rate limits from external APIs and implement exponential backoff for failed requests.
+
+\subsection{FR-017: Data Freshness Management}
+The system shall update existing records when newer versions are found and track data refresh timestamps.
+
+\section{Data Processing and NLP Pipeline}
+
+\subsection{FR-018: Content Summarization}
+The system shall generate abstractive summaries of technical content, reducing length by 70-80\% while preserving key information.
+
+\subsection{FR-019: Topic Classification}
+The system shall automatically classify content into topics (e.g., Machine Learning, Cloud Computing, DevOps, Security, Web Development) using multi-label classification.
+
+\subsection{FR-020: Keyword Extraction}
+The system shall extract important keywords and entities from content using NLP techniques, identifying technologies, companies, and concepts.
+
+\subsection{FR-021: Trend Detection}
+The system shall identify emerging trends by analyzing keyword frequency patterns over time and detecting rapid growth in mentions.
+
+\subsection{FR-022: Sentiment Analysis}
+The system shall analyze sentiment of discussions and comments, categorizing content as positive, negative, or neutral.
+
+\subsection{FR-023: Named Entity Recognition}
+The system shall identify and tag named entities including person names, company names, technologies, and products.
+
+\subsection{FR-024: Text Embedding Generation}
+The system shall generate dense vector embeddings for all content using sentence transformers, enabling semantic search and similarity calculations.
+
+\subsection{FR-025: Pipeline Orchestration}
+The system shall orchestrate NLP pipeline execution with configurable processing steps and error handling.
+
+\section{Knowledge Storage and Indexing}
+
+\subsection{FR-026: PostgreSQL Storage}
+The system shall store structured metadata and normalized content in PostgreSQL with appropriate indexes on frequently queried fields (timestamp, topic, source).
+
+\subsection{FR-027: Vector Database Storage}
+The system shall store text embeddings in a Vector Database (Pinecone, Weaviate, or Milvus) indexed by content ID and topic, enabling efficient semantic search.
+
+\subsection{FR-028: Redis Caching}
+The system shall implement Redis caching for frequently accessed queries, user sessions, and API responses with 1-hour TTL default.
+
+\subsection{FR-029: Object Storage Integration}
+The system shall store generated documents (PDFs, PPTs, Word files) and media in S3-compatible object storage with proper access controls.
+
+\subsection{FR-030: Full-Text Search Index}
+The system shall maintain a full-text search index on PostgreSQL content for fast keyword-based queries.
+
+\subsection{FR-031: Metadata Tagging}
+All stored content shall be tagged with metadata including source, collection timestamp, processing timestamp, and topics.
+
+\section{Semantic Search and Discovery}
+
+\subsection{FR-032: Semantic Search}
+Users shall be able to search content using natural language queries, with results ranked by semantic similarity to the query.
+
+\subsection{FR-033: Hybrid Search}
+The system shall support hybrid search combining keyword matching and semantic similarity, allowing users to balance precision and recall.
+
+\subsection{FR-034: Search Filters}
+Users shall filter search results by date range, source, topic, sentiment, and content type.
+
+\subsection{FR-035: Search History}
+The system shall maintain user search history and provide quick access to previous searches.
+
+\subsection{FR-036: Saved Searches}
+Users shall be able to save and name custom search queries for reuse.
+
+\section{AI Chat Assistant (RAG-Based)}
+
+\subsection{FR-037: Chat Interface}
+The system shall provide an interactive chat interface where users can ask questions about technology trends and content.
+
+\subsection{FR-038: RAG Pipeline}
+The chat assistant shall implement RAG by retrieving relevant documents from the vector database and using them as context for LLM responses.
+
+\subsection{FR-039: Conversation Context}
+The system shall maintain conversation context across multiple turns, allowing follow-up questions.
+
+\subsection{FR-040: Citation Generation}
+The chat assistant shall cite sources for generated responses, providing links to original content.
+
+\subsection{FR-041: Conversation History}
+Users shall view, search, and export their conversation histories.
+
+\subsection{FR-042: Rate Limiting for Chat}
+The system shall enforce rate limits on chat (e.g., 50 messages per day for free tier, unlimited for premium).
+
+\section{Recommendation Engine}
+
+\subsection{FR-043: Personalized Content Feed}
+The system shall generate a personalized learning feed based on user interests, viewing history, and explicit preferences.
+
+\subsection{FR-044: Collaborative Filtering}
+The system shall use collaborative filtering to identify similar users and recommend content they have found valuable.
+
+\subsection{FR-045: Content-Based Recommendations}
+The system shall recommend similar content based on semantic similarity to content the user has previously engaged with.
+
+\subsection{FR-046: Trending Content}
+The system shall include trending and viral content in recommendations, dynamically adjusting popularity weights.
+
+\subsection{FR-047: Topic Preferences}
+Users shall set explicit topic preferences and interests, which shall influence recommendations.
+
+\subsection{FR-048: Recommendation Explanations}
+Recommendations shall include explanations (e.g., "trending in Machine Learning" or "similar to content you liked").
+
+\section{Agentic AI Layer}
+
+\subsection{FR-049: Autonomous Agents}
+The system shall support autonomous AI agents that can execute multi-step tasks without user intervention.
+
+\subsection{FR-050: PDF Generation}
+Agents shall generate comprehensive PDF reports based on topic queries, with formatting, tables, images, and proper pagination.
+
+\subsection{FR-051: Presentation Generation}
+Agents shall create PowerPoint presentations with slides, speaker notes, and embedded visualizations.
+
+\subsection{FR-052: Document Generation}
+Agents shall generate Microsoft Word documents with formatting, tables, and embedded content.
+
+\subsection{FR-053: Code Project Generation}
+Agents shall scaffold complete code projects based on requirements, including directory structure, boilerplate code, and configuration files.
+
+\subsection{FR-054: Agent Scheduling}
+Users shall define when and how often agents should run their tasks (e.g., daily, weekly).
+
+\subsection{FR-055: Agent Output Storage}
+Generated outputs shall be automatically stored in object storage and indexed for user retrieval.
+
+\section{Automation Center}
+
+\subsection{FR-056: Workflow Builder}
+Users shall build custom workflows via a visual workflow builder without requiring programming knowledge.
+
+\subsection{FR-057: Workflow Triggers}
+Workflows shall be triggered by events (content matching filters, scheduled time, manual trigger) or webhooks.
+
+\subsection{FR-058: Workflow Actions}
+Available workflow actions shall include: send notification, create document, generate report, update database, call webhook, send email.
+
+\subsection{FR-059: Conditional Logic}
+Workflows shall support conditional branching (if-then-else) to enable complex automation logic.
+
+\subsection{FR-060: Workflow Scheduling}
+Users shall schedule workflows to run at specific times or intervals (hourly, daily, weekly, monthly).
+
+\subsection{FR-061: Workflow Execution History}
+The system shall log all workflow executions, including timestamps, status, inputs, and outputs.
+
+\subsection{FR-062: Workflow Templates}
+Pre-built workflow templates shall be available for common use cases (daily digest, weekly report, alert on trend spike).
+
+\section{Document Studio}
+
+\subsection{FR-063: Document Templates}
+The system shall provide templates for PDFs, presentations, and documents with customizable sections.
+
+\subsection{FR-064: Content Selection}
+Users shall select content from the knowledge base to include in documents.
+
+\subsection{FR-065: Custom Formatting}
+Users shall customize document appearance (colors, fonts, logos, branding).
+
+\subsection{FR-066: Batch Generation}
+Users shall generate multiple documents in batch, with automatic scheduling of generation tasks.
+
+\subsection{FR-067: Version Control}
+Document versions shall be tracked, and users can revert to previous versions.
+
+\section{Frontend Dashboard and Pages}
+
+\subsection{FR-068: Tech Intelligence Feed}
+The dashboard shall display a real-time feed of trending technology content with filtering and sorting options.
+
+\subsection{FR-069: Research Explorer}
+A dedicated page for searching and exploring research papers with filtering by date, topic, and author.
+
+\subsection{FR-070: GitHub Radar}
+A page showcasing trending GitHub repositories with language filters, star/fork sorting, and project details.
+
+\subsection{FR-071: Learning Hub}
+A curated learning page with recommendations, learning paths, and progress tracking.
+
+\subsection{FR-072: Automation Center Interface}
+The interface for creating, editing, viewing, and managing workflows and automations.
+
+\subsection{FR-073: AI Assistant Page}
+A dedicated chat interface for interacting with the RAG-based AI assistant.
+
+\subsection{FR-074: Document Studio Interface}
+The interface for document generation, customization, and management.
+
+\subsection{FR-075: Knowledge Library}
+A searchable library of all previously generated documents, saved content, and collections.
+
+\subsection{FR-076: User Profile and Settings}
+Users shall manage their profile, preferences, notification settings, and integrations.
+
+\section{Notifications and Alerts}
+
+\subsection{FR-077: Real-Time Notifications}
+The system shall support real-time in-app notifications for important events (trend spikes, matching content, workflow completion).
+
+\subsection{FR-078: Email Notifications}
+Users shall receive email notifications based on their preferences and subscription tier.
+
+\subsection{FR-079: Notification Preferences}
+Users shall configure which events trigger notifications and preferred delivery channels.
+
+\subsection{FR-080: Notification History}
+The system shall maintain a history of sent notifications accessible to users.
+
+\section{Mobile Responsiveness}
+
+\subsection{FR-081: Responsive Design}
+All pages shall be fully responsive, adapting to desktop, tablet, and mobile screen sizes.
+
+\subsection{FR-082: Touch Optimization}
+Interactive elements shall be optimized for touch input on mobile devices.
+
+\subsection{FR-083: Mobile Navigation}
+Navigation shall be adapted for mobile with collapsible menus and bottom tabs.
+
+\section{API and Integration}
+
+\subsection{FR-084: REST API}
+The system shall expose a comprehensive REST API for third-party integrations and programmatic access.
+
+\subsection{FR-085: API Authentication}
+API access shall require authentication via API keys or OAuth 2.0 tokens.
+
+\subsection{FR-086: API Documentation}
+Complete OpenAPI/Swagger documentation shall be available for the public API.
+
+\subsection{FR-087: Webhook Support}
+The system shall support webhooks for pushing notifications and events to external systems.
+
+\subsection{FR-088: Rate Limiting}
+API endpoints shall implement rate limiting (e.g., 1000 requests per hour per user).
+
+\chapter{Non-Functional Requirements}
+
+\section{Performance Requirements}
+
+\subsection{NFR-001: Response Time}
+\begin{itemize}
+    \item API endpoints shall respond within 200ms for 95th percentile requests
+    \item Search queries shall return results within 500ms
+    \item Chat responses shall be streamed, with initial response within 1000ms
+\end{itemize}
+
+\subsection{NFR-002: Throughput}
+\begin{itemize}
+    \item System shall handle 10,000 concurrent users
+    \item API shall support 50,000 requests per second
+    \item Data ingestion pipeline shall process 1,000 new documents per minute
+\end{itemize}
+
+\subsection{NFR-003: Latency}
+\begin{itemize}
+    \item Real-time notifications shall be delivered within 100ms of event trigger
+    \item Search indexes shall be updated within 5 minutes of content ingestion
+\end{itemize}
+
+\section{Scalability Requirements}
+
+\subsection{NFR-004: Horizontal Scaling}
+The system shall support horizontal scaling across multiple server instances without code changes. Load balancing shall automatically distribute traffic.
+
+\subsection{NFR-005: Database Scaling}
+Databases shall support read replicas and connection pooling to handle increased load.
+
+\subsection{NFR-006: Cache Scaling}
+Redis clusters shall automatically scale based on memory usage and request patterns.
+
+\section{Reliability Requirements}
+
+\subsection{NFR-007: Availability}
+The system shall maintain 99.9\% uptime (30 minutes downtime per month) during production operations.
+
+\subsection{NFR-008: Mean Time to Recovery (MTTR)}
+Critical system failures shall be resolved within 15 minutes.
+
+\subsection{NFR-009: Data Durability}
+All data shall be replicated across multiple availability zones with automatic failover.
+
+\subsection{NFR-010: Backup and Recovery}
+Daily backups shall be maintained for 30 days. Recovery time objective (RTO) is 1 hour; recovery point objective (RPO) is 1 hour.
+
+\section{Security Requirements}
+
+\subsection{NFR-011: Data Encryption}
+\begin{itemize}
+    \item All data in transit shall be encrypted using TLS 1.3 or higher
+    \item Sensitive data at rest shall be encrypted using AES-256
+    \item Database encryption shall use transparent data encryption (TDE)
+\end{itemize}
+
+\subsection{NFR-012: Authentication Security}
+\begin{itemize}
+    \item Passwords shall be hashed using bcrypt with salt rounds $\geq$ 12
+    \item JWT tokens shall be signed with RS256 algorithm
+    \item API keys shall be stored securely and rotated every 90 days
+\end{itemize}
+
+\subsection{NFR-013: Authorization and Access Control}
+\begin{itemize}
+    \item Role-based access control (RBAC) shall be enforced at all layers
+    \item Sensitive operations shall require multi-factor authentication
+    \item Principle of least privilege shall be applied to all permissions
+\end{itemize}
+
+\subsection{NFR-014: Input Validation and Sanitization}
+\begin{itemize}
+    \item All user inputs shall be validated against whitelist rules
+    \item SQL injection prevention through parameterized queries
+    \item XSS prevention through output encoding
+    \item CSRF protection through token validation
+\end{itemize}
+
+\subsection{NFR-015: API Security}
+\begin{itemize}
+    \item Rate limiting to prevent abuse (1000 req/hour per user)
+    \item API key rotation and revocation mechanisms
+    \item Request signing for sensitive operations
+    \item CORS policies strictly enforced
+\end{itemize}
+
+\subsection{NFR-016: Audit Logging}
+All security-relevant events shall be logged (login attempts, permission changes, data access) and retained for 90 days.
+
+\subsection{NFR-017: Vulnerability Management}
+\begin{itemize}
+    \item Regular security scanning of code and dependencies
+    \item Penetration testing quarterly
+    \item Immediate patching of critical vulnerabilities
+    \item Security incident response plan maintained
+\end{itemize}
+
+\subsection{NFR-018: Data Privacy}
+\begin{itemize}
+    \item GDPR compliance for EU users (data retention, deletion, export)
+    \item CCPA compliance for California users
+    \item User data shall not be sold or shared with third parties
+    \item Privacy policy clearly communicated to users
+\end{itemize}
+
+\section{Usability Requirements}
+
+\subsection{NFR-019: User Interface Consistency}
+The UI shall maintain consistent design patterns, terminology, and interaction models across all pages.
+
+\subsection{NFR-020: Accessibility}
+The system shall comply with WCAG 2.1 Level AA standards, including:
+\begin{itemize}
+    \item Keyboard navigation support
+    \item Screen reader compatibility
+    \item Color contrast ratios
+    \item Alt text for images
+\end{itemize}
+
+\subsection{NFR-021: Documentation}
+\begin{itemize}
+    \item User documentation with screenshots and video tutorials
+    \item Admin documentation for system configuration
+    \item Developer API documentation with examples
+    \item In-app tooltips and contextual help
+\end{itemize}
+
+\subsection{NFR-022: User Onboarding}
+New users shall complete a guided onboarding flow introducing key features within 5 minutes.
+
+\section{Maintainability Requirements}
+
+\subsection{NFR-023: Code Quality}
+\begin{itemize}
+    \item Minimum code coverage of 80\% for unit tests
+    \item Adherence to style guides and linters
+    \item Code review process for all changes
+    \item Technical debt tracking and remediation
+\end{itemize}
+
+\subsection{NFR-024: Logging and Monitoring}
+\begin{itemize}
+    \item Comprehensive structured logging at debug, info, warning, error, critical levels
+    \item Centralized log aggregation and analysis
+    \item Real-time alerting for critical errors
+    \item Performance monitoring with metrics collection
+\end{itemize}
+
+\subsection{NFR-025: System Monitoring}
+Real-time monitoring dashboards shall track:
+\begin{itemize}
+    \item Application performance (CPU, memory, disk, network)
+    \item Database query performance and connection pools
+    \item API response times and error rates
+    \item Data pipeline progress and failures
+\end{itemize}
+
+\section{Compatibility Requirements}
+
+\subsection{NFR-026: Browser Compatibility}
+The system shall support:
+\begin{itemize}
+    \item Chrome/Edge 90+
+    \item Firefox 88+
+    \item Safari 14+
+\end{itemize}
+
+\subsection{NFR-027: Mobile Device Support}
+Responsive design shall support:
+\begin{itemize}
+    \item iOS 12+
+    \item Android 8+
+    \item Screen sizes from 320px to 2560px width
+\end{itemize}
+
+\chapter{External Interface Requirements}
+
+\section{User Interface Requirements}
+
+\subsection{UI-001: Dashboard Layout}
+The main dashboard shall display:
+\begin{itemize}
+    \item Navigation sidebar with main sections
+    \item Header with user profile and notifications
+    \item Main content area with flexible layout
+    \item Footer with help and documentation links
+\end{itemize}
+
+\subsection{UI-002: Color Scheme and Branding}
+\begin{itemize}
+    \item Primary color: Dark blue (\#1e293b)
+    \item Accent color: Bright blue (\#3b82f6)
+    \item Text colors: Dark gray on light background, light gray on dark
+    \item Dark mode support with inverted color scheme
+\end{itemize}
+
+\subsection{UI-003: Typography}
+\begin{itemize}
+    \item Primary font: Inter or similar sans-serif
+    \item Body text: 14-16px
+    \item Headings: Hierarchical sizing (H1-H6)
+    \item Monospace font: Fira Code or Monaco for code display
+\end{itemize}
+
+\section{Hardware Interface Requirements}
+
+\subsection{HW-001: Server Requirements}
+\begin{itemize}
+    \item Minimum: 8 CPU cores, 32GB RAM, 500GB SSD
+    \item Recommended: 16+ CPU cores, 64GB RAM, 1TB+ NVMe SSD
+    \item Cloud instances: AWS t3.2xlarge or equivalent
+\end{itemize}
+
+\subsection{HW-002: Storage Requirements}
+\begin{itemize}
+    \item PostgreSQL: 500GB+ with daily backups
+    \item Vector DB: 100GB+ for embeddings
+    \item Object Storage: 1TB+ for documents and media
+\end{itemize}
+
+\section{Software Interface Requirements}
+
+\subsection{SW-001: Backend Stack}
+\begin{itemize}
+    \item Language: Python 3.11+ or Node.js 18+
+    \item Web Framework: FastAPI or Express.js
+    \item Task Queue: Celery or Bull
+    \item LLM Framework: LangChain or LlamaIndex
+\end{itemize}
+
+\subsection{SW-002: Frontend Stack}
+\begin{itemize}
+    \item Framework: Next.js 14+
+    \item Styling: TailwindCSS 3+
+    \item State Management: Redux or Zustand
+    \item UI Components: Custom built or shadcn/ui
+\end{itemize}
+
+\subsection{SW-003: Database Integration}
+\begin{itemize}
+    \item PostgreSQL: psycopg2 or node-postgres drivers
+    \item Vector DB: Official SDKs for Pinecone/Weaviate/Milvus
+    \item Redis: redis-py or node-redis clients
+\end{itemize}
+
+\subsection{SW-004: External Service Integration}
+\begin{itemize}
+    \item LLM APIs: OpenAI, Anthropic, HuggingFace APIs
+    \item Web Scraping: Selenium, BeautifulSoup, Puppeteer
+    \item Email: SendGrid or SES
+    \item Cloud Storage: AWS S3 SDK
+\end{itemize}
+
+\section{Communication Interface Requirements}
+
+\subsection{COMM-001: REST API}
+\begin{itemize}
+    \item Base URL: https://api.synapse.io/v1
+    \item Request format: JSON
+    \item Response format: JSON with standard structure: \{``code'', ``message'', ``data''\}
+    \item HTTP status codes: 200 (OK), 201 (Created), 400 (Bad Request), 401 (Unauthorized), 403 (Forbidden), 404 (Not Found), 500 (Server Error)
+\end{itemize}
+
+\subsection{COMM-002: WebSocket Communication}
+\begin{itemize}
+    \item Real-time events: wss://api.synapse.io/ws
+    \item Event types: notifications, chat messages, workflow updates
+    \item Automatic reconnection with exponential backoff
+    \item Heartbeat every 30 seconds
+\end{itemize}
+
+\subsection{COMM-003: Authentication Header}
+\begin{lstlisting}
+Authorization: Bearer <JWT_TOKEN>
+X-API-Key: <API_KEY> (for server-to-server)
+\end{lstlisting}
+
+\chapter{System Constraints}
+
+\section{Technical Constraints}
+
+\subsection{Third-Party API Dependencies}
+\begin{itemize}
+    \item System requires active LLM API provider account (OpenAI, Anthropic, etc.)
+    \item Web scraping dependent on external site availability and robots.txt compliance
+    \item Hacker News API limited to 1 request per 500ms (official guidelines)
+    \item arXiv API has burst rate limits
+\end{itemize}
+
+\subsection{Cost Constraints}
+\begin{itemize}
+    \item LLM API costs must be optimized through prompt engineering and caching
+    \item Cloud infrastructure costs must remain predictable through reserved instances
+    \item Storage costs managed through data retention policies and compression
+\end{itemize}
+
+\subsection{Legal and Compliance Constraints}
+\begin{itemize}
+    \item GDPR compliance required for all EU users
+    \item CCPA compliance required for California users
+    \item Copyright and fair use considerations for content scraping and reproduction
+    \item API usage must comply with terms of service of external platforms
+\end{itemize}
+
+\section{Operational Constraints}
+
+\subsection{Deployment Constraints}
+\begin{itemize}
+    \item Minimum 2-node cluster for high availability
+    \item Deployment only to supported cloud providers (AWS, GCP, Azure)
+    \item Database migrations must be zero-downtime compatible
+\end{itemize}
+
+\subsection{Data Constraints}
+\begin{itemize}
+    \item Maximum document size: 100MB for storage
+    \item Maximum chat message length: 10,000 characters
+    \item Retention: user data kept for 180 days after account deletion
+\end{itemize}
+
+\section{Performance Constraints}
+
+\subsection{Scalability Limits}
+\begin{itemize}
+    \item Single PostgreSQL instance can handle up to 100,000 concurrent connections
+    \item Vector DB query latency increases with dataset size (target: <100ms for <1B embeddings)
+    \item Redis cluster can handle up to 100,000 ops/sec per node
+\end{itemize}
+
+\chapter{Appendices}
+
+\section{Appendix A: API Endpoint Reference}
+
+The following core API endpoints shall be implemented:
+
+\begin{lstlisting}[language=bash]
+# Authentication
+POST /auth/register
+POST /auth/login
+POST /auth/logout
+POST /auth/refresh-token
+POST /auth/verify-mfa
+
+# Content Search
+GET /search?q=<query>\&type=<type>\&limit=<limit>
+GET /search/semantic?query=<query>
+GET /trending
+
+# Chat Assistant
+POST /chat/message
+GET /chat/history
+DELETE /chat/conversation/{id}
+
+# Recommendations
+GET /recommendations/feed
+GET /recommendations/trending
+
+# Automation
+POST /workflows
+GET /workflows
+PUT /workflows/{id}
+DELETE /workflows/{id}
+POST /workflows/{id}/execute
+
+# Documents
+POST /documents/generate
+GET /documents
+GET /documents/{id}
+DELETE /documents/{id}
+
+# User Management
+GET /user/profile
+PUT /user/profile
+GET /user/preferences
+PUT /user/preferences
+\end{lstlisting}
+
+\section{Appendix B: Database Schema Overview}
+
+Key tables and their purposes:
+
+\begin{itemize}
+    \item \textbf{users}: User accounts with authentication credentials
+    \item \textbf{roles}: Role definitions and permissions
+    \item \textbf{content}: Indexed content from all sources
+    \item \textbf{embeddings}: Vector embeddings linked to content
+    \item \textbf{conversations}: Chat conversation history
+    \item \textbf{workflows}: User-defined automation workflows
+    \item \textbf{documents}: Generated documents with metadata
+    \item \textbf{audit\_logs}: Security and access audit trails
+    \item \textbf{notifications}: User notifications
+\end{itemize}
+
+\section{Appendix C: Technology Stack Summary}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Component} & \textbf{Technology} \\
+\hline
+Backend & Python 3.11 + FastAPI \\
+Frontend & Next.js 14 + React + TailwindCSS \\
+Databases & PostgreSQL 14 + Pinecone Vector DB + Redis \\
+LLM Framework & LangChain + OpenAI API \\
+Task Queue & Celery + Redis \\
+Web Scraping & Scrapy + BeautifulSoup + Selenium \\
+Deployment & Docker + Kubernetes \\
+Cloud & AWS (primary) / GCP / Azure \\
+Monitoring & Prometheus + Grafana + ELK Stack \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Appendix D: Testing Requirements}
+
+\subsection{Unit Testing}
+Minimum 80\% code coverage using pytest (backend) and Jest (frontend).
+
+\subsection{Integration Testing}
+Test all API endpoints with various input scenarios, edge cases, and error conditions.
+
+\subsection{Performance Testing}
+\begin{itemize}
+    \item Load testing with 10,000 concurrent users
+    \item Stress testing to identify breaking points
+    \item Endurance testing over 72-hour runs
+\end{itemize}
+
+\subsection{Security Testing}
+\begin{itemize}
+    \item Penetration testing quarterly
+    \item OWASP Top 10 vulnerability scanning
+    \item Dependency vulnerability scanning (SAST/SCA)
+\end{itemize}
+
+\subsection{User Acceptance Testing}
+Testing with representative users from each user class to validate usability and functionality.
+
+\section{Appendix E: Change Log}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Version} & \textbf{Date} & \textbf{Changes} \\
+\hline
+1.0 & March 2026 & Initial SRS document \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Appendix F: Glossary}
+
+\begin{description}
+    \item[Agentic AI] Autonomous AI systems that can plan and execute multi-step tasks
+    \item[Embedding] Dense vector representation of text for semantic similarity
+    \item[NLP] Natural Language Processing - automated analysis of human language
+    \item[RAG] Retrieval-Augmented Generation - combining retrieval with generative AI
+    \item[RBAC] Role-Based Access Control - permission system based on user roles
+    \item[Semantic Search] Search based on meaning rather than keyword matching
+    \item[Web Scraping] Automated extraction of data from websites
+    \item[Vector DB] Database optimized for storing and querying embeddings
+    \item[Workflow] Sequence of automated steps triggered by events or schedules
+\end{description}
+
+\end{document}

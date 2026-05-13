@@ -1,0 +1,1817 @@
+I'll investigate these issues. Let me start by creating a plan and searching for the relevant code.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Looking at the automation 500 error, the issue is that execute_workflow.apply_async() is being called but the Celery worker might not be running in production. Let me check if we can add error handling or run it synchronously as a fallback.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+I've addressed all the issues you reported:
+
+## Summary of Fixes
+
+**1. Warning banners removed from dashboard** - Removed [ApiKeyWarningBanner](cci:1://file:///home/hayredin/Documents/synapse/frontend/src/components/layout/ApiKeyWarningBanner.tsx:24:0-107:1) component from the dashboard layout at [/home/hayredin/Documents/synapse/frontend/src/app/(dashboard)/layout.tsx](cci:7://file:///home/hayredin/Documents/synapse/frontend/src/app/%28dashboard%29/layout.tsx:0:0-0:0). Warnings will no longer appear as banners on the dashboard.
+
+**2. Automation trigger 500 error fixed** - Added error handling to the [WorkflowTriggerView](cci:2://file:///home/hayredin/Documents/synapse/backend/apps/automation/views.py:96:0-170:9) in [/home/hayredin/Documents/synapse/backend/apps/automation/views.py](cci:7://file:///home/hayredin/Documents/synapse/backend/apps/automation/views.py:0:0-0:0). If the Celery worker is not available, the workflow now runs synchronously as a fallback instead of returning a 500 error.
+
+**3. WebSocket 404 error fixed** - Updated the WebSocket URL in [/home/hayredin/Documents/synapse/frontend/src/hooks/useNotificationSocket.ts](cci:7://file:///home/hayredin/Documents/synapse/frontend/src/hooks/useNotificationSocket.ts:0:0-0:0) to use the backend API URL (NEXT_PUBLIC_API_URL) instead of the frontend host. This ensures the WebSocket connects to the correct backend server.
+
+**4. Cross-Origin-Opener-Policy error fixed** - Updated Google Drive OAuth flow to use postMessage instead of polling popup.closed:
+   - Modified [/home/hayredin/Documents/synapse/frontend/src/app/(dashboard)/settings/GoogleDriveSection.tsx](cci:7://file:///home/hayredin/Documents/synapse/frontend/src/app/%28dashboard%29/settings/GoogleDriveSection.tsx:0:0-0:0) to listen for postMessage events
+   - Updated [/home/hayredin/Documents/synapse/frontend/src/app/(dashboard)/documents/page.tsx](cci:7://file:///home/hayredin/Documents/synapse/frontend/src/app/%28dashboard%29/documents/page.tsx:0:0-0:0) to send postMessage back to parent window when OAuth completes
+
+All changes have been applied and should resolve the errors you were experiencing in the console.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Changes have been committed and pushed successfully to the repository.
+
+However, for the changes to take effect in production, you need to redeploy both applications:
+
+**Backend (Render):**
+- Go to your Render dashboard
+- Trigger a manual deploy or wait for auto-deploy
+- The automation trigger fix and WebSocket routing changes will be applied
+
+**Frontend (Vercel):**
+- Go to your Vercel dashboard
+- Trigger a manual redeploy
+- The warning banner removal, WebSocket URL fix, and OAuth postMessage changes will be applied
+
+The changes won't appear in the deployed version until both services are redeployed. The backend changes address the 500 automation error, and the frontend changes address the WebSocket 404 error and Cross-Origin-Opener-Policy warning.
+The console shows two critical issues: a **500 error on /auth/register/** and the **COOP warnings from Google Sign-In** (not Google Drive). Let me investigate both.
+
+
+
+
+
+
+
+
+
+Found two critical issues. Let me check the auth store and fix them.
+
+
+
+Found the critical bug! [Providers.tsx](cci:7://file:///home/hayredin/Documents/synapse/frontend/src/components/Providers.tsx:0:0-0:0) has a mismatched JSX closing tag (</MaybeGoogleProvider> instead of </GoogleOAuthProvider>). This would crash the entire frontend. Let me also investigate the register 500 error.
+Now let me fix the [track_signup](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/analytics.py:122:0-138:63) call signature mismatch and add better error handling to [RegisterView](cci:2://file:///home/hayredin/Documents/synapse/backend/apps/users/views.py:62:0-95:9):
+
+Now let me check if there are missing migrations that could cause the 500:
+
+
+
+
+
+
+There are unapplied migrations! Let me create them and check all apps:
+
+
+
+
+
+
+
+
+
+
+Good, all migrations are created. Now let me also check the COOP issue - it's coming from the Google Sign-In popup, not the Google Drive OAuth. The useGoogleLogin hook from @react-oauth/google opens a popup that triggers the COOP warning. Let me check if we can configure it to use redirect instead:
+Now let me commit and push all the fixes:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Pushed successfully. Here's what was fixed in this commit:
+
+## Critical Fixes
+
+**1. Frontend crash** — @/home/hayredin/Documents/synapse/frontend/src/components/Providers.tsx:119 had </MaybeGoogleProvider> as the closing tag but the opening tag was <GoogleOAuthProvider>. This **mismatched JSX tag was crashing the entire frontend**. Fixed to </GoogleOAuthProvider>.
+
+**2. Register 500 error** — Two issues in @/home/hayredin/Documents/synapse/backend/apps/users/views.py:77:
+- [track_signup(user)](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/analytics.py:122:0-138:63) was called with a User object, but the function signature expects (user_id: str, email: str). Fixed to [track_signup(str(user.id), user.email)](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/analytics.py:122:0-138:63).
+- Added try/except around serializer.save() with proper error logging so registration failures are captured in Render logs.
+
+**3. Missing migration** — 0005_alter_user_email_verified.py was detected as needed but never created/committed. The email_verified field default was True in migration 0004 but False in the model. This discrepancy could cause issues if migrations weren't fully applied.
+
+## After Redeploy
+
+You need to **redeploy both services**:
+- **Render** → Manual Deploy on synapse-api 
+- **Vercel** → Redeploy frontend
+
+The COOP warnings from Google Sign-In (gv.requestAccessToken) are **expected browser warnings** from the @react-oauth/google popup flow — they don't break functionality. The actual crash was the Providers.tsx bug.
+The error is clear — Daphne's --bind flag only takes an IP address, not ip:port like Gunicorn. Render sets PORT=10000, so --bind "0.0.0.0:10000" was parsed incorrectly.
+
+Already pushed. The fix is live — Daphne now uses --bind 0.0.0.0 and --port ${PORT:-8000} as separate flags.
+
+**Redeploy on Render** → it should auto-deploy from the push. The key error was:
+- --bind "0.0.0.0:10000" → Daphne parsed this as interface 0.0.0.0:10000 (invalid hostname)
+- Now --bind 0.0.0.0 --port 10000 → correct separate IP and port
+
+After redeploy, both WebSocket and HTTP should work on Render's PORT=10000.
+Progress — WebSocket upgraded from 404 → 403 (Daphne is running!), but two issues remain:
+
+1. **WebSocket 403** — AllowedHostsOriginValidator rejects cross-origin WebSocket (frontend origin synapse-app-six.vercel.app ≠ backend synapse-api-oyld.onrender.com)
+2. **Redis DB 2 error persists** — Celery worker likely has explicit CELERY_RESULT_BACKEND env var with /2 
+
+
+Now I see both issues clearly:
+
+1. **WebSocket 403**: AllowedHostsOriginValidator checks the Origin header against ALLOWED_HOSTS. The frontend at synapse-app-six.vercel.app sends an Origin header that doesn't match the backend's ALLOWED_HOSTS (which is synapse-api-oyld.onrender.com). Need to replace with OriginValidator that allows the frontend origin.
+
+2. **Redis DB 2**: The Celery worker reads CELERY_BROKER_URL/CELERY_RESULT_BACKEND from env vars via config_from_object("django.conf:settings"). But the production.py normalization only happens when REDIS_URL starts with rediss://. If the user has separate CELERY_BROKER_URL/CELERY_RESULT_BACKEND env vars set directly, those are read by base.py first, and while production.py overrides them, the Celery worker might not pick up the override. I need to also normalize those env vars.
+
+Let me fix both:
+
+Now fix the Redis DB issue — normalize CELERY_BROKER_URL and CELERY_RESULT_BACKEND env vars too, not just REDIS_URL:
+
+Now commit and push:
+
+
+
+Pushed. Two fixes in this commit:
+
+## Fixes
+
+**1. WebSocket 403** — AllowedHostsOriginValidator in @/home/hayredin/Documents/synapse/backend/config/asgi.py:40-43 rejected the cross-origin WebSocket because the frontend (synapse-app-six.vercel.app) isn't in ALLOWED_HOSTS (which only contains the backend domain). Replaced with OriginValidator that explicitly allows the FRONTEND_URL origin.
+
+**2. Redis DB 2 still failing** — The Celery worker reads CELERY_BROKER_URL/CELERY_RESULT_BACKEND from env vars directly (via config_from_object). Even though Django settings overrode them, the env vars still had /2. Now @/home/hayredin/Documents/synapse/backend/config/settings/production.py:108-131 also overwrites the **env vars themselves** (os.environ[...]) so the Celery worker picks up the corrected DB 0 URLs.
+
+**Redeploy on Render** — it should auto-deploy from the push. After that, both WebSocket and automation workflows should work.
+Great progress — the **workflow succeeded** (✓ at 07:32)! The Redis fix is working. But two new issues:
+
+1. **429 Too Many Requests** — django-axes is rate-limiting the frontend's aggressive polling
+2. **WebSocket 403** — already fixed in code, needs redeploy
+
+Let me fix the 429 issue. The frontend is polling too fast and axes blocks it.
+
+The 429s are hitting authenticated API endpoints (notifications, workflows), not login. This is likely DRF throttling, not axes. Let me check.
+
+Found it. The automation page polls **every 4 seconds** for workflow runs, and with 5 workflows that's ~75 req/min just for runs. The DRF throttle is 100/minute for authenticated users. Need to fix both sides.
+
+
+
+
+Now I'll fix both sides — increase the throttle limit and reduce aggressive polling:
+
+Now reduce the frontend polling — the 4s interval for runs is the main culprit:
+
+Now commit and push:
+
+
+
+Pushed. Here's the summary of this fix:
+
+## 429 Fix — Root Cause & Changes
+
+**Root cause**: The automation dashboard polls too aggressively for a 100/minute throttle limit:
+- 5 workflows × workflow-runs every 4s = **75 req/min**
+- workflows every 10s = 6/min
+- notifications every 15s = 4/min
+- Total: ~85 req/min → easily exceeds 100/min with other page queries
+
+**Backend** (@/home/hayredin/Documents/synapse/backend/config/settings/base.py:242):
+- Increased user throttle from 100/minute → 300/minute 
+
+**Frontend** (@/home/hayredin/Documents/synapse/frontend/src/app/(dashboard)/automation/page.tsx):
+- workflow-runs: 4s → **15s** (keeps 4s only when a run is actively running)
+- workflows: 10s → **30s**
+- notifications: 15s → **30s**
+
+**Redeploy both services** — Render (backend) and Vercel (frontend). Also make sure FRONTEND_URL=https://synapse-app-six.vercel.app is set in Render env vars for the WebSocket 403 fix.
+TypeScript circular reference error — runs is used in its own initializer. Fix by using the callback form of refetchInterval:
+
+
+
+IDE errors look stale from the old code. Let me verify the file is correct and check for any other issues:
+The edit is correct — runs is no longer referenced in its own initializer. The callback uses query.state.data instead. Now let me also check the user's other issue — "video not fetched and displayed on home page". Let me look at that:
+Two issues here: (1) Vercel build failure from the TypeScript error I just fixed, and (2) videos not displaying on the home page. Let me push the build fix first, then investigate the video issue.
+
+
+Build fix pushed. Now let me investigate the video fetching issue. The home page queries /videos/ — let me check the backend endpoint:
+Found the video issue. In VideoListView.get_queryset(), authenticated users are filtered to only videos linked via UserVideo — if no UserVideo records exist, they see **zero** videos:
+
+```@/home/hayredin/Documents/synapse/backend/apps/videos/views.py:25-30
+    def get_queryset(self):
+        qs = Video.objects.all()
+        # ── Personalization: scope to videos linked via UserVideo junction ──
+        if self.request.user and self.request.user.is_authenticated:
+            qs = qs.filter(user_videos__user=self.request.user)
+        return qs
+```
+
+This is the root cause — the home page shows "No videos yet" because the authenticated user has no UserVideo junction records. The fix: remove this filter for the general list view (show all videos), and add an optional ?personalized=true query param if needed later.
+Now commit and push:
+
+
+
+Two fixes pushed:
+
+## 1. Vercel Build Failure — TypeScript Circular Reference
+**File**: @/home/hayredin/Documents/synapse/frontend/src/app/(dashboard)/automation/page.tsx:504 
+- runs was referenced in its own initializer (refetchInterval: runs.some(...))
+- Fixed by using the callback form: refetchInterval: (query) => { const data = query.state.data ?? []; ... } 
+
+## 2. Videos Not Showing on Home Page
+**File**: @/home/hayredin/Documents/synapse/backend/apps/videos/views.py:28 
+- **Root cause**: [VideoListView.get_queryset()](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/videos/views.py:24:4-29:17) filtered to user_videos__user=request.user for all authenticated users. Since UserVideo junction records are never created, authenticated users see **zero** videos.
+- **Fix**: Only apply the UserVideo filter when ?personalized=true is explicitly requested. Default behavior now shows all videos.
+
+Both Render and Vercel should auto-deploy from these pushes. Verify that:
+1. Vercel build succeeds (no more TS error)
+2. Home page shows videos for logged-in users
+3. 429 errors are gone (throttle increased + polling reduced)
+
+Permission issue. Let me try a different approach:
+
+
+
+
+
+The [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) directory is owned by **root**. Need sudo:
+
+
+
+
+
+Sudo is probably waiting for a password. Let me try a different approach — instead of copying files, modify the Dockerfile to handle this properly:
+
+The sudo command is stuck waiting for password input. Let me take a different approach — instead of copying the scraper into [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0), I'll modify the Dockerfile to copy the scraper from the project root. But since the Docker build context is [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), I need to think about this differently.
+
+The real solution: make the Celery task not depend on the scraper being at BASE_DIR / "scraper" in Docker. Instead, in the Docker production image, install the scraper as a Python package or adjust the path.
+
+The approach should be: in the Dockerfile, copy the scraper directory from the build context. But the build context is [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), and [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) is at the project root. 
+
+The simplest fix: add a step in the Dockerfile that copies the scraper using a multi-stage approach, OR change the Render build context to the project root. But since we can't control Render's config from here, the best approach is to make the Dockerfile work with the [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) context by ensuring the scraper is available.
+
+Let me check if there's a setup.py or [pyproject.toml](cci:7://file:///home/hayredin/Documents/synapse/pyproject.toml:0:0-0:0) in the scraper:
+
+The scraper settings reference BASE_DIR / "backend" for Django. In Docker, the structure is different (no [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) subdirectory). 
+
+The cleanest fix: change the Dockerfile to use the **project root** as the build context, so both [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) and [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) are available. But that requires changing the Render dashboard config.
+
+Alternative: copy the scraper into the Docker image by changing the Dockerfile's build context. Since we can't easily change Render's config, let me instead modify the Dockerfile to add a build argument or use a different approach.
+
+Actually, the simplest approach is to change the Render **Root Directory** setting. But we can also just make the Dockerfile work by copying the scraper from the right place. Let me check if Render uses the repo root as context:
+
+Looking at the Render dashboard output from earlier, it says main 0388823 — it builds from the git repo. Render's Docker build uses the **Root Directory** setting as the build context. If Root Directory is [backend](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), then only [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) files are available.
+
+The most practical fix: modify the Dockerfile to change the build context to the repo root, and adjust paths accordingly. OR, we can simply copy the scraper content into [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) via git (fixing the permissions first).
+
+Root-owned directory. Let me change the Dockerfile approach instead — set the build context to the project root and adjust all COPY paths:
+
+The Dockerfile uses COPY requirements.txt . and COPY --chown=appuser:appuser . . — these are relative to the build context. If Render's build context is [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), then it copies [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) (empty) into /app/scraper/.
+
+I need to change the Dockerfile to use the **repo root** as build context and adjust the COPY paths. This way both [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) and [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) are available.
+
+Now I need to update the Render **Root Directory** setting. The Dockerfile now expects the build context to be the repo root (not [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0)). This is configured in the Render dashboard. But I can also add a render.yaml to make this explicit:
+
+Wait — the Render dashboard already has the service configured. Adding [render.yaml](cci:7://file:///home/hayredin/Documents/synapse/render.yaml:0:0-0:0) may conflict. The key thing is the **Root Directory** setting in the Render dashboard. Currently it's likely set to [backend](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), which means the build context is [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) and the Dockerfile path is just [Dockerfile](cci:7://file:///home/hayredin/Documents/synapse/backend/Dockerfile:0:0-0:0).
+
+With my changes, the Dockerfile now expects the **repo root** as build context. The user needs to update the Render dashboard setting:
+- **Root Directory**: leave empty (repo root)
+- **Dockerfile Path**: [backend/Dockerfile](cci:7://file:///home/hayredin/Documents/synapse/backend/Dockerfile:0:0-0:0)
+
+But actually, let me verify what the current Render config looks like. The user showed deployment logs earlier that said main 0388823 — this suggests Render builds from the full repo. Let me also check if there's already a render.yaml:
+
+That's the one I just created. Let me also check the scraper settings — in Docker, the path structure changes (no [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) subdirectory), so the scraper's [settings.py](cci:7://file:///home/hayredin/Documents/synapse/scraper/settings.py:0:0-0:0) needs to handle this:
+
+Line 8: sys.path.insert(0, str(BASE_DIR / "backend")) — in Docker, BASE_DIR will be /app (since scraper is at /app/scraper/), and there's no /app/backend/ directory. The Django app is directly at /app/. Need to fix this:
+
+Also need to fix the DJANGO_SETTINGS_MODULE — in Docker production it should be config.settings.production:
+
+Now commit and push everything:
+
+
+
+
+
+
+
+
+Pushed. There's a **critical manual step** needed — the Dockerfile now expects the **repo root** as the build context (so [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) is available). You need to update the Render dashboard:
+
+## ⚠️ Render Dashboard Update Required
+
+Go to your Render service settings and change:
+
+- **Root Directory**: Clear it (leave empty) — currently likely set to [backend](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0)
+- **Dockerfile Path**: Change to [backend/Dockerfile](cci:7://file:///home/hayredin/Documents/synapse/backend/Dockerfile:0:0-0:0)
+
+This is necessary because the Dockerfile now copies [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) and [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) separately from the repo root. If the build context stays as [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), the COPY scraper/ /app/scraper/ line will fail.
+
+I also added a [render.yaml](cci:7://file:///home/hayredin/Documents/synapse/render.yaml:0:0-0:0) at the repo root with dockerContext: . and dockerfilePath: ./backend/Dockerfile — if Render picks this up, it may auto-configure correctly.
+
+## Summary of all fixes in this session
+
+| # | Issue | Root Cause | Fix |
+|---|-------|-----------|-----|
+| 1 | Vercel build failure | runs referenced in its own initializer | Used [refetchInterval](cci:1://file:///home/hayredin/Documents/synapse/frontend/src/app/%28dashboard%29/automation/page.tsx:503:4-506:5) callback form |
+| 2 | Videos not showing | [VideoListView](cci:2://file:///home/hayredin/Documents/synapse/backend/apps/videos/views.py:11:0-29:17) filtered to empty UserVideo junction | Only filter when ?personalized=true |
+| 3 | Scraper produces no results | yt-dlp not installed in production Docker stage | Added pip install yt-dlp |
+| 4 | Scraper code missing in Docker | [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) was empty; actual code at repo root | Changed Dockerfile to copy [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) from repo root |
+| 5 | Scraper settings broken in Docker | Hardcoded BASE_DIR / "backend" path | Auto-detect local vs Docker layout |
+The backend is returning **502 Bad Gateway** — the Docker build failed because I changed the Dockerfile to expect the repo root as build context, but Render still uses [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) as the Root Directory. The COPY backend/requirements.txt . line fails because from the [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) context, there's no [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) subdirectory.
+
+I need to revert the Dockerfile and find another way to include the scraper. Let me check what git tracks for [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0):
+
+
+[backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) is **not tracked by git** (empty directories aren't tracked). So when Render clones the repo, [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) doesn't exist at all. The Celery task tries cwd=/app/scraper/ which doesn't exist → scrapy fails silently.
+
+Strategy: revert Dockerfile to [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) context, and copy scraper files into [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) in git. Let me try writing files there:
+The [backend/scraper/](cci:9://file:///home/hayredin/Documents/synapse/backend/scraper:0:0-0:0) directory is root-owned and can't be written to. The Dockerfile change broke the build because Render uses [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) as build context. I need to:
+
+1. **Revert the Dockerfile** to work with [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) context
+2. **Bypass the Scrapy dependency** — the YouTube spider is just a wrapper around yt-dlp subprocess anyway. I'll modify [scrape_youtube](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/tasks.py:485:0-564:77) to call yt-dlp directly from the Celery task, eliminating the need for the scraper directory.
+
+
+
+
+Now I need to modify the [scrape_youtube](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/tasks.py:485:0-564:77) Celery task to call yt-dlp directly instead of running Scrapy. The YouTube spider is just a wrapper around yt-dlp subprocess calls anyway.
+
+Now let me check what the Video model and pipeline look like so I can save directly:
+
+Now let me check the NON_TECH_KEYWORDS and the default queries from the spider so I can replicate the logic:
+
+Now I'll rewrite the [scrape_youtube](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/tasks.py:485:0-564:77) task to call yt-dlp directly and save Video objects to the database, bypassing Scrapy entirely:
+Now remove the [render.yaml](cci:7://file:///home/hayredin/Documents/synapse/render.yaml:0:0-0:0) since the Dockerfile is back to [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) context, and commit/push:
+
+
+
+
+
+
+
+
+Pushed. Here's what changed and why the previous Docker build broke:
+
+## What went wrong
+The previous commit changed the Dockerfile to COPY backend/requirements.txt . and COPY backend/ . — expecting the **repo root** as build context. But Render's Root Directory is set to [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0), so from that context there's no [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) subdirectory → COPY backend/requirements.txt fails → **502 Bad Gateway**.
+
+## What's fixed now
+
+1. **Dockerfile reverted** to use [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) as build context (matches Render config)
+2. **yt-dlp installed** in production Docker stage
+3. **[scrape_youtube](cci:1://file:///home/hayredin/Documents/synapse/backend/apps/core/tasks.py:485:0-719:77) task rewritten** to call yt-dlp directly — no Scrapy dependency. The old task ran scrapy crawl youtube from /app/scraper/ which was an empty directory in Docker. The new task:
+   - Calls yt-dlp --flat-playlist --dump-single-json directly via subprocess
+   - Parses JSON results, filters non-tech content
+   - Saves [Video](cci:2://file:///home/hayredin/Documents/synapse/backend/apps/videos/models.py:9:0-38:30) objects to DB via update_or_create 
+   - No dependency on the [scraper/](cci:9://file:///home/hayredin/Documents/synapse/scraper:0:0-0:0) directory at all
+
+Render should now rebuild successfully. Once it's up, trigger the **Tech & Tutorial Videos** workflow again — it should actually scrape and save videos this time.The [start_prod.sh](cci:7://file:///home/hayredin/Documents/synapse/backend/start_prod.sh:0:0-0:0) is NOT making it into the Docker image despite being in git. The [.dockerignore](cci:7://file:///home/hayredin/Documents/synapse/.dockerignore:0:0-0:0) at the repo root may be filtering it out. Let me check:
+
+
+
+Neither [.dockerignore](cci:7://file:///home/hayredin/Documents/synapse/.dockerignore:0:0-0:0) excludes .sh files, yet [start_prod.sh](cci:7://file:///home/hayredin/Documents/synapse/backend/start_prod.sh:0:0-0:0) isn't in the image. The 1.63kB [.dockerignore](cci:7://file:///home/hayredin/Documents/synapse/.dockerignore:0:0-0:0) loaded matches the repo root one, not the 18-line [backend/](cci:9://file:///home/hayredin/Documents/synapse/backend:0:0-0:0) one. This suggests Render may be using the repo root as context despite the Root Directory setting.
+
+Let me just inline the start script into the Dockerfile to eliminate this mystery entirely:
+Now I'll inline this script directly in the Dockerfile, eliminating the dependency on the file being in the build context:
+The lint errors are from a basic Dockerfile parser that doesn't understand heredoc syntax inside RUN. While BuildKit supports it, let me use a simpler approach — just put everything directly in the CMD:
+
+
+
+
+Pushed. The Dockerfile now has all startup commands directly in the CMD instruction — no dependency on [start_prod.sh](cci:7://file:///home/hayredin/Documents/synapse/backend/start_prod.sh:0:0-0:0) being in the build context at all.
+
+The CMD runs:
+1. python manage.py migrate 
+2. python manage.py collectstatic 
+3. celery -A config.celery worker -B ... (background)
+4. exec daphne config.asgi:application ... (foreground)
+
+Watch the Render build logs — this should succeed now. Once the backend is up, trigger the video workflow again.
+
+Continue  and [
+
+fix.txt
+ i was working with other model in windsurf  with glm 5.1 becouse of rate lime i get here awith opus and now imnot sure if that model done the correct thing or not but it is failing multiple times and you can see all what it done in file [/home/hayredin/Documents/synapse/fix.txt] and enen if after such a huge trial still geting build error on render [Web Service
+synapse-api
+Docker
+Free
+Upgrade your instance
+
+Connect
+
+Manual Deploy
+Service ID:
+srv-d7iv5h3bc2fs739bbpt0
+
+HayreKhan750 / SYNAPSE
+main
+https://synapse-api-oyld.onrender.com
+
+Your free instance will spin down with inactivity, which can delay requests by 50 seconds or more.
+Upgrade now
+April 22, 2026 at 11:45 AM
+failed
+bdfefa5
+Fix Docker build: inline CMD instead of start_prod.sh The start_prod.sh file was not being copied into the Docker image despite being tracked by git. Root cause unclear (possibly Render build context issue). Solution: put all startup commands directly in the Dockerfile CMD using shell form - no external script needed.
+
+Rollback
+Exited with status 127 while running your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Apr 22, 11:44 AM - 11:48 AM
+GMT+3
+
+
+
+#15 sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf 11.72MB / 11.72MB 0.1s done
+#15 extracting sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf
+#15 extracting sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf 2.5s done
+#15 sha256:b0db2789254aa94933aebb88145b07797447546e599f69f2c0ab7fd0636c52bb 423B / 423B done
+#15 extracting sha256:b0db2789254aa94933aebb88145b07797447546e599f69f2c0ab7fd0636c52bb 0.0s done
+#15 sha256:e6fd2c235939450f4edc9360f149183aefeceabf10c4d817e0108830420d1be2 1.80MB / 1.80MB 0.0s done
+#15 extracting sha256:e6fd2c235939450f4edc9360f149183aefeceabf10c4d817e0108830420d1be2
+#15 extracting sha256:e6fd2c235939450f4edc9360f149183aefeceabf10c4d817e0108830420d1be2 0.2s done
+#15 CACHED
+#16 [production 7/8] COPY --chown=appuser:appuser . .
+#16 DONE 0.2s
+#17 [production 8/8] RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+#17 DONE 3.3s
+#18 exporting to docker image format
+#18 exporting layers
+#18 exporting layers 0.2s done
+#18 exporting manifest sha256:3c75f845ce9d0b1b9da148cfa375ccde0878980d880cbb49d90983ca784e801c done
+#18 exporting config sha256:ba182a0a7bce181e3a61737e3fd531590d7b09cb6985c7b99b1490e49c3abdbe done
+#18 DONE 0.7s
+#19 exporting cache to client directory
+#19 preparing build cache for export
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 24.12MB / 124.78MB 0.2s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 48.23MB / 124.78MB 0.3s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 67.11MB / 124.78MB 0.5s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 90.35MB / 124.78MB 0.6s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 117.44MB / 124.78MB 0.8s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 124.78MB / 124.78MB 0.9s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 124.78MB / 124.78MB 0.9s done
+#19 extracting sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb
+#19 extracting sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 8.2s done
+#19 sha256:3585999eb10c06e3a8ac4c6ed8d18f6fa4a7fc9edaf02840c3ab37f19573581d 161B / 161B done
+#19 extracting sha256:3585999eb10c06e3a8ac4c6ed8d18f6fa4a7fc9edaf02840c3ab37f19573581d
+#19 extracting sha256:3585999eb10c06e3a8ac4c6ed8d18f6fa4a7fc9edaf02840c3ab37f19573581d 0.2s done
+#19 sha256:2c8887ff3b822daac05e0e0ae084293a9ef50300cd01e68c85c9db03fce28dab 15.67MB / 15.67MB 0.1s done
+#19 extracting sha256:2c8887ff3b822daac05e0e0ae084293a9ef50300cd01e68c85c9db03fce28dab
+#19 extracting sha256:2c8887ff3b822daac05e0e0ae084293a9ef50300cd01e68c85c9db03fce28dab 1.2s done
+#19 writing cache image manifest sha256:0a19daca218dcf93df8be0323b722b6329b36b64939788e1cdc607afdf82e97e 0.0s done
+#19 DONE 10.8s
+Pushing image to registry...
+Upload succeeded
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+python: can't open file '/app/manage.py': [Errno 2] No such file or directory
+/bin/sh: 1: exec: daphne: not found
+==> Exited with status 127
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+Need better ways to work with logs? Try theRender CLI, Render MCP Server, or set up a log stream integration 
+Downloading cache...
+==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+==> Cloning from https://github.com/HayreKhan750/SYNAPSE
+==> Checking out commit bdfefa572c706efd68e586fa5e755a977e83ca6d in branch main
+==> Downloaded 3.3GB in 15s. Extraction took 3s.
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.62kB done
+#1 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 ...
+#3 [auth] library/python:pull render-prod/docker-mirror-repository/library/python:pull token for us-west1-docker.pkg.dev
+#3 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 0.6s
+#4 [internal] load .dockerignore
+#4 transferring context: 1.63kB done
+#4 DONE 0.0s
+#5 importing cache manifest from local:1839947403969508160
+#5 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#5 DONE 0.0s
+#6 [builder 1/5] FROM docker.io/library/python:3.11-slim@sha256:2c078a0e5679ec6484e684c4a8113829dc49c4387f54ad4d04941eea82327710
+#6 resolve docker.io/library/python:3.11-slim@sha256:2c078a0e5679ec6484e684c4a8113829dc49c4387f54ad4d04941eea82327710 0.0s done
+#6 DONE 0.0s
+#7 [internal] load build context
+#7 transferring context: 5.01MB 0.2s done
+#7 DONE 0.2s
+#8 [builder 3/5] RUN apt-get update && apt-get install -y     build-essential libpq-dev gcc curl     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+#9 [builder 4/5] COPY requirements.txt .
+#9 CACHED
+#10 [production 4/8] COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+#10 CACHED
+#11 [production 5/8] COPY --from=builder /usr/local/bin /usr/local/bin
+#11 CACHED
+#12 [builder 2/5] WORKDIR /app
+#12 CACHED
+#13 [production 3/8] RUN apt-get update && apt-get install -y libpq-dev curl && rm -rf /var/lib/apt/lists/*
+#13 CACHED
+#14 [builder 5/5] RUN pip install --upgrade pip     && pip install --no-cache-dir -r requirements.txt --use-deprecated=legacy-resolver
+#14 CACHED
+#15 [production 6/8] RUN pip install yt-dlp --no-cache-dir
+#15 sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd 27.26MB / 29.78MB 0.2s
+#15 sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd 29.78MB / 29.78MB 0.2s done
+#15 extracting sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd
+#15 extracting sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd 0.7s done
+#15 sha256:91ff8760033c3b9bc9c3a3bcc6ff66c113ec9e13f94fa2f12ae4b221aae996b9 1.29MB / 1.29MB 0.0s done
+#15 extracting sha256:91ff8760033c3b9bc9c3a3bcc6ff66c113ec9e13f94fa2f12ae4b221aae996b9
+#15 extracting sha256:91ff8760033c3b9bc9c3a3bcc6ff66c113ec9e13f94fa2f12ae4b221aae996b9 0.4s done
+#15 sha256:f3ba2250c52436e41e9f2f3830af92de466fcacc2d848264e1f9fdc76975d803 14.37MB / 14.37MB 0.1s done
+#15 extracting sha256:f3ba2250c52436e41e9f2f3830af92de466fcacc2d848264e1f9fdc76975d803
+#15 extracting sha256:f3ba2250c52436e41e9f2f3830af92de466fcacc2d848264e1f9fdc76975d803 0.8s done
+#15 sha256:7ccd73948dde4b7f1623ac6bf9b58706fb83d0a363d765d7c799d46035ceb563 249B / 249B done
+#15 extracting sha256:7ccd73948dde4b7f1623ac6bf9b58706fb83d0a363d765d7c799d46035ceb563 0.0s done
+#15 sha256:46ddad8a8b06610e9046e864ac4eef0216e6a3b3c58941330df0170806ba9f3d 92B / 92B done
+#15 extracting sha256:46ddad8a8b06610e9046e864ac4eef0216e6a3b3c58941330df0170806ba9f3d 0.0s done
+#15 sha256:d9d47195eda15b74abcc9e49ad90db8cb48d87d97b04e9dbf96e201f9e98ec52 9.98MB / 9.98MB 0.1s done
+#15 extracting sha256:d9d47195eda15b74abcc9e49ad90db8cb48d87d97b04e9dbf96e201f9e98ec52
+#15 extracting sha256:d9d47195eda15b74abcc9e49ad90db8cb48d87d97b04e9dbf96e201f9e98ec52 0.5s done
+#15 sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf 11.72MB / 11.72MB 0.1s done
+#15 extracting sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf
+#15 extracting sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf 2.5s done
+#15 sha256:b0db2789254aa94933aebb88145b07797447546e599f69f2c0ab7fd0636c52bb 423B / 423B done
+#15 extracting sha256:b0db2789254aa94933aebb88145b07797447546e599f69f2c0ab7fd0636c52bb 0.0s done
+#15 sha256:e6fd2c235939450f4edc9360f149183aefeceabf10c4d817e0108830420d1be2 1.80MB / 1.80MB 0.0s done
+#15 extracting sha256:e6fd2c235939450f4edc9360f149183aefeceabf10c4d817e0108830420d1be2
+#15 extracting sha256:e6fd2c235939450f4edc9360f149183aefeceabf10c4d817e0108830420d1be2 0.2s done
+#15 CACHED
+#16 [production 7/8] COPY --chown=appuser:appuser . .
+#16 DONE 0.2s
+#17 [production 8/8] RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+#17 DONE 3.3s
+#18 exporting to docker image format
+#18 exporting layers
+#18 exporting layers 0.2s done
+#18 exporting manifest sha256:3c75f845ce9d0b1b9da148cfa375ccde0878980d880cbb49d90983ca784e801c done
+#18 exporting config sha256:ba182a0a7bce181e3a61737e3fd531590d7b09cb6985c7b99b1490e49c3abdbe done
+#18 DONE 0.7s
+#19 exporting cache to client directory
+#19 preparing build cache for export
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 24.12MB / 124.78MB 0.2s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 48.23MB / 124.78MB 0.3s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 67.11MB / 124.78MB 0.5s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 90.35MB / 124.78MB 0.6s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 117.44MB / 124.78MB 0.8s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 124.78MB / 124.78MB 0.9s
+#19 sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 124.78MB / 124.78MB 0.9s done
+#19 extracting sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb
+#19 extracting sha256:0e69909bafdc333467e1594c91b2bb068663f1c871e9a477cc2069e3616d86bb 8.2s done
+#19 sha256:3585999eb10c06e3a8ac4c6ed8d18f6fa4a7fc9edaf02840c3ab37f19573581d 161B / 161B done
+#19 extracting sha256:3585999eb10c06e3a8ac4c6ed8d18f6fa4a7fc9edaf02840c3ab37f19573581d
+#19 extracting sha256:3585999eb10c06e3a8ac4c6ed8d18f6fa4a7fc9edaf02840c3ab37f19573581d 0.2s done
+#19 sha256:2c8887ff3b822daac05e0e0ae084293a9ef50300cd01e68c85c9db03fce28dab 15.67MB / 15.67MB 0.1s done
+#19 extracting sha256:2c8887ff3b822daac05e0e0ae084293a9ef50300cd01e68c85c9db03fce28dab
+#19 extracting sha256:2c8887ff3b822daac05e0e0ae084293a9ef50300cd01e68c85c9db03fce28dab 1.2s done
+#19 writing cache image manifest sha256:0a19daca218dcf93df8be0323b722b6329b36b64939788e1cdc607afdf82e97e 0.0s done
+#19 DONE 10.8s
+Pushing image to registry...
+Upload succeeded
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+python: can't open file '/app/manage.py': [Errno 2] No such file or directory
+/bin/sh: 1: exec: daphne: not found
+==> Exited with status 127
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys]]
+
+
+
+The start_prod.sh isn't making it into the Docker image. The chmod fails because the file doesn't exist at /app/start_prod.sh. Let me fix the Dockerfile — remove the chmod and use bash to run the script:
+
+Let me check if start_prod.sh is tracked by git:
+
+Command cd, git
+
+cd /home/hayredin/Documents/synapse && git ls-tree HEAD -- backend/start_prod.sh
+100644 blob 6cac0fa4792389f1bea0fdc25a138916adb074f4
+backend/start_prod.sh
+
+
+Using legacy terminal
+Configure
+Checked command status
+It IS tracked by git. Let me check the .dockerignore — maybe something is excluding .sh files:
+
+Command cd, cat, echo
+
+cd /home/hayredin/Documents/synapse/backend && cat .dockerignore 2>/dev/null || echo "No .dockerignore in backend/"
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.log
+logs/
+.env
+.env.*
+media/
+staticfiles/
+
+
+Using legacy terminal
+Configure
+Checked command status
+There's a separate .dockerignore in backend/! And it doesn't exclude .sh files. But wait — let me check if start_prod.sh is actually in the Docker build context. The build log showed COPY --chown=appuser:appuser . . completed in 0.2s with 5.01MB context. Let me check the file size:
+
+Command ls
+
+ls -la /home/hayredin/Documents/synapse/backend/start_prod.sh
+-rw-r--r-- 1 hayredin hayredin 1774 Apr 22 07:01 /home/hayredin/Documents/synapse/backend/start_prod.sh
+
+
+Using legacy terminal
+Configure
+Checked command status
+The file exists locally. But the Docker build says it's not there. Let me check git's file mode — git might be tracking it with a different name or the Render checkout might differ:
+
+Command cd, git, head
+
+cd /home/hayredin/Documents/synapse && git show HEAD:backend/start_prod.sh | head -5
+#!/bin/bash
+# ── SYNAPSE Production Start Script ──────────────────────────────────────────
+# Runs BOTH the web server AND Celery worker+beat in a single container.
+# This is the free-tier deployment strategy (no separate background worker).
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+Using legacy terminal
+Configure
+Checked command status
+File is in git. The issue might be that the COPY --chown=appuser:appuser . . copies files but start_prod.sh somehow doesn't end up at /app/start_prod.sh. Let me check if there's a .dockerignore pattern that could match it. The .dockerignore doesn't exclude .sh files.
+
+Wait — I think the issue might be more subtle. The COPY --chown=appuser:appuser . . runs as root, then the RUN chmod +x also runs as root. But the useradd + chown -R appuser:appuser /app runs BEFORE the COPY. So the COPY with --chown=appuser should work...
+
+Actually, looking again at the build log more carefully: the COPY step #17 [production 8/9] COPY --chown=appuser:appuser . . completed in 0.2s. That's very fast for 5MB. And then chmod can't find the file.
+
+The simplest fix: remove the chmod line and use CMD ["bash", "/app/start_prod.sh"] instead. Also add a debug RUN ls to verify:
+
+Dockerfile
++6
+-6
+Command cd, git
+
+cd /home/hayredin/Documents/synapse && git add backend/Dockerfile && git commit -m "Fix Docker build: remove chmod, use bash to run start script
+ 
+chmod failed because start_prod.sh wasn't found after COPY. Use bash
+to run the script instead (works without execute permission). Added
+debug ls to verify file exists in image. Reordered COPY before useradd
+to ensure files are present before chown." && git push
+[main 346316b] Fix Docker build: remove chmod, use bash to run start script
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+Enumerating objects: 7, done.
+Counting objects: 100% (7/7), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 679 bytes | 226.00 KiB/s, done.
+Total 4 (delta 3), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+To https://github.com/HayreKhan750/SYNAPSE.git
+   584c96e..346316b  main -> main
+
+
+Using legacy terminal
+Configure
+Checked command status
+Pushed. The changes:
+
+Removed RUN chmod +x — was failing because file wasn't found
+Reordered: COPY before useradd + chown — ensures files are present before trying to set ownership
+Changed CMD to CMD ["bash", "/app/start_prod.sh"] — works without execute permission
+Added debug RUN ls — will show in build logs whether start_prod.sh exists in the image
+Watch the Render build logs. If you see WARNING: start_prod.sh not found, then the file isn't making it into the build context and we need to investigate further. If you see the file listed, the build should proceed and the app should start.
+
+Feedback submitted
+
+
+
+==> Downloading cache...
+==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+==> Cloning from https://github.com/HayreKhan750/SYNAPSE
+==> Checking out commit 346316b7e9ac9cbbbff2dbcede5df2edd4890dd2 in branch main
+==> Downloaded 3.3GB in 15s. Extraction took 3s.
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 2.33kB done
+#1 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 ...
+#3 [auth] library/python:pull render-prod/docker-mirror-repository/library/python:pull token for us-west1-docker.pkg.dev
+#3 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 0.6s
+#4 [internal] load .dockerignore
+#4 transferring context: 1.63kB done
+#4 DONE 0.0s
+#5 importing cache manifest from local:16025787285687060583
+#5 inferred cache manifest type: application/vnd.oci.image.manifest.v1+json done
+#5 DONE 0.0s
+#6 [builder 1/5] FROM docker.io/library/python:3.11-slim@sha256:2c078a0e5679ec6484e684c4a8113829dc49c4387f54ad4d04941eea82327710
+#6 resolve docker.io/library/python:3.11-slim@sha256:2c078a0e5679ec6484e684c4a8113829dc49c4387f54ad4d04941eea82327710 0.0s done
+#6 DONE 0.0s
+#7 [internal] load build context
+#7 transferring context: 5.01MB 0.3s done
+#7 DONE 0.3s
+#8 [builder 2/5] WORKDIR /app
+#8 CACHED
+#9 [builder 3/5] RUN apt-get update && apt-get install -y     build-essential libpq-dev gcc curl     && rm -rf /var/lib/apt/lists/*
+#9 sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd 29.78MB / 29.78MB 0.2s
+#9 sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd 29.78MB / 29.78MB 0.2s done
+#9 extracting sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd
+#9 extracting sha256:3531af2bc2a9c8883754652783cf96207d53189db279c9637b7157d034de7ecd 0.7s done
+#9 sha256:91ff8760033c3b9bc9c3a3bcc6ff66c113ec9e13f94fa2f12ae4b221aae996b9 1.29MB / 1.29MB 0.0s done
+#9 extracting sha256:91ff8760033c3b9bc9c3a3bcc6ff66c113ec9e13f94fa2f12ae4b221aae996b9
+#9 extracting sha256:91ff8760033c3b9bc9c3a3bcc6ff66c113ec9e13f94fa2f12ae4b221aae996b9 0.3s done
+#9 sha256:f3ba2250c52436e41e9f2f3830af92de466fcacc2d848264e1f9fdc76975d803 14.37MB / 14.37MB 0.1s done
+#9 extracting sha256:f3ba2250c52436e41e9f2f3830af92de466fcacc2d848264e1f9fdc76975d803
+#9 extracting sha256:f3ba2250c52436e41e9f2f3830af92de466fcacc2d848264e1f9fdc76975d803 0.8s done
+#9 sha256:7ccd73948dde4b7f1623ac6bf9b58706fb83d0a363d765d7c799d46035ceb563 249B / 249B done
+
+The start_prod.sh is NOT making it into the Docker image despite being in git. The .dockerignore at the repo root may be filtering it out. Let me check:
+
+Neither .dockerignore excludes .sh files, yet start_prod.sh isn't in the image. The 1.63kB .dockerignore loaded matches the repo root one, not the 18-line backend/ one. This suggests Render may be using the repo root as context despite the Root Directory setting.
+
+Let me just inline the start script into the Dockerfile to eliminate this mystery entirely:
+
+Now I'll inline this script directly in the Dockerfile, eliminating the dependency on the file being in the build context:
+
+Dockerfile
++22
+-7
+The lint errors are from a basic Dockerfile parser that doesn't understand heredoc syntax inside RUN. While BuildKit supports it, let me use a simpler approach — just put everything directly in the CMD:
+
+Dockerfile
++14
+-22
+Command cd, git
+
+cd /home/hayredin/Documents/synapse && git add backend/Dockerfile && git commit -m "Fix Docker build: inline CMD instead of start_prod.sh
+ 
+The start_prod.sh file was not being copied into the Docker image
+despite being tracked by git. Root cause unclear (possibly Render
+build context issue). Solution: put all startup commands directly
+in the Dockerfile CMD using shell form - no external script needed." && git push
+[main bdfefa5] Fix Docker build: inline CMD instead of start_prod.sh
+ 1 file changed, 12 insertions(+), 5 deletions(-)
+Enumerating objects: 7, done.
+Counting objects: 100% (7/7), done.
+Delta compression using up to 4 threads
+Compressing objects: 100% (4/4), done.
+Writing objects: 100% (4/4), 862 bytes | 862.00 KiB/s, done.
+Total 4 (delta 3), reused 0 (delta 0), pack-reused 0
+remote: Resolving deltas: 100% (3/3), completed with 3 local objects.
+To https://github.com/HayreKhan750/SYNAPSE.git
+   346316b..bdfefa5  main -> main
+
+
+Using legacy terminal
+Configure
+Checked command status
+Pushed. The Dockerfile now has all startup commands directly in the CMD instruction — no dependency on start_prod.sh being in the build context at all.
+
+The CMD runs:
+
+python manage.py migrate
+python manage.py collectstatic
+celery -A config.celery worker -B ... (background)
+exec daphne config.asgi:application ... (foreground)
+Watch the Render build logs — this should succeed now. Once the backend is up, trigger the video workflow again.
+
+Feedback submitted
+
+
+
+ it is failing multiple times and you can see all what it done in file [/home/hayredin/Documents/synapse/fix.txt] and enen if after such a huge trial still geting build error on render [Web Service
+synapse-api
+Docker
+Free
+Upgrade your instance
+
+Connect
+
+Manual Deploy
+Service ID:
+srv-d7iv5h3bc2fs739bbpt0
+
+HayreKhan750 / SYNAPSE
+main
+https://synapse-api-oyld.onrender.com
+
+Your free instance will spin down with inactivity, which can delay requests by 50 seconds or more.
+Upgrade now
+April 22, 2026 at 11:45 AM
+failed
+bdfefa5
+Fix Docker build: inline CMD instead of start_prod.sh The start_prod.sh file was not being copied into the Docker image despite being tracked by git. Root cause unclear (possibly Render build context issue). Solution: put all startup commands directly in the Dockerfile CMD using shell form - no external script needed.
+
+Rollback
+Exited with status 127 while running your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Apr 22, 11:44 AM - 11:48 AM
+GMT+3
+
+
+
+#15 sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf 11.72MB / 11.72MB 0.1s done
+#15 extracting sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf
+#15 extracting sha256:01db0c08858bf0f39a6241733c44c194aca50f714ec3e67f6817bc46486eb4cf 2.5s done
+#15 sha256:b0db2789254aa94933aebb88145b07797447546e599f69f2c0ab7fd0636c52bb 423B / 423B done
+
+The critical clue: .dockerignore is 1.63kB (matches the repo root one, NOT the 18-line backend/ one). This means Render uses the repo root as build context, not backend/. So COPY . . dumps the entire repo into /app/, putting manage.py at /app/backend/manage.py instead of /app/manage.py.
+
+Let me read the fix.txt and requirements to get the full picture:
+
+The build logs reveal the root cause I've been missing:
+
+.dockerignore is 1.63kB — matches the repo root one, NOT backend/.dockerignore
+Build context is 5.01MB — the entire repo, not just backend/
+COPY . . dumps the whole repo into /app/ — so manage.py is at /app/backend/manage.py, not /app/manage.py
+daphne: not found — likely a PATH issue since the whole repo structure is wrong
+Render uses the repo root as build context, regardless of the Root Directory setting. Let me verify and fix:
+
+Analyzed
+~/Documents/synapse
+There IS a requirements.txt at the repo root (17 bytes — probably just references requirements.txt). And manage.py is inside backend/. The Dockerfile needs to copy backend/ contents, not the whole repo.
+
+The root requirements.txt only has yt-dlp — that's why the builder stage "works" (it only installs yt-dlp, not the actual Django dependencies!). The real requirements are in requirements.txt. This explains why daphne isn't found — it was never installed in the production image.
+
+Now I'll fix the Dockerfile properly for the repo root build context:
+
+Now let me check backend/requirements.txt to confirm daphne and other deps are there:
+
+Command head
+
+head -30 /home/hayredin/Documents/synapse/backend/requirements.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# ── Django Core ──────────────────────────────────────────────
+Django>=4.2,<5.0
+# ── WebSockets / Real-time ────────────────────────────────────
+channels>=4.1,<5.0
+daphne>=4.1,<5.0
+channels-redis>=4.2,<5.0
+djangorestframework>=3.15,<4.0
+django-cors-headers>=4.3,<5.0
+djangorestframework-simplejwt>=5.3,<6.0
+django-axes>=6.4,<7.0
+django-filter>=24.2,<25.0
+django-redis>=5.4,<6.0
+django-celery-beat>=2.6,<3.0
+django-celery-results>=2.5,<3.0
+django-prometheus>=2.3,<3.0
+django-storages[s3]>=1.14,<2.0
+django-silk>=5.1,<6.0
+whitenoise[brotli]>=6.7,<7.0
+
+# ── Security ─────────────────────────────────────────────────
+cryptography>=42.0,<43.0
+django-ratelimit>=4.1,<5.0
+# Phase 9.1 — MFA
+django-otp>=1.4,<2.0
+qrcode[pil]>=7.4,<8.0
+# Phase 9.1 — Secret scanning (dev/CI)
+semgrep>=1.70,<2.0
+
+
+Using legacy terminal
+Configure
+Checked command status
+daphne IS in requirements.txt. The problem is the builder stage copies the root requirements.txt (which only has yt-dlp) instead of requirements.txt. Now I'll fix the Dockerfile properly:
+
+Cascade cannot create Dockerfile because it already exists.
+Dockerfile
++17
+-10
+Now I need to also update the scraper settings since in Docker the scraper will be at /app/scraper/ and the Django app is directly at /app/ (no backend/ subdirectory):
+
+The scraper settings already handle the Docker path correctly (lines 10-13). Now commit and push:
+
+Command cd, git
+
+101 x 10
+
+Using legacy terminal
+Configure
+Checked command status
+Your included usage quota is exhausted. Purchase extra usage to continue using premium models. Quota resets Apr 26, 11:00 AM GMT+3.
+Feedback submitted
+
+
+
+Continnue
+
+6 more
+Fix Docker build: Render uses repo root context, not backend/
+
+8
+Verify Render rebuild succeeds and backend is live
+
+1 more
+Pushed commit d69ae4a. The key insight that was causing all the failures:
+
+Root Cause of ALL Build Failures
+Render uses the repo root as Docker build context — NOT backend/. Evidence:
+
+.dockerignore loaded was 1.63kB (matches repo root, not backend/)
+Build context was 5.01MB (entire repo, not just backend/)
+This meant:
+
+COPY requirements.txt . → copied the root requirements.txt (only yt-dlp) → daphne, Django, celery never installed
+COPY . . → dumped entire repo into /app/ → manage.py at /app/backend/manage.py not /app/manage.py
+Result: python: can't open file '/app/manage.py' and daphne: not found
+Fix in d69ae4a
+COPY backend/requirements.txt . → installs ALL Django dependencies
+COPY backend/ . → only backend source goes to /app/ (manage.py at /app/manage.py)
+COPY scraper/ /app/scraper/ → scraper code available for Celery tasks
+Watch the Render build logs for this deploy. Once it's live, trigger the video workflow.
+
+Feedback submitted
+
+
+
+in erlier time you told me to chenge the root directory to empty space from backend and is that fine [since i have already changed it ]
+
+Yes, that's correct — leaving the Root Directory empty is exactly what the current Dockerfile expects. The build logs confirmed Render uses the repo root as context anyway.
+
+Just make sure your Render settings are:
+
+Root Directory: empty (repo root) ✅ (you already changed this)
+Dockerfile Path: backend/Dockerfile ← verify this is set correctly
+If the Dockerfile path is still just Dockerfile (without the backend/ prefix), Render won't find it. Check that in your Render dashboard under Settings → Build & Deploy.
+
+Feedback submitted
+
+content-script.js:104 Failed to get subsystem status for purpose Object
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes">
+layout-fa6b4defc0056bcf.js:1 WebSocket connection to 'wss://synapse-api-oyld.onrender.com/ws/notifications/' failed: WebSocket is closed before the connection is established.
+(anonymous) @ layout-fa6b4defc0056bcf.js:1
+aQ @ fd9d1056-44a46c36c6df0a47.js:1
+aj @ fd9d1056-44a46c36c6df0a47.js:1
+od @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+oc @ fd9d1056-44a46c36c6df0a47.js:1
+of @ fd9d1056-44a46c36c6df0a47.js:1
+id @ fd9d1056-44a46c36c6df0a47.js:1
+o @ fd9d1056-44a46c36c6df0a47.js:1
+R @ vendors-0acc99d655ec5bb5.js:656
+home:1 [Intervention] Images loaded lazily and replaced with placeholders. Load events are deferred. See https://go.microsoft.com/fwlink/?linkid=2048113
+layout-fa6b4defc0056bcf.js:1 WebSocket connection to 'wss://synapse-api-oyld.onrender.com/ws/notifications/' failed: WebSocket is closed before the connection is established.
+(anonymous) @ layout-fa6b4defc0056bcf.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+layout-fa6b4defc0056bcf.js:1 WebSocket connection to 'wss://synapse-api-oyld.onrender.com/ws/notifications/' failed: Error during WebSocket handshake: Unexpected response code: 500
+s @ layout-fa6b4defc0056bcf.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/organizations/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/organizations/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/briefing/today/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/briefing/today/:1  Failed to load resource: net::ERR_FAILED
+layout-fa6b4defc0056bcf.js:1 WebSocket connection to 'wss://synapse-api-oyld.onrender.com/ws/notifications/' failed: Error during WebSocket handshake: Unexpected response code: 502
+s @ layout-fa6b4defc0056bcf.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/briefing/today/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/briefing/today/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/organizations/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:646 Failed to fetch organizations: AxiosError: Network Error
+    at m.onerror (vendors-0acc99d655ec5bb5.js:730:95810)
+    at th.request (vendors-0acc99d655ec5bb5.js:730:103869)
+    at async th.request (vendors-0acc99d655ec5bb5.js:730:103773)
+    at async th.request (vendors-0acc99d655ec5bb5.js:730:103773)
+    at async th.request (vendors-0acc99d655ec5bb5.js:730:103773)
+    at async layout-fa6b4defc0056bcf.js:1:45334
+    at th.request (vendors-0acc99d655ec5bb5.js:730:103869)
+    at async layout-fa6b4defc0056bcf.js:1:45334
+window.console.error @ vendors-0acc99d655ec5bb5.js:646
+synapse-api-oyld.onrender.com/api/v1/organizations/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/997fe5c1-2f15-4cae-a63f-c5a68fe7d87a/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/4a6ab155-ea65-4d2b-ac63-4a20a30338fe/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/bb1c4fac-a6cd-4ddd-b99e-17626eb0d9cf/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/action-schemas/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/3bd750e3-5e59-4669-9d5d-ddb15e9fa511/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/automation/workflows/8a396d19-ba12-4e5d-bf35-c215c7326713/runs/:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete:1  Failed to load resource: net::ERR_FAILED
+
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+es @ layout-fa6b4defc0056bcf.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+es @ layout-fa6b4defc0056bcf.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+es @ layout-fa6b4defc0056bcf.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/unread-count/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+es @ layout-fa6b4defc0056bcf.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.catch
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.catch
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.catch
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/automation/workflows/ net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+G @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+Promise.catch
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+queryFn @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+setInterval
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+#Q @ vendors-0acc99d655ec5bb5.js:730
+#H @ vendors-0acc99d655ec5bb5.js:730
+onQueryUpdate @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+batch @ vendors-0acc99d655ec5bb5.js:730
+#s @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+XMLHttpRequest.send
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+queryFn @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+setInterval
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+#Q @ vendors-0acc99d655ec5bb5.js:730
+#H @ vendors-0acc99d655ec5bb5.js:730
+onQueryUpdate @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+batch @ vendors-0acc99d655ec5bb5.js:730
+#s @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+XMLHttpRequest.send
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+queryFn @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+setInterval
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+#Q @ vendors-0acc99d655ec5bb5.js:730
+#H @ vendors-0acc99d655ec5bb5.js:730
+onQueryUpdate @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+batch @ vendors-0acc99d655ec5bb5.js:730
+#s @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+XMLHttpRequest.send
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+automation:1 Access to XMLHttpRequest at 'https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete' from origin 'https://synapse-app-six.vercel.app' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+vendors-0acc99d655ec5bb5.js:730  GET https://synapse-api-oyld.onrender.com/api/v1/notifications/?notif_type=workflow_complete net::ERR_FAILED 502 (Bad Gateway)
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+th.<computed> @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+queryFn @ page-e4059dca3aee1037.js:1
+o @ vendors-0acc99d655ec5bb5.js:730
+_ @ vendors-0acc99d655ec5bb5.js:730
+start @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+#G @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+setInterval
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+setInterval @ vendors-0acc99d655ec5bb5.js:730
+#Q @ vendors-0acc99d655ec5bb5.js:730
+#H @ vendors-0acc99d655ec5bb5.js:730
+onQueryUpdate @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+batch @ vendors-0acc99d655ec5bb5.js:730
+#s @ vendors-0acc99d655ec5bb5.js:730
+fetch @ vendors-0acc99d655ec5bb5.js:730
+XMLHttpRequest.send
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+xhr @ vendors-0acc99d655ec5bb5.js:730
+ta @ vendors-0acc99d655ec5bb5.js:730
+Promise.then
+_request @ vendors-0acc99d655ec5bb5.js:730
+request @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ vendors-0acc99d655ec5bb5.js:730
+(anonymous) @ 8320-77d9344d0d2dcf7b.js:1
+

@@ -1,0 +1,56 @@
+Core Intelligence
+
+Smart Digest Email — Daily/weekly personalized email with your top 10 articles, AI-written summary of the week in tech, sent every morning at your chosen time
+Topic Watchlist with Alerts — Watch specific keywords (e.g. "Rust", "LLM", "CUDA") and get instant in-app notifications when something new drops on that topic
+AI Chat with Memory — The chat currently resets each session. Give it long-term memory of your interests, past questions, and articles you've read so it gives better answers over time
+Semantic Search — Replace keyword search with vector search — type "articles about making LLMs faster" and get actually relevant results, not just title matches
+Related Articles Panel — Every article shows 3-5 semantically similar articles you haven't read yet, powered by embeddings
+Reading Experience
+
+Reading Progress & Highlights — Track which articles you've fully read, let you highlight passages, add personal notes that sync across devices
+Offline Mode / PWA — Full Progressive Web App with service worker — read saved articles with no internet connection
+Text-to-Speech Reader — Listen to any article hands-free with a built-in audio player and playback speed control
+Browser Extension — One-click save any article from any website directly into SYNAPSE with auto-tagging and summarization
+Reading Goals — Set a daily "articles to read" goal, track streaks, see your weekly reading stats vs goal
+AI Features
+
+AI Agent for Research — Give it a topic ("write me a research brief on transformer alternatives") and it autonomously scrapes, reads, and synthesizes a full report
+Debate Mode — Pick any article and AI generates pro/con arguments, alternative perspectives, and what the critics say
+Code Extractor — Automatically detects code snippets in articles, extracts them into runnable examples with syntax highlighting and copy button
+Translation — One-click translate any article to your language with AI, while preserving technical terms correctly
+AI-Generated Podcast — Convert your weekly digest into a 5-minute audio summary, two AI voices discussing the top stories
+Discovery & Curation
+
+Trending Topics Map — Visual bubble chart of the hottest tech topics this week, sized by article volume, colored by sentiment
+GitHub Stars Feed — Track repos gaining the most stars in real time, grouped by language and topic
+Twitter/X Tech Thread Digest — Surface the best tech threads from your chosen people, not just individual tweets
+Paper-to-Blog Translator — Takes a dense arxiv paper and rewrites it as an accessible blog post anyone can understand
+Community Upvotes — Let users upvote articles — surfaces a "Community's Pick" section separate from algorithmic feed
+Personalization
+
+Interest Profile Builder — Onboarding quiz that maps your exact tech interests and auto-configures your feed on day 1
+Source Quality Scores — Rate and block sources you find low quality; AI learns your taste over time
+"Catch Me Up" Mode — Been away for 3 days? One button gives you the 10 most important things you missed, ranked by significance
+Smart Collections — Auto-organize saved articles into smart folders (e.g., all AI papers, all Rust articles) without manual tagging
+Reading Speed Calibration — Measures your reading speed once, then shows accurate per-article time estimates
+Productivity & Integrations
+
+Notion/Obsidian Export — Export any article summary + your highlights + notes directly into Notion page or Obsidian note
+Slack Bot — Daily digest posted to your Slack channel, team members react to vote articles up for discussion
+Calendar Integration — Block "reading time" on your calendar; SYNAPSE queues articles for that specific time slot
+GitHub Integration — Follow repos you contribute to; surface issues, PRs, and release notes in your feed
+API & Webhooks — Let power users pipe SYNAPSE data into their own tools, scripts, or dashboards
+Social & Teams
+
+Team Workspaces — Shared feed for engineering teams — curate articles together, leave comments, assign reading to teammates
+Share Digest — Create a public link to your weekly reading list, share it like a newsletter with one click
+"What my network is reading" — Connect with others on SYNAPSE, see what articles your connections saved this week
+Discussion Threads — Comment on any article, reply to others' thoughts — like a Hacker News embedded inside the app
+Expert Annotations — Verified experts can annotate articles with corrections, context, or endorsements
+Performance & Polish
+
+Instant Loading with Skeleton Prefetch — Prefetch the next page of articles before you scroll to the bottom
+Dark/Light/OLED Mode with Custom Accent Color — Full theme customization beyond just dark/light
+Command Palette Superpowers — > prefix runs AI commands, @ mentions people, # filters by topic — all from the same search bar
+Mobile App (Expo/React Native) — Native iOS/Android app with push notifications, offline sync, haptic feedback
+Usage Analytics Dashboard — Personal stats page: topics you read most, your peak reading hours, sources you trust, reading velocity over time

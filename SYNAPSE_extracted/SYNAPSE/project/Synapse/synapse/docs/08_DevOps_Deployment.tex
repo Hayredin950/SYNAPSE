@@ -1,0 +1,2585 @@
+\documentclass{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fancyhdr}
+\usepackage{tocloft}
+\usepackage{booktabs}
+
+% Listings configuration
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  breakatwhitespace=true,
+  frame=tb,
+  framesep=5pt,
+  backgroundcolor=\color{gray!10},
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  stringstyle=\color{red},
+  showstringspaces=false,
+  captionpos=b,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=5,
+  tabsize=2
+}
+
+% Define YAML language for listings
+\lstdefinelanguage{yaml}{
+  keywords={true, false, null, ~},
+  keywordstyle=\color{blue},
+  sensitive=false,
+  comment=[l]{\#},
+  commentstyle=\color{gray}\ttfamily,
+  stringstyle=\color{red}\ttfamily,
+  morestring=[b]",
+  morestring=[b]'
+}
+
+\title{\textbf{SYNAPSE DevOps \& Deployment Guide} \\ AI-Powered Technology Intelligence Platform}
+\author{DevOps Engineering Team}
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SYNAPSE DevOps}
+\lhead{Deployment Documentation}
+\cfoot{\thepage}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\chapter{Executive Summary}
+
+SYNAPSE is a FAANG-style AI-powered technology intelligence and automation platform built with a modern, cloud-native DevOps architecture. This document provides comprehensive guidance on deploying, managing, and scaling SYNAPSE in development, staging, and production environments.
+
+\section{Technology Stack Overview}
+
+\begin{itemize}
+  \item \textbf{Backend Framework}: Django 4.2 + FastAPI 0.104 (Python 3.11)
+  \item \textbf{Frontend Framework}: Next.js 14
+  \item \textbf{Databases}: PostgreSQL 15, Redis 7, pgvector
+  \item \textbf{Message Queue}: Celery 5.3
+  \item \textbf{Containerization}: Docker, Docker Compose
+  \item \textbf{CI/CD}: GitHub Actions
+  \item \textbf{Cloud Platforms}: AWS / GCP
+  \item \textbf{Monitoring}: Prometheus, Grafana, Sentry
+  \item \textbf{Reverse Proxy}: Nginx
+\end{itemize}
+
+\chapter{DevOps Philosophy \& Principles}
+
+\section{Core Principles}
+
+SYNAPSE deployment follows industry-standard DevOps best practices designed for reliability, scalability, and maintainability:
+
+\subsection{Infrastructure as Code (IaC)}
+
+All infrastructure is defined, versioned, and automated through code. Docker Compose for local development and cloud infrastructure templates (Terraform/CloudFormation) for production ensure reproducibility and consistency across environments. No manual infrastructure changes are permitted in production.
+
+\subsection{CI/CD-First Development}
+
+Every code change triggers an automated pipeline:
+\begin{enumerate}
+  \item Linting and code quality checks
+  \item Automated testing (unit, integration, end-to-end)
+  \item Security scanning (SAST, dependency scanning)
+  \item Container image building and pushing
+  \item Automated deployment to staging
+  \item Manual promotion to production with health checks
+\end{enumerate}
+
+\subsection{Container-First Deployment}
+
+All services run in Docker containers with consistent, reproducible builds. This eliminates ``works on my machine'' problems and simplifies deployment across different environments.
+
+\subsection{Immutable Infrastructure}
+
+Docker images are built once and deployed to multiple environments without modification. Configuration is injected at runtime via environment variables. This ensures production environments match tested staging environments exactly.
+
+\subsection{12-Factor App Methodology}
+
+SYNAPSE adheres to the twelve-factor app principles:
+\begin{itemize}
+  \item Codebase tracked in git
+  \item Dependencies explicitly declared in requirements.txt and package.json
+  \item Configuration via environment variables
+  \item Backing services (databases, cache) as attached resources
+  \item Strict separation of build, release, and run stages
+  \item Stateless processes
+  \item Port binding (services export HTTP as a port-bound service)
+  \item Concurrency through process types
+  \item Fast startup and graceful shutdown
+  \item Feature parity between dev/staging/production
+  \item Logs as event streams
+  \item Admin tasks as one-off processes
+\end{itemize}
+
+\subsection{Zero-Downtime Deployments}
+
+Production deployments use rolling updates with health checks. Services gracefully handle SIGTERM signals, complete in-flight requests, and shut down cleanly. Load balancers drain connections before removing instances.
+
+\newpage
+
+\chapter{Local Development Environment}
+
+\section{Overview}
+
+The local development environment mirrors production as closely as possible using Docker Compose. This ensures consistency and reduces environment-specific bugs.
+
+\section{Docker Compose Configuration}
+
+Below is the complete \texttt{docker-compose.yml} file for local development:
+
+\begin{lstlisting}[language=bash, caption=docker-compose.yml - Local Development Stack, label=lst:docker-compose]
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: synapse_postgres
+    environment:
+      POSTGRES_DB: synapse_db
+      POSTGRES_USER: synapse_user
+      POSTGRES_PASSWORD: synapse_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse_user -d synapse_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - synapse_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: synapse_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - synapse_network
+
+  # Django Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: synapse_backend
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      DEBUG: "True"
+      DJANGO_SETTINGS_MODULE: synapse.settings.development
+      DATABASE_URL: postgresql://synapse_user:synapse_password@postgres:5432/synapse_db
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: dev-secret-key-change-in-production
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+
+  # FastAPI AI Service
+  fastapi_ai:
+    build:
+      context: ./fastapi_ai
+      dockerfile: Dockerfile.dev
+    container_name: synapse_fastapi_ai
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+    environment:
+      DEBUG: "True"
+      DATABASE_URL: postgresql://synapse_user:synapse_password@postgres:5432/synapse_db
+      REDIS_URL: redis://redis:6379/1
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-test-key}
+      PINECONE_API_KEY: ${PINECONE_API_KEY:-test-key}
+      PINECONE_ENV: ${PINECONE_ENV:-gcp-starter}
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./fastapi_ai:/app
+      - /app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: synapse_frontend
+    command: npm run dev
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_FASTAPI_URL: http://localhost:8001
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+      - fastapi_ai
+    networks:
+      - synapse_network
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: synapse_celery_worker
+    command: celery -A synapse worker -l info
+    environment:
+      DEBUG: "True"
+      DJANGO_SETTINGS_MODULE: synapse.settings.development
+      DATABASE_URL: postgresql://synapse_user:synapse_password@postgres:5432/synapse_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+
+  # Celery Beat Scheduler
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: synapse_celery_beat
+    command: celery -A synapse beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      DEBUG: "True"
+      DJANGO_SETTINGS_MODULE: synapse.settings.development
+      DATABASE_URL: postgresql://synapse_user:synapse_password@postgres:5432/synapse_db
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+
+  # PgAdmin (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: synapse_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@synapse.local
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_password
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - synapse_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  synapse_network:
+    driver: bridge
+\end{lstlisting}
+
+\section{Environment Variables Management}
+
+\subsection{Local Development (.env.local)}
+
+Create \texttt{.env.local} in the project root:
+
+\begin{lstlisting}[language=bash, caption=.env.local - Local Development Environment Variables]
+# Django Settings
+DEBUG=True
+SECRET_KEY=dev-secret-key-change-in-production
+ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend
+
+# Database
+DATABASE_URL=postgresql://synapse_user:synapse_password@postgres:5432/synapse_db
+POSTGRES_DB=synapse_db
+POSTGRES_USER=synapse_user
+POSTGRES_PASSWORD=synapse_password
+
+# Redis
+REDIS_URL=redis://redis:6379/0
+
+# Celery
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# AI/ML Services
+OPENAI_API_KEY=sk-test-key
+PINECONE_API_KEY=test-key
+PINECONE_ENV=gcp-starter
+
+# External APIs
+GITHUB_TOKEN=ghp_test_token
+ARXIV_API_KEY=test-arxiv-key
+YOUTUBE_API_KEY=test-youtube-key
+NEWS_API_KEY=test-news-key
+
+# Email
+SENDGRID_API_KEY=test-sendgrid-key
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_FASTAPI_URL=http://localhost:8001
+NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
+\end{lstlisting}
+
+\subsection{Production Environment (.env.production)}
+
+\begin{lstlisting}[language=bash, caption=.env.production - Production Environment Variables]
+# Django Settings
+DEBUG=False
+SECRET_KEY=${DJANGO_SECRET_KEY}
+ALLOWED_HOSTS=synapse.example.com,api.synapse.example.com
+CSRF_TRUSTED_ORIGINS=https://synapse.example.com,https://api.synapse.example.com
+
+# Security
+SECURE_SSL_REDIRECT=True
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+SECURE_HSTS_SECONDS=31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=True
+
+# Database (RDS)
+DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:5432/${DB_NAME}
+
+# Redis (ElastiCache)
+REDIS_URL=redis://${REDIS_HOST}:6379/0
+
+# Celery
+CELERY_BROKER_URL=redis://${REDIS_HOST}:6379/0
+CELERY_RESULT_BACKEND=redis://${REDIS_HOST}:6379/0
+
+# AWS
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+AWS_STORAGE_BUCKET_NAME=synapse-prod-storage
+AWS_S3_REGION_NAME=us-east-1
+
+# AI/ML Services
+OPENAI_API_KEY=${OPENAI_API_KEY}
+PINECONE_API_KEY=${PINECONE_API_KEY}
+PINECONE_ENV=${PINECONE_ENV}
+
+# Monitoring
+SENTRY_DSN=${SENTRY_DSN}
+
+# Frontend
+NEXT_PUBLIC_API_URL=https://api.synapse.example.com
+NEXT_PUBLIC_FASTAPI_URL=https://ai.synapse.example.com
+NEXT_PUBLIC_WS_URL=wss://api.synapse.example.com/ws
+\end{lstlisting}
+
+\section{Getting Started}
+
+To set up the local development environment:
+
+\begin{lstlisting}[language=bash, caption=Local Development Setup Commands]
+# Clone repository
+git clone https://github.com/yourorg/synapse.git
+cd synapse
+
+# Create .env.local
+cp .env.example .env.local
+# Edit .env.local with your values
+
+# Build and start all services
+docker-compose up -d
+
+# Run migrations
+docker-compose exec backend python manage.py migrate
+
+# Create superuser
+docker-compose exec backend python manage.py createsuperuser
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+\end{lstlisting}
+
+\chapter{Dockerfile Specifications}
+
+\section{Backend Dockerfile (Django + Gunicorn)}
+
+The backend uses a multi-stage build to minimize image size and improve security:
+
+\begin{lstlisting}[language=bash, caption=Dockerfile - Django Backend, label=lst:backend-dockerfile]
+# Stage 1: Builder
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Stage 2: Production
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install only runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd -m -u 1000 synapse_user
+
+# Copy Python dependencies from builder
+COPY --from=builder /root/.local /home/synapse_user/.local
+ENV PATH=/home/synapse_user/.local/bin:$PATH
+
+# Copy application code
+COPY --chown=synapse_user:synapse_user . .
+
+# Switch to non-root user
+USER synapse_user
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Run Gunicorn
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "4", \
+     "--worker-class", "gthread", \
+     "--threads", "2", \
+     "--worker-tmp-dir", "/dev/shm", \
+     "--max-requests", "1000", \
+     "--max-requests-jitter", "50", \
+     "--timeout", "30", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "synapse.wsgi:application"]
+\end{lstlisting}
+
+\section{FastAPI Dockerfile (Uvicorn)}
+
+\begin{lstlisting}[language=bash, caption=Dockerfile - FastAPI AI Service]
+# Stage 1: Builder
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# Stage 2: Production
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 synapse_user
+
+COPY --from=builder /root/.local /home/synapse_user/.local
+ENV PATH=/home/synapse_user/.local/bin:$PATH
+
+COPY --chown=synapse_user:synapse_user . .
+
+USER synapse_user
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8001/health || exit 1
+
+EXPOSE 8001
+
+CMD ["uvicorn", \
+     "main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8001", \
+     "--workers", "4"]
+\end{lstlisting}
+
+\section{Frontend Dockerfile (Next.js)}
+
+\begin{lstlisting}[language=bash, caption=Dockerfile - Next.js Frontend]
+# Stage 1: Dependencies
+FROM node:20-alpine as deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Stage 2: Builder
+FROM node:20-alpine as builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:20-alpine as runner
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodejs
+RUN adduser -S nextjs -u 1001
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+CMD ["node", "server.js"]
+\end{lstlisting}
+
+\section{Celery Worker Dockerfile}
+
+The Celery worker uses the same base as the backend but with different entrypoint:
+
+\begin{lstlisting}[language=bash, caption=Dockerfile - Celery Worker]
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 synapse_user
+
+COPY --from=builder /root/.local /home/synapse_user/.local
+ENV PATH=/home/synapse_user/.local/bin:$PATH
+
+COPY --chown=synapse_user:synapse_user . .
+
+USER synapse_user
+
+CMD ["celery", "-A", "synapse", "worker", "-l", "info", \
+     "-c", "4", \
+     "--max-tasks-per-child", "100"]
+\end{lstlisting}
+
+\section{.dockerignore Files}
+
+To reduce image size and build context, create \texttt{.dockerignore} files:
+
+\begin{lstlisting}[caption=.dockerignore - Backend]
+*.pyc
+__pycache__
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.git
+.gitignore
+.dockerignore
+Dockerfile
+docker-compose*.yml
+.env*
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+\end{lstlisting}
+
+\begin{lstlisting}[caption=.dockerignore - Frontend]
+node_modules
+npm-debug.log
+build
+dist
+.next
+.env*
+.git
+.gitignore
+.dockerignore
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+.eslintcache
+coverage
+\end{lstlisting}
+
+\chapter{CI/CD Pipeline (GitHub Actions)}
+
+\section{Overview}
+
+SYNAPSE uses GitHub Actions for continuous integration and deployment. The pipeline ensures code quality, security, and automated deployment to production.
+
+\section{Continuous Integration Workflow}
+
+\begin{lstlisting}[language=bash, caption=.github/workflows/ci.yml - Continuous Integration Pipeline, label=lst:ci-workflow]
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint Code
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 black isort pylint
+
+      - name: Run flake8
+        run: flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Check code formatting with black
+        run: black --check backend/
+
+      - name: Check import sorting with isort
+        run: isort --check-only backend/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install ESLint
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+  test-backend:
+    runs-on: ubuntu-latest
+    name: Test Backend
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-cov pytest-django
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DJANGO_SETTINGS_MODULE: synapse.settings.testing
+        run: |
+          cd backend
+          python manage.py migrate
+
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://test_user:test_password@localhost:5432/test_db
+          DJANGO_SETTINGS_MODULE: synapse.settings.testing
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd backend
+          pytest --cov=synapse --cov-report=xml --cov-report=html
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./backend/coverage.xml
+          flags: backend
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    name: Test Frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm run test -- --coverage
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./frontend/coverage/coverage-final.json
+          flags: frontend
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install security tools
+        run: pip install bandit safety
+
+      - name: Run Bandit (Python security)
+        run: bandit -r backend/ -f json -o bandit-report.json || true
+
+      - name: Run Safety (dependency check)
+        run: safety check --json || true
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run npm audit
+        working-directory: frontend
+        run: npm audit || true
+
+  build:
+    needs: [lint, test-backend, test-frontend, security-scan]
+    runs-on: ubuntu-latest
+    name: Build Docker Images
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push fastapi image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./fastapi_ai
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fastapi-ai:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fastapi-ai:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+\end{lstlisting}
+
+\section{Continuous Deployment Workflow}
+
+\begin{lstlisting}[language=bash, caption=.github/workflows/deploy.yml - Continuous Deployment Pipeline]
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+  DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    name: Build and Push Images
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push all images
+        run: |
+          docker buildx build --push -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend:${{ github.sha }} ./backend
+          docker buildx build --push -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/fastapi-ai:${{ github.sha }} ./fastapi_ai
+          docker buildx build --push -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend:${{ github.sha }} ./frontend
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_KEY }}
+          script: |
+            cd /var/synapse
+            echo "IMAGE_TAG=${{ github.sha }}" > .env.deploy
+            source .env.deploy
+            docker-compose pull
+            docker-compose up -d
+
+  health-check:
+    needs: deploy
+    runs-on: ubuntu-latest
+    name: Health Check
+
+    steps:
+      - name: Check backend health
+        run: |
+          for i in {1..30}; do
+            if curl -f https://api.synapse.example.com/health/; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          echo "Backend health check failed"
+          exit 1
+
+      - name: Check frontend health
+        run: |
+          for i in {1..30}; do
+            if curl -f https://synapse.example.com/api/health; then
+              echo "Frontend is healthy"
+              exit 0
+            fi
+            echo "Attempt $i failed, retrying..."
+            sleep 10
+          done
+          echo "Frontend health check failed"
+          exit 1
+
+  notify:
+    needs: [build-and-push, deploy, health-check]
+    runs-on: ubuntu-latest
+    name: Notify Deployment Status
+    if: always()
+
+    steps:
+      - name: Notify Slack on success
+        if: needs.health-check.result == 'success'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "SYNAPSE Deployment Successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*SYNAPSE Deployment Successful* [OK]\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Notify Slack on failure
+        if: needs.health-check.result == 'failure'
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "SYNAPSE Deployment Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*SYNAPSE Deployment Failed* [FAIL]\n*Commit:* <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n*Author:* ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+
+\end{lstlisting}
+
+\section{GitHub Actions Best Practices}
+
+\subsection{Secrets Management}
+
+All sensitive information is stored as GitHub Secrets:
+
+\begin{itemize}
+  \item \texttt{DEPLOY\_HOST}: Production server IP/hostname
+  \item \texttt{DEPLOY\_USER}: SSH user for deployment
+  \item \texttt{DEPLOY\_KEY}: SSH private key
+  \item \texttt{SLACK\_WEBHOOK}: Slack webhook URL for notifications
+  \item \texttt{DATABASE\_PASSWORD}: Production database password
+  \item \texttt{API\_KEYS}: Third-party API keys
+\end{itemize}
+
+\subsection{Caching Strategy}
+
+The pipeline uses multiple caching layers to optimize build times:
+
+\begin{itemize}
+  \item \textbf{pip cache}: Python dependencies cached between runs
+  \item \textbf{npm cache}: Node.js dependencies cached
+  \item \textbf{Docker layer cache}: Build layers cached via GitHub Actions cache
+  \item \textbf{BuildKit inline cache}: Embedded in Docker images for efficiency
+\end{itemize}
+
+\chapter{Production Infrastructure (AWS)}
+
+\section{Architecture Overview}
+
+SYNAPSE production infrastructure is deployed on AWS with high availability, auto-scaling, and disaster recovery capabilities:
+
+\begin{enumerate}
+  \item \textbf{Application Load Balancer (ALB)}: Distributes traffic to EC2 instances
+  \item \textbf{EC2 Auto Scaling Group}: Manages backend and AI service instances
+  \item \textbf{RDS PostgreSQL}: Managed database with Multi-AZ for high availability
+  \item \textbf{ElastiCache Redis}: Managed in-memory cache cluster
+  \item \textbf{S3}: Object storage for media, backups, and logs
+  \item \textbf{CloudFront}: CDN for frontend static assets and API caching
+  \item \textbf{Route 53}: DNS management and health checks
+  \item \textbf{VPC}: Private subnets for databases, public subnets for ALB
+  \item \textbf{Security Groups}: Network-level access control
+  \item \textbf{CloudWatch}: Monitoring, logging, and alarms
+\end{enumerate}
+
+\section{EC2 Instance Recommendations}
+
+\subsection{Backend Service}
+
+\begin{itemize}
+  \item \textbf{Instance Type}: t3.medium (2 vCPU, 4 GB RAM) - minimum
+  \item \textbf{Recommended}: t3.large for production (2 vCPU, 8 GB RAM)
+  \item \textbf{Volume}: 50 GB EBS (gp3) for application logs
+  \item \textbf{Auto Scaling}: Min 2, Max 10 instances based on CPU >70\%
+  \item \textbf{Security Group}: Allow 8000 from ALB, SSH from bastion
+\end{itemize}
+
+\subsection{FastAPI AI Service}
+
+\begin{itemize}
+  \item \textbf{Instance Type}: t3.large (2 vCPU, 8 GB RAM) - minimum
+  \item \textbf{Recommended}: t3.xlarge (4 vCPU, 16 GB RAM) for AI workloads
+  \item \textbf{Volume}: 100 GB EBS (gp3) for model caching
+  \item \textbf{Auto Scaling}: Min 1, Max 5 instances based on queue depth
+  \item \textbf{Security Group}: Allow 8001 from ALB, SSH from bastion
+\end{itemize}
+
+\section{RDS PostgreSQL Configuration}
+
+\begin{lstlisting}[caption=RDS PostgreSQL Setup Parameters]
+Engine Version: PostgreSQL 15.x
+Instance Class: db.t3.large (production minimum)
+Multi-AZ: Enabled for high availability
+Storage Type: gp3 (provisioned IOPS)
+Storage Size: 100 GB (auto-scaling to 1000 GB)
+Backup Retention: 30 days
+Backup Window: 03:00-04:00 UTC
+Maintenance Window: sun:04:00-sun:05:00 UTC
+Enhanced Monitoring: Enabled (60 second granularity)
+Performance Insights: Enabled (7 day retention)
+Encryption: KMS encryption at rest
+Network: Private subnet, accessible only from app tier
+Database Name: synapse_prod
+Master Username: synapse_admin
+Parameter Groups:
+  - max_connections: 100
+  - shared_buffers: 256MB
+  - effective_cache_size: 2GB
+  - work_mem: 8MB
+  - maintenance_work_mem: 64MB
+\end{lstlisting}
+
+\section{ElastiCache Redis Configuration}
+
+\begin{lstlisting}[caption=ElastiCache Redis Setup Parameters]
+Engine: Redis 7.x
+Node Type: cache.t3.medium (production minimum)
+Number of Nodes: 2 (Multi-AZ cluster mode disabled)
+Parameter Group: custom (optimize for Celery)
+Port: 6379
+Encryption at Rest: Enabled (KMS)
+Encryption in Transit: Enabled (TLS)
+Automatic Failover: Enabled
+Backup Retention: 5 days
+Backup Window: 03:00-05:00 UTC
+Maintenance Window: sun:04:00-sun:05:00 UTC
+Parameter Overrides:
+  - maxmemory-policy: allkeys-lru
+  - timeout: 300
+  - tcp-backlog: 511
+\end{lstlisting}
+
+\section{Auto-Scaling Configuration}
+
+\begin{lstlisting}[language=Python, caption=Auto-Scaling Policy - Backend]
+{
+  "AutoScalingGroupName": "synapse-backend-asg",
+  "MinSize": 2,
+  "MaxSize": 10,
+  "DesiredCapacity": 2,
+  "HealthCheckType": "ELB",
+  "HealthCheckGracePeriod": 300,
+  "TargetGroupArns": ["arn:aws:elasticloadbalancing:..."],
+  "TargetTrackingScalingPolicy": {
+    "TargetValue": 70.0,
+    "PredefinedMetricSpecification": {
+      "PredefinedMetricType": "ASGAverageCPUUtilization"
+    },
+    "ScaleOutCooldown": 60,
+    "ScaleInCooldown": 300
+  }
+}
+\end{lstlisting}
+
+\chapter{Nginx Configuration}
+
+\section{Reverse Proxy Setup}
+
+\begin{lstlisting}[language=bash, caption=nginx.conf - Main Configuration]
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 2048;
+    use epoll;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log /var/log/nginx/access.log main;
+
+    # Performance
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+    client_max_body_size 50M;
+
+    # Gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml text/javascript 
+               application/json application/javascript application/xml+rss 
+               application/rss+xml font/truetype font/opentype 
+               application/vnd.ms-fontobject image/svg+xml;
+
+    # Rate limiting
+    limit_req_zone $binary_remote_addr zone=api_limit:10m rate=10r/s;
+    limit_req_zone $binary_remote_addr zone=general_limit:10m rate=30r/s;
+
+    # Upstream definitions
+    upstream django_backend {
+        least_conn;
+        server backend-1:8000 max_fails=3 fail_timeout=30s;
+        server backend-2:8000 max_fails=3 fail_timeout=30s;
+        server backend-3:8000 max_fails=3 fail_timeout=30s;
+        keepalive 32;
+    }
+
+    upstream fastapi_backend {
+        least_conn;
+        server fastapi-ai-1:8001 max_fails=3 fail_timeout=30s;
+        server fastapi-ai-2:8001 max_fails=3 fail_timeout=30s;
+        keepalive 32;
+    }
+
+    upstream nextjs_frontend {
+        least_conn;
+        server frontend-1:3000 max_fails=3 fail_timeout=30s;
+        server frontend-2:3000 max_fails=3 fail_timeout=30s;
+        keepalive 32;
+    }
+
+    # HTTPS redirect
+    server {
+        listen 80;
+        server_name synapse.example.com api.synapse.example.com ai.synapse.example.com;
+        return 301 https://$server_name$request_uri;
+    }
+
+    # API Server
+    server {
+        listen 443 ssl http2;
+        server_name api.synapse.example.com;
+
+        # SSL certificates (Let's Encrypt)
+        ssl_certificate /etc/letsencrypt/live/api.synapse.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/api.synapse.example.com/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers on;
+
+        # Security headers
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "no-referrer-when-downgrade" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline';" always;
+
+        # Rate limiting
+        limit_req zone=api_limit burst=20 nodelay;
+
+        # Django proxy
+        location / {
+            proxy_pass http://django_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Host $server_name;
+            
+            proxy_connect_timeout 30s;
+            proxy_send_timeout 30s;
+            proxy_read_timeout 30s;
+        }
+
+        # WebSocket support
+        location /ws {
+            proxy_pass http://django_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            
+            proxy_read_timeout 86400;
+        }
+
+        # Static files
+        location /static/ {
+            alias /var/www/synapse/static/;
+            expires 30d;
+            add_header Cache-Control "public, immutable";
+        }
+
+        # Media files
+        location /media/ {
+            alias /var/www/synapse/media/;
+            expires 7d;
+            add_header Cache-Control "public";
+        }
+    }
+
+    # AI Service Server
+    server {
+        listen 443 ssl http2;
+        server_name ai.synapse.example.com;
+
+        ssl_certificate /etc/letsencrypt/live/ai.synapse.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/ai.synapse.example.com/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        add_header Strict-Transport-Security "max-age=31536000" always;
+
+        location / {
+            proxy_pass http://fastapi_backend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            
+            proxy_connect_timeout 60s;
+            proxy_send_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+    }
+
+    # Frontend Server
+    server {
+        listen 443 ssl http2;
+        server_name synapse.example.com;
+
+        ssl_certificate /etc/letsencrypt/live/synapse.example.com/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/synapse.example.com/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+        limit_req zone=general_limit burst=50 nodelay;
+
+        # Next.js application
+        location / {
+            proxy_pass http://nextjs_frontend;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # Static assets with caching
+        location /_next/static {
+            proxy_pass http://nextjs_frontend;
+            proxy_cache_valid 200 30d;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+}
+\end{lstlisting}
+
+\chapter{Environment Configuration}
+
+\section{Required Environment Variables}
+
+All production environment variables are managed through AWS Secrets Manager or HashiCorp Vault:
+
+\begin{lstlisting}[caption=Complete Environment Variables Reference]
+# Django/Django REST Framework
+DJANGO_SECRET_KEY=<random-secret-key-min-50-chars>
+DEBUG=False
+ALLOWED_HOSTS=synapse.example.com,api.synapse.example.com,ai.synapse.example.com
+CSRF_TRUSTED_ORIGINS=https://synapse.example.com,https://api.synapse.example.com
+
+# Database
+DATABASE_URL=postgresql://synapse_admin:password@rds-endpoint:5432/synapse_prod
+DB_ECHO=False
+DB_POOL_SIZE=20
+DB_POOL_RECYCLE=3600
+
+# Redis/Cache
+REDIS_URL=redis://:password@elasticache-endpoint:6379/0
+CACHE_BACKEND=django.core.cache.backends.redis.RedisCache
+
+# Celery
+CELERY_BROKER_URL=redis://:password@elasticache-endpoint:6379/1
+CELERY_RESULT_BACKEND=redis://:password@elasticache-endpoint:6379/2
+CELERY_TASK_SERIALIZER=json
+CELERY_ACCEPT_CONTENT=json
+CELERY_RESULT_SERIALIZER=json
+CELERY_TIMEZONE=UTC
+
+# AI/ML Services
+OPENAI_API_KEY=<openai-secret-key>
+OPENAI_ORG_ID=<optional-org-id>
+PINECONE_API_KEY=<pinecone-api-key>
+PINECONE_ENV=production
+PINECONE_INDEX=synapse-prod
+
+# External APIs
+GITHUB_TOKEN=<github-personal-access-token>
+GITHUB_API_BASE=https://api.github.com
+ARXIV_API_KEY=<arxiv-api-key>
+YOUTUBE_API_KEY=<youtube-api-key>
+NEWS_API_KEY=<news-api-key>
+NEWSAPI_BASE_URL=https://newsapi.org/v2
+
+# AWS/Cloud
+AWS_ACCESS_KEY_ID=<aws-access-key>
+AWS_SECRET_ACCESS_KEY=<aws-secret-key>
+AWS_STORAGE_BUCKET_NAME=synapse-prod-storage
+AWS_S3_REGION_NAME=us-east-1
+AWS_S3_CUSTOM_DOMAIN=cdn.synapse.example.com
+AWS_DEFAULT_ACL=public-read
+AWS_LOCATION=static
+
+# Email/Notifications
+SENDGRID_API_KEY=<sendgrid-api-key>
+EMAIL_FROM=noreply@synapse.example.com
+EMAIL_BACKEND=sendgrid_backend.SendgridBackend
+
+# Monitoring
+SENTRY_DSN=<sentry-dsn>
+SENTRY_ENVIRONMENT=production
+SENTRY_TRACES_SAMPLE_RATE=0.1
+
+# Security
+SECURE_SSL_REDIRECT=True
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+SECURE_HSTS_SECONDS=31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS=True
+SECURE_HSTS_PRELOAD=True
+
+# Frontend
+NEXT_PUBLIC_API_URL=https://api.synapse.example.com
+NEXT_PUBLIC_FASTAPI_URL=https://ai.synapse.example.com
+NEXT_PUBLIC_WS_URL=wss://api.synapse.example.com/ws
+NEXT_PUBLIC_SENTRY_DSN=<frontend-sentry-dsn>
+NEXT_PUBLIC_ENVIRONMENT=production
+\end{lstlisting}
+
+\section{Secrets Management Strategy}
+
+\subsection{AWS Secrets Manager}
+
+\begin{lstlisting}[language=Python, caption=AWS Secrets Manager Secret Structure]
+{
+  "DJANGO_SECRET_KEY": "value",
+  "DATABASE_URL": "postgresql://user:pass@host/db",
+  "OPENAI_API_KEY": "sk-...",
+  "SENDGRID_API_KEY": "SG...",
+  "AWS_ACCESS_KEY_ID": "AKIA...",
+  "AWS_SECRET_ACCESS_KEY": "..."
+}
+\end{lstlisting}
+
+\subsection{EC2 IAM Role}
+
+EC2 instances are granted an IAM role with permissions to:
+
+\begin{itemize}
+  \item Read from Secrets Manager (GetSecretValue)
+  \item Access S3 buckets (s3:GetObject, s3:PutObject)
+  \item Write CloudWatch logs
+  \item Access ElastiCache (conditional on security groups)
+  \item Access RDS (conditional on security groups)
+\end{itemize}
+
+\subsection{Deployment Secret Injection}
+
+During deployment, a startup script retrieves secrets from AWS Secrets Manager and injects them as environment variables before starting the application.
+
+\chapter{Database Management in Production}
+
+\section{Database Migrations Strategy}
+
+Zero-downtime database migrations are critical for production deployments:
+
+\begin{enumerate}
+  \item \textbf{Backward-compatible changes}: All new columns added with default values or nullable
+  \item \textbf{Dual-write period}: Code writes to both old and new schemas
+  \item \textbf{Data migration}: Backfill data during low-traffic periods
+  \item \textbf{Code deployment}: Deploy code that reads from new columns
+  \item \textbf{Cleanup}: Remove old columns after verification
+  \item \textbf{Rollback plan}: Keep previous code version ready for quick rollback
+\end{enumerate}
+
+\begin{lstlisting}[caption=Database Migration Checklist]
+1. Create new column/table with default values (backwards compatible)
+2. Deploy code to write to both old and new locations
+3. Wait for read replicas to catch up
+4. Run migration job to backfill data from old to new
+5. Deploy code to read from new location with fallback to old
+6. Monitor error rates and verify data consistency
+7. Remove writes to old location from code
+8. Deploy updated code
+9. Wait for all deployments
+10. Drop old column/table in maintenance window
+\end{lstlisting}
+
+\section{Backup Strategy}
+
+\subsection{Automated Daily Backups}
+
+\begin{itemize}
+  \item \textbf{Frequency}: Daily automated backups at 03:00 UTC
+  \item \textbf{Retention}: 30-day rolling backup window
+  \item \textbf{Location}: AWS S3 with cross-region replication
+  \item \textbf{Encryption}: KMS encryption at rest
+  \item \textbf{Verification}: Weekly restore test to staging environment
+\end{itemize}
+
+\subsection{Point-in-Time Recovery}
+
+RDS enables point-in-time recovery (PITR) within the backup retention window:
+
+\begin{itemize}
+  \item \textbf{Recovery Window}: Any point in last 30 days
+  \item \textbf{RTO}: 15-30 minutes depending on database size
+  \item \textbf{Procedure}: Click \textit{Actions} > \textit{Restore to Point in Time} in AWS console
+  \item \textbf{Testing}: Monthly PITR drills to staging environment
+\end{itemize}
+
+\section{Read Replicas for Reporting}
+
+Create read replicas to offload reporting queries from the primary database:
+
+\begin{lstlisting}[caption=Read Replica Configuration]
+Primary Database: synapse-prod (us-east-1a)
+Read Replica 1: synapse-prod-read-1 (us-east-1b) - Analytics
+Read Replica 2: synapse-prod-read-2 (us-east-1c) - Backups
+Lag Target: < 1 second
+Connection Limit: 50 per replica
+\end{lstlisting}
+
+Reporting queries are routed to read replicas using Django database router.
+
+\section{pgvector Index Maintenance}
+
+\subsection{Index Creation}
+
+For optimal AI search performance, create indices on vector columns:
+
+\begin{lstlisting}[language=sql, caption=pgvector Index Creation]
+-- Create HNSW index for vector similarity search
+CREATE INDEX ON embeddings USING hnsw (embedding vector_cosine_ops)
+WITH (m=16, ef_construction=200);
+
+-- Create IVFFlat index (alternative for larger datasets)
+CREATE INDEX ON embeddings USING ivfflat (embedding vector_cosine_ops)
+WITH (lists=100);
+
+-- Create B-tree index for metadata filtering
+CREATE INDEX ON embeddings (created_at DESC) WHERE deleted_at IS NULL;
+
+-- Analyze distribution
+ANALYZE embeddings;
+\end{lstlisting}
+
+\subsection{Index Maintenance}
+
+\begin{lstlisting}[language=bash, caption=pgvector Index Maintenance Script]
+#!/bin/bash
+# Run weekly to maintain vector indices
+
+psql $DATABASE_URL << EOF
+-- Reindex regularly for optimal performance
+REINDEX INDEX CONCURRENTLY embeddings_embedding_idx;
+
+-- Vacuum to recover space from deleted embeddings
+VACUUM ANALYZE embeddings;
+
+-- Check index bloat
+SELECT 
+  schemaname, tablename, indexname, 
+  ROUND(100 * (OTTA - CASE WHEN OTTA=0 THEN 1 ELSE OTTA END) / OTTA::numeric) AS n_dead_tup
+FROM pgstattuple_approx('embeddings_embedding_idx'::regclass)
+WHERE OTTA > 0;
+EOF
+\end{lstlisting}
+
+\section{Redis Persistence}
+
+Redis uses both AOF (Append-Only File) and RDB (snapshot) for durability:
+
+\begin{lstlisting}[caption=Redis Persistence Configuration]
+# RDB Snapshots (point-in-time backup)
+save 900 1        # Save if 1 key changed in 900 seconds
+save 300 10       # Save if 10 keys changed in 300 seconds
+save 60 10000     # Save if 10000 keys changed in 60 seconds
+
+# AOF (rewrite every operation for durability)
+appendonly yes
+appendfsync everysec
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+
+# Disk space limits
+maxmemory-policy allkeys-lru
+maxmemory 2gb
+\end{lstlisting}
+
+\chapter{Monitoring \& Observability}
+
+\section{Prometheus Metrics Setup}
+
+\subsection{Django Metrics with django-prometheus}
+
+\begin{lstlisting}[language=python, caption=Django Prometheus Configuration]
+# settings.py
+INSTALLED_APPS = [
+    'django_prometheus',
+    # ... other apps
+]
+
+MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    # ... other middleware
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
+]
+
+# urls.py
+from django_prometheus import urls as prometheus_urls
+
+urlpatterns = [
+    path('', include(prometheus_urls)),
+    # ... other patterns
+]
+\end{lstlisting}
+
+\subsection{Custom Business Metrics}
+
+\begin{lstlisting}[language=python, caption=Custom Prometheus Metrics]
+from prometheus_client import Counter, Gauge, Histogram
+
+# Articles scraped
+articles_scraped = Counter(
+    'articles_scraped_total',
+    'Total articles scraped',
+    ['source']
+)
+
+# AI requests
+ai_requests = Counter(
+    'ai_requests_total',
+    'Total AI API requests',
+    ['model', 'status']
+)
+
+# Agent tasks completed
+agent_tasks = Counter(
+    'agent_tasks_completed_total',
+    'Total agent tasks completed',
+    ['task_type', 'status']
+)
+
+# Queue depth
+celery_queue_depth = Gauge(
+    'celery_queue_depth',
+    'Current Celery task queue depth',
+    ['queue_name']
+)
+
+# Request latency
+request_latency = Histogram(
+    'request_latency_seconds',
+    'API request latency',
+    ['endpoint'],
+    buckets=(0.1, 0.5, 1.0, 2.0, 5.0)
+)
+\end{lstlisting}
+
+\section{Grafana Dashboards}
+
+\subsection{System Overview Dashboard}
+
+Dashboard displays:
+\begin{itemize}
+  \item CPU usage across instances
+  \item Memory utilization per service
+  \item Disk I/O and storage usage
+  \item Network throughput
+  \item Container restart counts
+\end{itemize}
+
+\subsection{Application Metrics Dashboard}
+
+\begin{itemize}
+  \item Request rate (req/s)
+  \item Response time (p50, p95, p99)
+  \item Error rate by endpoint
+  \item Status code distribution
+  \item Database connection pool usage
+\end{itemize}
+
+\subsection{Business Metrics Dashboard}
+
+\begin{itemize}
+  \item Daily articles scraped (by source)
+  \item AI API request volume
+  \item Agent task completion rate
+  \item Feature usage by user
+  \item Customer acquisition funnel
+\end{itemize}
+
+\subsection{Celery Task Monitoring}
+
+\begin{itemize}
+  \item Task queue depth
+  \item Task processing rate
+  \item Task failure rate
+  \item Worker availability
+  \item Task execution time (p50, p95, p99)
+\end{itemize}
+
+\section{Sentry Integration}
+
+\subsection{Django Setup}
+
+\begin{lstlisting}[language=python, caption=Sentry Configuration - Django]
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.celery import CeleryIntegration
+
+sentry_sdk.init(
+    dsn=os.getenv('SENTRY_DSN'),
+    integrations=[
+        DjangoIntegration(),
+        CeleryIntegration(),
+    ],
+    traces_sample_rate=0.1,
+    send_default_pii=False,
+    environment=os.getenv('SENTRY_ENVIRONMENT', 'development'),
+)
+\end{lstlisting}
+
+\subsection{Next.js Setup}
+
+\begin{lstlisting}[language=Java, caption=Sentry Configuration - Next.js]
+// next.config.js
+const withSentryConfig = require("@sentry/nextjs/config");
+
+module.exports = withSentryConfig({
+  // ... other config
+}, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+});
+
+// pages/_document.js
+import * as Sentry from "@sentry/nextjs";
+
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  environment: process.env.NEXT_PUBLIC_ENVIRONMENT,
+  tracesSampleRate: 0.1,
+});
+\end{lstlisting}
+
+\section{Structured Logging}
+
+All logs are structured as JSON for easy aggregation and analysis:
+
+\begin{lstlisting}[language=python, caption=JSON Logging Configuration]
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'json': {
+            '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+            'format': '%(asctime)s %(name)s %(levelname)s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'json',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': '/var/log/synapse/django.log',
+            'maxBytes': 1024 * 1024 * 100,  # 100 MB
+            'backupCount': 10,
+            'formatter': 'json',
+        }
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    }
+}
+\end{lstlisting}
+
+\subsection{Log Aggregation with CloudWatch}
+
+CloudWatch Logs Insights queries for common scenarios:
+
+\begin{lstlisting}[caption=CloudWatch Logs Insights Queries]
+# Error rate over time
+fields @timestamp, @message, severity
+| filter severity = "ERROR"
+| stats count() by bin(5m)
+
+# Slow requests
+fields @timestamp, @message, duration
+| filter duration > 1000
+| sort duration desc
+| limit 100
+
+# Failed API calls
+fields @timestamp, endpoint, status_code, error
+| filter status_code >= 400
+| stats count() by endpoint, status_code
+
+# Celery task failures
+fields @timestamp, task_name, exception
+| filter severity = "ERROR" and source = "celery"
+| stats count() by task_name
+\end{lstlisting}
+
+\section{Uptime Monitoring}
+
+\subsection{AWS Route 53 Health Checks}
+
+\begin{lstlisting}[caption=Health Check Configuration]
+Type: HTTPS
+Resource Path: /health/
+Port: 443
+Request Interval: 30 seconds
+Failure Threshold: 3 consecutive failures
+Regions: Virginia, California, Ireland
+CloudWatch Alarm: Alert on 2+ regions failing
+\end{lstlisting}
+
+\section{Alert Rules}
+
+Production alerting thresholds:
+
+\begin{lstlisting}[caption=Alert Rules and Thresholds]
+# Error Rate Alert
+Condition: error_rate > 5% for 5 minutes
+Action: Page on-call engineer via PagerDuty
+Severity: CRITICAL
+
+# High CPU Alert
+Condition: CPU utilization > 80% for 10 minutes
+Action: Slack notification
+Severity: WARNING
+
+# Disk Usage Alert
+Condition: Disk used > 90% for 5 minutes
+Action: Slack notification + PagerDuty
+Severity: CRITICAL
+
+# Database Connection Pool Alert
+Condition: Connection pool utilization > 80%
+Action: Slack notification
+Severity: WARNING
+
+# Celery Queue Backlog Alert
+Condition: Queue depth > 10000 tasks for 15 minutes
+Action: Slack notification
+Severity: WARNING
+
+# Redis Memory Alert
+Condition: Memory usage > 85% of max
+Action: Slack notification
+Severity: WARNING
+\end{lstlisting}
+
+\chapter{Security Hardening}
+
+\section{Django Security Settings}
+
+\begin{lstlisting}[language=python, caption=Production Django Security Configuration]
+# settings/production.py
+
+# SSL/HTTPS
+SECURE_SSL_REDIRECT = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_SECURITY_POLICY = {
+    "default-src": ("'self'",),
+    "script-src": ("'self'", "cdn.jsdelivr.net"),
+    "style-src": ("'self'", "'unsafe-inline'", "fonts.googleapis.com"),
+}
+
+# HSTS (HTTP Strict Transport Security)
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# CORS
+CORS_ALLOWED_ORIGINS = [
+    "https://synapse.example.com",
+    "https://api.synapse.example.com",
+]
+
+# Session security
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Strict"
+CSRF_COOKIE_HTTPONLY = True
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation'
+                '.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation'
+                '.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 12}
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation'
+                '.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation'
+                '.NumericPasswordValidator',
+    },
+]
+\end{lstlisting}
+
+\section{Database Security}
+
+\begin{itemize}
+  \item \textbf{SSL Connections}: All database connections use SSL/TLS
+  \item \textbf{Least Privilege}: Application user has minimal required permissions
+  \item \textbf{No Public Access}: Database is in private subnet, not accessible from internet
+  \item \textbf{Encryption at Rest}: KMS encryption enabled
+  \item \textbf{Backup Encryption}: All backups encrypted with KMS
+\end{itemize}
+
+\section{Docker Security}
+
+\begin{itemize}
+  \item \textbf{Non-root User}: All containers run as unprivileged user (UID 1000)
+  \item \textbf{Read-only Filesystem}: Applications run with read-only root where possible
+  \item \textbf{Resource Limits}: Memory and CPU limits enforced
+  \item \textbf{Image Scanning}: Container images scanned for vulnerabilities
+  \item \textbf{No Secrets in Images}: Secrets injected at runtime only
+\end{itemize}
+
+\section{Network Security}
+
+\begin{lstlisting}[caption=AWS Security Group Configuration]
+# Backend Security Group
+Ingress:
+  - HTTP:8000 from ALB
+  - SSH:22 from Bastion
+Egress:
+  - All traffic to RDS, Redis, S3
+
+# Database Security Group
+Ingress:
+  - PostgreSQL:5432 from Backend SG
+Egress:
+  - Minimal (mostly disabled)
+
+# Redis Security Group
+Ingress:
+  - Redis:6379 from Backend SG, Celery SG
+Egress:
+  - Minimal
+\end{lstlisting}
+
+\section{Dependency Scanning}
+
+\subsection{Python Dependencies}
+
+\begin{itemize}
+  \item \textbf{Tool}: Safety + Dependabot
+  \item \textbf{Frequency}: Continuous (on every commit)
+  \item \textbf{Action}: Block merge if HIGH/CRITICAL vulnerabilities
+  \item \textbf{Update Policy}: Security patches applied within 24 hours
+\end{itemize}
+
+\subsection{Node.js Dependencies}
+
+\begin{itemize}
+  \item \textbf{Tool}: npm audit + Dependabot
+  \item \textbf{Frequency}: Continuous
+  \item \textbf{Action}: Automated PRs for updates
+  \item \textbf{Update Policy}: Security patches applied within 48 hours
+\end{itemize}
+
+\section{Secret Rotation Strategy}
+
+\begin{enumerate}
+  \item \textbf{API Keys}: Rotate every 90 days
+  \item \textbf{Database Password}: Rotate every 180 days
+  \item \textbf{Django SECRET\_KEY}: Rotate on security incident or annually
+  \item \textbf{SSL Certificates}: Auto-renewal 30 days before expiration
+  \item \textbf{AWS Keys}: Rotate every 180 days
+  \item \textbf{Procedure}: Rotation done in maintenance window with zero-downtime
+\end{enumerate}
+
+\chapter{Scaling Strategy}
+
+\section{Horizontal Scaling of Backend Services}
+
+Backend services scale horizontally using AWS Auto Scaling Groups:
+
+\begin{enumerate}
+  \item \textbf{Target Tracking}: Scale based on CPU utilization (target 70\%)
+  \item \textbf{Min Instances}: 2 for high availability
+  \item \textbf{Max Instances}: 10 to control costs
+  \item \textbf{Scale-up}: Add instance within 1 minute of exceeding threshold
+  \item \textbf{Scale-down}: Remove instance 5 minutes after dropping below threshold
+  \item \textbf{Termination Policy}: Terminate oldest instances first
+\end{enumerate}
+
+\section{Celery Worker Scaling}
+
+Auto-scale Celery workers based on queue depth:
+
+\begin{lstlisting}[language=python, caption=Queue Depth Based Scaling]
+import boto3
+from celery import current_app
+
+def get_queue_depth():
+    """Get current queue depth from Redis"""
+    inspector = current_app.control.inspect()
+    active_tasks = inspector.active()
+    queue_depth = sum(len(tasks) for tasks in active_tasks.values())
+    return queue_depth
+
+def scale_workers(queue_depth):
+    """Scale worker count based on queue depth"""
+    asg_client = boto3.client('autoscaling')
+    
+    target_workers = min(10, max(2, queue_depth // 100))
+    
+    asg_client.set_desired_capacity(
+        AutoScalingGroupName='synapse-celery-asg',
+        DesiredCapacity=target_workers,
+        HonorCooldown=False
+    )
+\end{lstlisting}
+
+\section{Database Connection Pooling (PgBouncer)}
+
+PgBouncer reduces database connection overhead:
+
+\begin{lstlisting}[caption=PgBouncer Configuration]
+[databases]
+synapse_prod = host=rds-endpoint port=5432 dbname=synapse_prod
+
+[pgbouncer]
+pool_mode = transaction
+max_client_conn = 500
+default_pool_size = 25
+min_pool_size = 10
+reserve_pool_size = 5
+reserve_pool_timeout = 3
+max_db_connections = 100
+server_lifetime = 3600
+\end{lstlisting}
+
+\section{CDN for Static Assets}
+
+CloudFront CDN configuration for optimal static asset delivery:
+
+\begin{enumerate}
+  \item \textbf{Origin}: S3 bucket for frontend static files
+  \item \textbf{Distribution}: Global (217 edge locations)
+  \item \textbf{Caching}: 30 days for immutable assets, 1 hour for HTML
+  \item \textbf{Compression}: Gzip and Brotli compression enabled
+  \item \textbf{Security}: TLS 1.2+, only HTTPS
+  \item \textbf{Cost}: Approximately \$0.085 per GB transferred
+\end{enumerate}
+
+\section{Redis Cluster for High Availability}
+
+Redis Cluster setup for fault tolerance:
+
+\begin{lstlisting}[caption=Redis Cluster Configuration]
+Cluster Mode: Enabled
+Node Type: cache.r6g.xlarge
+Number of Node Groups: 3
+Replicas per Node Group: 2
+Automatic Failover: Enabled
+Multi-AZ: Enabled
+Total Nodes: 9 (3 shards x 3 replicas each)
+Capacity: 750 GB total (250 GB per shard)
+\end{lstlisting}
+
+\section{Load Testing}
+
+Use Locust for production-like load testing before deployments:
+
+\begin{lstlisting}[language=python, caption=Locust Load Testing Script]
+from locust import HttpUser, task, between
+
+class SynapseUser(HttpUser):
+    wait_time = between(1, 5)
+    
+    @task(3)
+    def get_dashboard(self):
+        self.client.get("/api/dashboard/")
+    
+    @task(2)
+    def search_articles(self):
+        self.client.get("/api/articles/?search=AI&limit=20")
+    
+    @task(1)
+    def get_ai_insights(self):
+        self.client.post("/api/ai/insights/", 
+            json={"topic": "machine learning"})
+    
+    def on_start(self):
+        # Login
+        response = self.client.post("/api/auth/login/",
+            json={"username": "testuser", "password": "testpass"})
+        self.client.headers.update({
+            "Authorization": f"Bearer {response.json()['access_token']}"
+        })
+\end{lstlisting}
+
+\chapter{Disaster Recovery}
+
+\section{Recovery Objectives}
+
+\begin{itemize}
+  \item \textbf{RTO (Recovery Time Objective)}: 1 hour to restore full functionality
+  \item \textbf{RPO (Recovery Point Objective)}: 24 hours (point-in-time recovery)
+  \item \textbf{Availability SLA}: 99.95\% uptime (< 22 minutes downtime/month)
+\end{itemize}
+
+\section{Multi-AZ Database Deployment}
+
+RDS Multi-AZ synchronous replication ensures high availability:
+
+\begin{enumerate}
+  \item \textbf{Primary}: us-east-1a
+  \item \textbf{Standby}: us-east-1b (synchronous replica)
+  \item \textbf{Failover Time}: < 2 minutes automatic failover
+  \item \textbf{No Data Loss}: Synchronous replication guarantees durability
+  \item \textbf{No Manual Intervention}: Automatic DNS update on failover
+\end{enumerate}
+
+\section{S3 Versioning and Cross-Region Replication}
+
+S3 bucket protection against accidental deletion:
+
+\begin{lstlisting}[caption=S3 Protection Strategy]
+Bucket: synapse-prod-storage
+Versioning: Enabled (retain all versions)
+MFA Delete: Enabled (require MFA to permanently delete)
+Cross-Region Replication:
+  - Replication to us-west-2 (secondary region)
+  - Replication to eu-west-1 (tertiary region)
+  - Encryption: KMS (separate key per region)
+Lifecycle Policy:
+  - Non-current versions: Delete after 90 days
+  - Incomplete multipart uploads: Delete after 7 days
+\end{lstlisting}
+
+\section{Infrastructure Replication}
+
+Production infrastructure is replicated across regions:
+
+\begin{enumerate}
+  \item \textbf{Primary Region}: us-east-1 (N. Virginia)
+  \item \textbf{Secondary Region}: us-west-2 (Oregon)
+  \item \textbf{Tertiary Region}: eu-west-1 (Ireland)
+  \item \textbf{DNS}: Route 53 geolocation routing + health checks
+  \item \textbf{Failover}: Automatic DNS update if primary unhealthy
+  \item \textbf{Data Sync}: Cross-region RDS read replicas
+  \item \textbf{Cost}: + 40\% for secondary region (standby)
+\end{enumerate}
+
+\section{Disaster Recovery Runbook}
+
+\subsection{Database Corruption}
+
+\begin{enumerate}
+  \item Stop application traffic (update Route 53 to return 503)
+  \item Identify corruption point using logs
+  \item Perform point-in-time recovery to 1 hour before corruption
+  \item Validate recovered data against backups
+  \item Test on staging environment first
+  \item Restore traffic
+  \item Post-mortem investigation
+\end{enumerate}
+
+\subsection{Complete Data Center Failure}
+
+\begin{enumerate}
+  \item Activate disaster recovery site (secondary region)
+  \item Route DNS to secondary region via Route 53
+  \item Promote read replicas to standalone databases
+  \item Verify data consistency and freshness
+  \item Update frontend configuration to point to secondary region
+  \item Test critical workflows
+  \item Restore from latest backup if data loss detected
+  \item RTO: < 1 hour
+\end{enumerate}
+
+\subsection{Ransomware/Security Incident}
+
+\begin{enumerate}
+  \item Isolate affected systems from network
+  \item Disable all API keys and credentials
+  \item Take offline backups (snapshot current state)
+  \item Restore from clean backup (before infection detected)
+  \item Rotate all secrets and credentials
+  \item Enable enhanced monitoring and logging
+  \item Security audit of compromised systems
+  \item Deploy patched code
+  \item Restore traffic gradually
+\end{enumerate}
+
+\chapter{Deployment Runbook}
+
+\section{Pre-Deployment Checklist}
+
+Before any production deployment, verify:
+
+\begin{itemize}
+  \item All tests passing (lint, unit, integration, e2e)
+  \item Security scanning completed (no HIGH/CRITICAL vulnerabilities)
+  \item Database migrations reviewed and tested on staging
+  \item Feature flags configured for gradual rollout
+  \item Monitoring dashboards verified and alerts configured
+  \item On-call engineer notified and standing by
+  \item Rollback procedure documented and tested
+  \item Backup created before deployment
+  \item Maintenance window scheduled if needed
+\end{itemize}
+
+\section{Step-by-Step Deployment Procedure}
+
+\begin{enumerate}
+  \item \textbf{Trigger Deployment}: Push to main branch (GitHub Actions auto-deploys)
+  \item \textbf{Build Stage}: Docker images built and pushed to registry
+  \item \textbf{Deploy Stage}: SSH to production servers, pull images, start containers
+  \item \textbf{Health Check Stage}: Verify endpoints responding and databases accessible
+  \item \textbf{Smoke Test}: Run automated smoke tests against live endpoints
+  \item \textbf{Monitor Stage}: Watch error rates, latency, and database connections for 15 minutes
+  \item \textbf{Notify Stage}: Send Slack notification to team with deployment summary
+\end{enumerate}
+
+\subsection{Manual Deployment (if CI/CD unavailable)}
+
+\begin{lstlisting}[language=bash, caption=Manual Deployment Steps]
+#!/bin/bash
+# Manual deployment script (use only in emergency)
+
+set -e
+
+# Configuration
+DEPLOY_USER="deploy"
+DEPLOY_HOST="prod-server.example.com"
+IMAGE_REGISTRY="ghcr.io/yourorg/synapse"
+IMAGE_TAG=$(git rev-parse --short HEAD)
+
+# 1. Build images
+docker build -t $IMAGE_REGISTRY/backend:$IMAGE_TAG ./backend
+docker build -t $IMAGE_REGISTRY/fastapi-ai:$IMAGE_TAG ./fastapi_ai
+docker build -t $IMAGE_REGISTRY/frontend:$IMAGE_TAG ./frontend
+
+# 2. Push to registry
+docker push $IMAGE_REGISTRY/backend:$IMAGE_TAG
+docker push $IMAGE_REGISTRY/fastapi-ai:$IMAGE_TAG
+docker push $IMAGE_REGISTRY/frontend:$IMAGE_TAG
+
+# 3. SSH to production and deploy
+ssh $DEPLOY_USER@$DEPLOY_HOST << EOF
+    set -e
+    cd /var/synapse
+    
+    # Pull latest images
+    docker pull $IMAGE_REGISTRY/backend:$IMAGE_TAG
+    docker pull $IMAGE_REGISTRY/fastapi-ai:$IMAGE_TAG
+    docker pull $IMAGE_REGISTRY/frontend:$IMAGE_TAG
+    
+    # Run migrations
+    docker-compose run --rm backend python manage.py migrate
+    
+    # Update docker-compose.yml with new image tag
+    sed -i 's|image: .*backend.*|image: $IMAGE_REGISTRY/backend:$IMAGE_TAG|g' docker-compose.yml
+    sed -i 's|image: .*fastapi.*|image: $IMAGE_REGISTRY/fastapi-ai:$IMAGE_TAG|g' docker-compose.yml
+    sed -i 's|image: .*frontend.*|image: $IMAGE_REGISTRY/frontend:$IMAGE_TAG|g' docker-compose.yml
+    
+    # Start new containers (rolling update)
+    docker-compose up -d --no-deps --scale backend=3 backend
+    docker-compose up -d --no-deps fastapi_ai
+    docker-compose up -d --no-deps frontend
+    
+    # Wait for health checks
+    sleep 30
+    
+    # Verify deployment
+    curl -f http://localhost:8000/health/ || exit 1
+    curl -f http://localhost:8001/health || exit 1
+EOF
+
+echo "Deployment successful!"
+\end{lstlisting}
+
+\section{Rollback Procedure}
+
+If deployment causes issues, rollback quickly:
+
+\begin{enumerate}
+  \item \textbf{Detect Issue}: Monitor alerts for error rate spike, increased latency, or failures
+  \item \textbf{Decide to Rollback}: If error rate > 10\%, rollback immediately
+  \item \textbf{Rollback Code}: Revert to previous commit via GitHub
+  \item \textbf{Rebuild Images}: GitHub Actions automatically rebuilds and deploys old version
+  \item \textbf{Verify}: Run health checks and smoke tests
+  \item \textbf{Post-Incident}: Investigate root cause, add tests, and retry deployment
+\end{enumerate}
+
+\begin{lstlisting}[language=bash, caption=Manual Rollback Script]
+#!/bin/bash
+# Rollback to previous deployed version
+
+DEPLOY_USER="deploy"
+DEPLOY_HOST="prod-server.example.com"
+
+ssh $DEPLOY_USER@$DEPLOY_HOST << 'EOF'
+    cd /var/synapse
+    
+    # Stop current deployment
+    docker-compose stop
+    
+    # Checkout previous version
+    git checkout HEAD~1
+    
+    # Rebuild and restart with previous version
+    docker-compose build
+    docker-compose up -d
+    
+    # Run migrations (if needed)
+    docker-compose exec -T backend python manage.py migrate
+    
+    # Verify
+    sleep 10
+    curl -f http://localhost:8000/health/ || exit 1
+    
+    echo "Rollback complete"
+EOF
+\end{lstlisting}
+
+\section{Health Check Endpoints}
+
+All services expose health check endpoints for monitoring:
+
+\begin{lstlisting}[caption=Health Check Endpoints Reference]
+# Django Backend
+GET /health/
+Response: {"status": "ok", "version": "1.0.0", "timestamp": "2024-01-15T10:30:00Z"}
+Dependencies: PostgreSQL, Redis, Celery
+
+# FastAPI AI Service
+GET /health
+Response: {"status": "ok", "version": "1.0.0", "gpu_available": true}
+Dependencies: PostgreSQL, Pinecone, OpenAI API
+
+# Next.js Frontend
+GET /api/health
+Response: {"status": "ok", "build_id": "abc123def456"}
+Dependencies: Static assets available
+\end{lstlisting}
+
+\section{Post-Deployment Verification Checklist}
+
+After deployment, verify:
+
+\begin{itemize}
+  \item All services responding to health checks
+  \item Error rate < 1\% (normal operation)
+  \item Response latency p95 < 500ms (normal operation)
+  \item Database replication lag < 1 second
+  \item Celery tasks processing normally (queue depth < 100)
+  \item Log ingestion normal (no errors in real-time logs)
+  \item User-facing features working (smoke tests passed)
+  \item Feature flags behaving as expected
+  \item Load balancer routing traffic correctly
+  \item SSL certificates valid and not expiring soon
+  \item Monitoring alerts not firing (unless expected)
+\end{itemize}
+
+\section{Maintenance Window Procedure}
+
+For database migrations or major changes requiring downtime:
+
+\begin{enumerate}
+  \item Schedule 2-week advance notice to users
+  \item Set deployment mode to maintenance (return HTTP 503)
+  \item Notify team 1 hour before window
+  \item Perform database migrations with verification
+  \item Perform code deployment
+  \item Run post-deployment tests
+  \item Remove maintenance mode
+  \item Monitor for 30 minutes for any issues
+  \item Notify team of successful completion
+\end{enumerate}
+
+\newpage
+
+\chapter*{Conclusion}
+
+This DevOps and Deployment guide provides a comprehensive framework for operating SYNAPSE in production. Key principles include:
+
+\begin{itemize}
+  \item \textbf{Infrastructure as Code}: All infrastructure is versioned and reproducible
+  \item \textbf{Automation First}: Minimize manual processes through CI/CD
+  \item \textbf{Observability}: Comprehensive monitoring and logging for quick issue detection
+  \item \textbf{Security by Default}: Multi-layer defense and regular security reviews
+  \item \textbf{Reliability}: Multi-AZ, automated failover, and disaster recovery
+  \item \textbf{Scalability}: Horizontal scaling and efficient resource utilization
+  \item \textbf{Maintainability}: Clear runbooks and documented procedures
+\end{itemize}
+
+For updates to this document or to report issues, contact the DevOps team.
+
+\appendix
+
+\chapter{Useful Commands}
+
+\section{Docker Compose Commands}
+
+\begin{lstlisting}[language=bash]
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f [service_name]
+
+# Execute command in container
+docker-compose exec backend python manage.py shell
+
+# Stop services
+docker-compose stop
+
+# Remove containers and volumes
+docker-compose down -v
+
+# Scale service
+docker-compose up -d --scale celery_worker=3
+
+# View resource usage
+docker stats
+\end{lstlisting}
+
+\section{AWS CLI Commands}
+
+\begin{lstlisting}[language=bash]
+# Get RDS endpoint
+aws rds describe-db-instances --db-instance-identifier synapse-prod \
+  --query 'DBInstances[0].Endpoint.Address'
+
+# Get ElastiCache endpoint
+aws elasticache describe-cache-clusters \
+  --cache-cluster-id synapse-redis \
+  --show-cache-node-info
+
+# Get secrets from Secrets Manager
+aws secretsmanager get-secret-value \
+  --secret-id synapse/prod
+
+# View CloudWatch logs
+aws logs tail /aws/synapse/django --follow
+
+# Create RDS snapshot
+aws rds create-db-snapshot \
+  --db-instance-identifier synapse-prod \
+  --db-snapshot-identifier synapse-backup-$(date +%s)
+\end{lstlisting}
+
+\section{Database Commands}
+
+\begin{lstlisting}[language=bash]
+# Connect to RDS
+psql postgresql://user:password@rds-endpoint:5432/synapse_db
+
+# Useful queries in psql
+-- View database size
+SELECT pg_size_pretty(pg_database_size('synapse_db'));
+
+-- View table sizes
+SELECT relname, pg_size_pretty(pg_total_relation_size(relid))
+FROM pg_catalog.pg_statio_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+
+-- View active connections
+SELECT count(*) FROM pg_stat_activity;
+
+-- View slow queries (requires log_statement=all)
+SELECT query, calls, mean_exec_time FROM pg_stat_statements
+ORDER BY mean_exec_time DESC LIMIT 10;
+\end{lstlisting}
+
+\end{document}
+

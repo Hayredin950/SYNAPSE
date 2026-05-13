@@ -1,0 +1,126 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.env
+.env.*
+!.env.example
+venv/
+env/
+ENV/
+.venv/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# FastAPI / Uvicorn
+*.pid
+
+# Node.js / Next.js
+node_modules/
+.next/
+out/
+build/
+.npm
+.eslintcache
+.parcelcache
+.cache
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.yarn-integrity
+frontend/.env*.local
+
+# LaTeX build artifacts
+*.aux
+*.toc
+*.out
+*.log
+*.lof
+*.lot
+*.lol
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.dvi
+
+# Docker
+.docker/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+junit.xml
+
+# Scrapy
+.scrapy/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# AWS
+.aws/
+
+# Secrets
+*.pem
+*.key
+secrets/
+
+# Generated files (keep .tex, ignore PDFs in CI)
+# docs/*.pdf  <- comment out if you want PDFs tracked
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+fix/
+
+# Firebase Service Account Key (NEVER commit this)
+*firebase-adminsdk*.json
+firebase-service-account.json

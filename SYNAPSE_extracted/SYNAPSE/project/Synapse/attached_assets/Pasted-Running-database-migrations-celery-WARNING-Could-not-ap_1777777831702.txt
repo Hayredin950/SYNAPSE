@@ -1,0 +1,68 @@
+Running database migrations...
+[celery] WARNING: Could not apply langchain patch (langchain-core not available): No module named 'langchain_core'
+Operations to perform:
+  Apply all migrations: admin, agents, articles, auth, automation, axes, billing, contenttypes, core, django_celery_beat, django_celery_results, documents, integrations, notifications, organizations, papers, repositories, sessions, token_blacklist, trends, tweets, users, videos
+Running migrations:
+  No migrations to apply.
+Collecting static files...
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] ANTHROPIC_API_KEY is not set — Claude LLM support will be unavailable.
+  _warn_missing_keys()
+[celery] WARNING: Could not apply langchain patch (langchain-core not available): No module named 'langchain_core'
+Starting Django backend on port 8000...
+[celery] WARNING: Could not apply langchain patch (langchain-core not available): No module named 'langchain_core'
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GOOGLE_CLIENT_ID is not set — Google Drive / OAuth integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GOOGLE_CLIENT_SECRET is not set — Google Drive / OAuth integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] AWS_ACCESS_KEY_ID is not set — S3 storage integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] AWS_SECRET_ACCESS_KEY is not set — S3 storage integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] SENDGRID_API_KEY is not set — Email delivery via SendGrid will be unavailable; console backend used.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] STRIPE_SECRET_KEY is not set — Billing / Stripe integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GITHUB_CLIENT_ID is not set — GitHub OAuth will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] OPENAI_API_KEY is not set — AI moderation and OpenAI LLM features will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] ANTHROPIC_API_KEY is not set — Claude LLM support will be unavailable.
+  _warn_missing_keys()
+[celery] WARNING: Could not apply langchain patch (langchain-core not available): No module named 'langchain_core'
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GOOGLE_CLIENT_ID is not set — Google Drive / OAuth integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GOOGLE_CLIENT_SECRET is not set — Google Drive / OAuth integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] AWS_ACCESS_KEY_ID is not set — S3 storage integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] AWS_SECRET_ACCESS_KEY is not set — S3 storage integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] SENDGRID_API_KEY is not set — Email delivery via SendGrid will be unavailable; console backend used.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] STRIPE_SECRET_KEY is not set — Billing / Stripe integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GITHUB_CLIENT_ID is not set — GitHub OAuth will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] OPENAI_API_KEY is not set — AI moderation and OpenAI LLM features will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] ANTHROPIC_API_KEY is not set — Claude LLM support will be unavailable.
+  _warn_missing_keys()
+Watching for file changes with StatReloader
+Performing system checks...
+
+System check identified no issues (0 silenced).
+May 03, 2026 - 01:24:02
+Django version 4.2.30, using settings 'config.settings.replit'
+Starting ASGI/Daphne version 4.2.1 development server at http://0.0.0.0:8000/
+Quit the server with CONTROL-C.
+HTTP/2 support not enabled (install the http2 and tls Twisted extras)
+Configuring endpoint tcp:port=8000:interface=0.0.0.0
+Listening on TCP address 0.0.0.0:8000
+Not Found: /api/v1/
+HTTP GET /api/v1/ 404 [0.63, 127.0.0.1:49008]
+Unauthorized: /api/v1/auth/login/
+HTTP POST /api/v1/auth/login/ 401 [0.12, 127.0.0.1:38666]
+HTTP GET /api/v1/articles/ 200 [0.02, 127.0.0.1:58116]
+Unauthorized: /api/v1/auth/login/
+HTTP POST /api/v1/auth/login/ 401 [0.14, 127.0.0.1:44136]
+HTTP POST /api/v1/auth/login/ 200 [0.37, 127.0.0.1:46026]

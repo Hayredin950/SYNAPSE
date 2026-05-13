@@ -1,0 +1,9 @@
+# pgBouncer userlist — TASK-506
+# Format: "username" "md5<md5(password+username)>"
+# Generate with: echo -n "password+username" | md5sum
+# Example (replace with real credentials in production):
+# "synapse" "md5<generated_hash>"
+# "postgres" "md5<generated_hash>"
+
+# !! This file should be kept secret and NOT committed to version control !!
+# Add to .gitignore: infrastructure/pgbouncer/userlist.txt

@@ -1,0 +1,2 @@
+SYNAPSE.zip filter=lfs diff=lfs merge=lfs -text
+SYNAPSE_extracted/SYNAPSE/Synapse[[:space:]](2).zip filter=lfs diff=lfs merge=lfs -text

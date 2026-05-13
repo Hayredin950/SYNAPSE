@@ -1,0 +1,104 @@
+# ── TASK-504: OpenTelemetry Collector configuration ───────────────────────────
+# Collects traces from Django backend and AI engine,
+# exports to Grafana Tempo (traces) + Prometheus (metrics)
+#
+# Usage:
+#   docker run --rm -v $(pwd):/etc/otelcol \
+#     otel/opentelemetry-collector-contrib \
+#     --config=/etc/otelcol/otel-collector-config.yml
+
+receivers:
+  # OTLP receiver — Django/AI engine send traces here
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins: ["*"]
+
+  # Prometheus scrape of Django /metrics endpoint
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'django-backend'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['backend:8000']
+          metrics_path: '/metrics'
+
+        - job_name: 'ai-engine'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['ai-engine:8001']
+          metrics_path: '/metrics'
+
+processors:
+  # Batch traces before exporting
+  batch:
+    timeout: 5s
+    send_batch_size: 512
+
+  # Drop internal health-check spans
+  filter/drop_health:
+    traces:
+      span:
+        - 'attributes["http.route"] == "/health/"'
+        - 'attributes["http.route"] == "/api/v1/health/"'
+
+  # Add service metadata
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: "production"
+        action: upsert
+      - key: service.namespace
+        value: "synapse"
+        action: upsert
+
+  # Memory limiter to prevent OOM
+  memory_limiter:
+    limit_mib: 512
+    spike_limit_mib: 128
+    check_interval: 5s
+
+exporters:
+  # Traces → Grafana Tempo
+  otlp/tempo:
+    endpoint: "tempo:4317"
+    tls:
+      insecure: true
+
+  # Metrics → Prometheus (remote write)
+  prometheusremotewrite:
+    endpoint: "http://prometheus:9090/api/v1/write"
+    tls:
+      insecure: true
+
+  # Logs → Loki
+  loki:
+    endpoint: "http://loki:3100/loki/api/v1/push"
+    default_labels_enabled:
+      exporter: true
+      job: true
+
+  # Debug output (disable in production)
+  logging:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers:  [otlp]
+      processors: [memory_limiter, filter/drop_health, resource, batch]
+      exporters:  [otlp/tempo, logging]
+
+    metrics:
+      receivers:  [prometheus, otlp]
+      processors: [memory_limiter, batch]
+      exporters:  [prometheusremotewrite]
+
+  telemetry:
+    logs:
+      level: "warn"

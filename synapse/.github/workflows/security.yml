@@ -1,0 +1,246 @@
+name: Security Scanning
+
+# ============================================================
+# SYNAPSE — Security Scanning Pipeline (Phase 9.1)
+# ============================================================
+# Runs on schedule (daily) + every PR to main.
+#
+# Jobs:
+#   1. SAST (Static Analysis): bandit + semgrep
+#   2. Dependency CVE scan: safety + pip-audit + npm audit
+#   3. Secret scanning: truffleHog
+#   4. Container scanning: Trivy (CRITICAL + HIGH CVEs)
+#   5. OWASP ZAP DAST (weekly against staging)
+# ============================================================
+
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run daily at 2am UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: OWASP ZAP target URL
+        required: false
+        default: 'https://staging.synapse.app'
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. SAST — Static Application Security Testing ─────────────────────────
+  sast:
+    name: SAST (bandit + semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install tools
+        run: pip install bandit[toml] semgrep
+
+      - name: bandit — Python SAST
+        run: |
+          bandit -r backend/ ai_engine/ scraper/ \
+            -c pyproject.toml \
+            -f sarif \
+            -o bandit-results.sarif \
+            --severity-level medium \
+            --confidence-level medium
+        continue-on-error: true
+
+      - name: Upload bandit SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: bandit-results.sarif
+          category: bandit
+
+      - name: semgrep — extended SAST rules
+        run: |
+          semgrep scan \
+            --config=auto \
+            --config=p/django \
+            --config=p/python \
+            --config=p/jwt \
+            --config=p/secrets \
+            --sarif \
+            --output semgrep-results.sarif \
+            backend/ ai_engine/
+        continue-on-error: true
+
+      - name: Upload semgrep SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep-results.sarif
+          category: semgrep
+
+  # ── 2. Dependency CVE Scanning ────────────────────────────────────────────
+  dependency-scan:
+    name: Dependency CVE Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install scanners
+        run: pip install safety pip-audit
+
+      - name: safety — Python deps CVE check
+        run: |
+          safety check \
+            -r backend/requirements.txt \
+            --full-report \
+            --output json \
+            --save-as safety-report.json
+        continue-on-error: true
+
+      - name: pip-audit — additional CVE check
+        run: |
+          pip-audit \
+            -r backend/requirements.txt \
+            --format json \
+            --output pip-audit.json
+        continue-on-error: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm audit — frontend deps
+        working-directory: frontend
+        run: |
+          npm ci
+          npm audit --json > npm-audit.json || true
+
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-audit-reports
+          path: |
+            safety-report.json
+            pip-audit.json
+            frontend/npm-audit.json
+          retention-days: 30
+
+  # ── 3. Secret Scanning (truffleHog) ──────────────────────────────────────
+  secret-scan:
+    name: Secret Scanning (truffleHog)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # full history for secret scanning
+
+      - name: TruffleHog OSS — scan for leaked secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # ── 4. Container Vulnerability Scan (Trivy) ───────────────────────────────
+  container-scan:
+    name: Container Scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image for scanning
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: backend/Dockerfile
+          target: production
+          push: false
+          load: true
+          tags: synapse/backend:security-scan
+          cache-from: type=gha,scope=backend
+
+      - name: Trivy — scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref:  synapse/backend:security-scan
+          format:     sarif
+          output:     trivy-backend.sarif
+          severity:   CRITICAL,HIGH
+          exit-code:  0
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-backend.sarif
+          category: trivy-backend
+
+      - name: Trivy — filesystem scan (IaC + config files)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type:  fs
+          scan-ref:   .
+          format:     sarif
+          output:     trivy-fs.sarif
+          severity:   CRITICAL,HIGH
+          exit-code:  0
+
+      - name: Upload filesystem SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  # ── 5. OWASP ZAP DAST (weekly / manual) ──────────────────────────────────
+  owasp-zap:
+    name: OWASP ZAP DAST
+    runs-on: ubuntu-latest
+    # Only run on schedule or manual dispatch (not on every PR)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    permissions:
+      security-events: write
+      issues:          write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ inputs.target_url || 'https://staging.synapse.app' }}
+          rules_file_name: .zap/rules.tsv
+          cmd_options: '-a -j'
+          fail_action: false  # Don't fail CI — report only
+
+      - name: Upload ZAP report
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-report
+          path: report_html.html
+          retention-days: 30
+
+      - name: ZAP Full Scan (API)
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: ${{ inputs.target_url || 'https://staging.synapse.app' }}/api/v1/
+          cmd_options: '-a'
+          fail_action: false
+        continue-on-error: true

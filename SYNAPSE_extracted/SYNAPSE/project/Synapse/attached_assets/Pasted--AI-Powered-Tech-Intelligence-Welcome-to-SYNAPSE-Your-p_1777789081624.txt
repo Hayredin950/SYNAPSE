@@ -1,0 +1,340 @@
+
+AI-Powered Tech Intelligence
+Welcome to SYNAPSE
+Your personal AI-curated feed of articles, papers, repos, and videos — all searchable and summarized.
+
+Today's Brief · Sunday, May 3
+
+Good morning! Here's what's happening in tech.
+
+Expand
+📊 Your Personalized Tech Briefing for May 03, 2026
+Welcome, Demo to your SYNAPSE feed! Here's what's happening in tech today.
+
+📰 Latest Articles (5 from HackerNews)
+Uber wants to turn its drivers into a sensor grid for self-driving companies
+Open Design: Use Your Coding Agent as a Design Engine
+Roblox shares plummet 18% as child safety measures weigh on bookings
+The USB Situation
+Refusal in Language Models Is Mediated by a Single Direction
+📄 Latest Research (5 from arXiv)
+Measuring research data reuse in scholarly publications using generative artificial intelligence: Open Science Indicator development and preliminary results Numerous metascience studies and other initiatives have begun to monitor the prevalence of open science practices when i...
+Repetition over Diversity: High-Signal Data Filtering for Sample-Efficient German Language Modeling Recent research has shown that filtering massive English web corpora into high-quality subsets significantly improves tr...
+TopBench: A Benchmark for Implicit Prediction and Reasoning over Tabular Question Answering Large Language Models (LLMs) have advanced Table Question Answering, where most queries can be answered by extracting in...
+Mapping the Methodological Space of Classroom Interaction Research: Scale, Duration, and Modality in an Age of AI Research on classroom interaction has long been divided between large-scale observation and in-depth ethnographic work. ...
+PRISM: Pre-alignment via Black-box On-policy Distillation for Multimodal Reinforcement Learning The standard post-training recipe for large multimodal models (LMMs) applies supervised fine-tuning (SFT) on curated dem...
+💻 Trending Repositories (5 from GitHub)
+josecoss-dev/huit-coop-onboarding (1 ⭐)
+JeisonAlexis/WSUP-Frontend (1 ⭐)
+Aakash452/Test-Pilor_v2 (1 ⭐) Setting up and running tests for an unfamiliar project is tedious, fragile, and hard to automate. TestPilot solves this ...
+vitooralves/Dash-Controle-de-Salarios (1 ⭐) Dash como exemplo de uma empresa...
+andrealvarado23/Machine-Learning---Nivel-Basico (1 ⭐) Google Colab - Python 3 ...
+🎬 Featured Videos (0 from YouTube)
+🐦 Latest from X (0 tweets)
+This briefing contains real scraped data personalized for you. Your daily workflows will keep this updated automatically.
+
+Ask follow-up
+15 sources
+Articles
+
+161
+
+View all
+Papers
+
+327
+
+View all
+Repositories
+
+360
+
+View all
+Videos
+
+0
+
+View all
+Tweets
+
+0
+
+View all
+🔥 Trending Technologies
+View all
+Go
+100%
+LLM
+71%
+RAG
+47%
+Python
+26%
+Java
+23%
+Claude
+22%
+Latest from Tech Feed
+Curated articles from around the web
+
+View all
+9 min ago
+Advanced Quantization Algorithm for LLMs
+A tech article covering hackernews, best.
+
+AI summarizing…
+hackernews
+best
+tech
+
+Ask AI
+
+9 min ago
+After dissing Anthropic for limiting Mythos, OpenAI restricts access to Cyber
+A tech article covering hackernews, best.
+
+AI summarizing…
+hackernews
+best
+tech
+
+Ask AI
+
+9 min ago
+AWS stops billing Middle East cloud customers as repairs to war damage drag on
+A tech article covering hackernews, best.
+
+AI summarizing…
+hackernews
+best
+tech
+
+Ask AI
+
+9 min ago
+Lib0xc: A set of C standard library-adjacent APIs for safer systems programming
+A tech article covering hackernews, best.
+
+AI summarizing…
+hackernews
+best
+tech
+
+Ask AI
+
+9 min ago
+Flock cameras keep telling police a man who doesn't have a warrant has a warrant
+A tech article covering hackernews, best.
+
+AI summarizing…
+hackernews
+best
+tech
+
+Ask AI
+
+9 min ago
+The X-Files has made me nostalgic for a time I never experienced
+A tech article covering hackernews, best.
+
+AI summarizing…
+hackernews
+best
+tech
+
+Ask AI
+
+Trending on GitHub
+Hot repos today
+
+View all
+🐙
+Java
+Trending
+spring-projects/spring-boot
+Spring Boot helps you to create Spring-powered, production-grade applications and services with absolute minimum fuss.
+
+80.6k
+41.9k
+477
+framework
+java
+spring
+spring-boot
+by spring-projects
+4 min ago
+
+🐙
+Trending
+Developer-Y/cs-video-courses
+List of Computer Science courses with video lectures.
+
+80.8k
+11.2k
+3
+algorithms
+bioinformatics
+computational-biology
+computational-physics
+by Developer-Y
+4 min ago
+
+🐙
+Rust
+Trending
+zed-industries/zed
+Code at the speed of thought – Zed is a high-performance, multiplayer code editor from the creators of Atom and Tree-sitter.
+
+81.4k
+8.2k
+2.8k
+gpui
+rust-lang
+text-editor
+zed
+by zed-industries
+4 min ago
+
+Latest Videos
+AI-curated tech & ML videos
+
+View all
+No videos yet
+
+Latest Research Papers
+New papers from arXiv (cs.AI, cs.LG, cs.CL)
+
+View all
+
+4 min ago
+cs.SE
+cs.CY
+Cognitive Atrophy and Systemic Collapse in AI-Dependent Software Engineering
+Frank Ginac
+
+The integration of Large Language Models (LLMs) into the software development lifecycle (SDLC) masks a critical socio-technical failure: Cognitive-Systemic Collapse. This paper introduces "Epistemological Debt," the hidden carrying cost incurred when engineers substitute logical derivation with passive AI verification. This debt erodes the mental models essential for root-cause analysis, widening the gap between system complexity and human comprehension. Furthermore, recursive training on synthetic code threatens to homogenize the global software reservoir, diminishing the variance required for robust engineering. Using the 2026 Amazon outages as a case study, this research illustrates how "mechanized convergence" leads to systemic fragility. To preserve long-term resilience, engineering leaders must move beyond prompt-based development to implement rigorous human-in-the-loop pedagogical standards. This framework balances AI-driven productivity with the epistemic sovereignty necessary to manage increasingly opaque software ecosystems.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+Hot Fixing in the Wild
+Carol Hanna, Karine Even-Mendoza, W. B. Langdon +3 more
+
+Despite the operational importance of hot fixes, large-scale evidence on how they reshape routine maintenance workflows, particularly in the era of autonomous coding agents, remains limited. We analyse hot fixes present in over 61,000 GitHub repositories from the Hao-Li/AIDev dataset and find consistent patterns of urgency: reduced collaboration (typically a single contributor), smaller and more targeted changes (median 2-3 commits and files, with <10 line modifications), limited review (often fewer than two reviewers), and substantially fewer test file modifications than regular bug fixes, consistent with their urgency-driven character. Leveraging the same urgency contexts, we examine differences between human- and AI-agent-authored hot fixes, revealing over 10 distinct repair behaviours, thus offering insights into future human-automation collaboration for hot fixing. Our study is the first to empirically analyse hot fix code changes at scale using a repository-level operationalisation of urgency. The comparison of human and agentbehaviours delineates their distinct characteristics, providing a foundation for understanding hot fixing in real-world practice
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+cs.CL
+ClassEval-Pro: A Cross-Domain Benchmark for Class-Level Code Generation
+Yeheng Chen, Chaoxiang Xie, Yuling Shi +4 more
+
+LLMs have achieved strong results on both function-level code synthesis and repository-level code modification, yet a capability that falls between these two extremes -- compositional code creation, i.e., building a complete, internally structured class from a specification -- remains underserved. Current evaluations are either confined to isolated functions or rely on manually curated class-level tasks that are expensive to scale and increasingly susceptible to data contamination. We introduce ClassEval-Pro, a benchmark of 300 class-level tasks spanning 11 domains, constructed through an automated three-stage pipeline that combines complexity enhancement, cross-domain class composition, and integration of real-world GitHub code contributed after January 2025. Every task is validated by an LLM Judge Ensemble and must pass test suites with over 90% line coverage. We evaluate five frontier LLMs under five generation strategies. The best model achieves only 45.6% class-level Pass@1, with a 17.7-point gap between the strongest and weakest models, confirming the benchmark's discriminative power. Strategy choice strongly interacts with model capability: structured approaches such as bottom-up improve weaker models by up to 9.4 percentage points, while compositional generation collapses to as low as 1.3%. Error analysis over 500 manually annotated failures reveals that logic errors (56.2%) and dependency errors (38.0%) dominate, identifying cross-method coordination as the core bottleneck.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+Where did we fail? -- Reproducing build failures in embedded open source software
+Han Fu, Andreas Ermedahl, Sigrid Eldh +3 more
+
+Due to hardware-software co-development in embedded systems, continuous integration (CI) builds frequently fail because of complex cross-compilation, board configurations, and toolchain constraints. Although CI build logs contain valuable diagnostic information, they are short-lived and difficult to reuse due to heterogeneous runners, toolchains, and log formats. To address these challenges, we present PhantomRun, a unified abstraction layer and publicly reusable dataset that standardizes the retrieval, storage, and reproduction of CI build logs and metadata. Across 4628 failing CI runs, we reconstructed 91.8% of builds and preserved execution outcomes in 98% of evaluated cases. PhantomRun provides two core capabilities: retrieving the build log of any commit and faithfully re-executing the corresponding build in a controlled environment. By exposing all build artifacts and metadata in a uniform, machine-readable format, PhantomRun enables reproducible and longitudinal studies of CI failures. An empirical evaluation shows that reproduced builds closely match their originals, typically differing only in timestamps or minor nondeterministic reordering, demonstrating the feasibility of large-scale historical CI reconstruction.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+On the Effectiveness of Modular Testing with EvoSuite
+Elizabeth Dinella
+
+This paper explores the effectiveness of modular randomized testing for object oriented programs in Java. Modular testing involves testing individual components of a program in isolation. Often times, for effective test generation, a series of non-target setup calls must be included to obtain high coverage of the target component. In this work, we evaluate and improve modular testing with the EvoSuite test generator. We find that due to strict restrictions that disallow calls to non-target setup methods, EvoSuite's modular testing mode is ineffective and often results in low branch coverage. We propose \textsc{emote} (Effective Modular Testing with EvoSuite): an enhancement to EvoSuite that relaxes this restriction, allowing non-target methods to be included in the test prefixes. This modification draws inspiration from developer-written fuzz drivers, which often invoke setup methods to properly initialize the state before testing the target method. To ensure meaningful test generation, we modify EvoSuite's fitness function to focus branch coverage contributions on the call chain originating from the target method. \textsc{emote} is evaluated on a subset of the SF100 benchmark, showing a 15.15\% improvement in coverage of the target methods.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+CI-Repair-Bench: A Repository-Aware Benchmark for Automated Patch Validation via CI Workflows
+Rabeya Khatun Muna, Md Nakhla Rafi, Tse-Hsun +1 more
+
+Continuous Integration (CI) enforces repository-level correctness through multi-stage workflows and is central to modern software development, yet diagnosing and repairing CI failures remains challenging. Unlike traditional program repair, CI failures frequently involve non-code artifacts, environment and dependency issues, noisy execution logs, and workflow-level constraints. Existing program repair benchmarks fall short in this setting: they are largely test-centric, restrict repairs to source code, assume fixed execution environments, and evaluate under simplified CI workflows that do not reflect real repository-level validation. We introduce CI-Repair-Bench, a benchmark for CI-verified, repository-level program repair constructed from real GitHub Actions executions. It contains 567 CI failure instances from 103 repositories and evaluates repair correctness exclusively through full CI re-execution under original workflows. Failures are categorized into 12 CI error types, enabling fine-grained, error-type-aware evaluation. To demonstrate benchmark usage, we include a reference CI repair workflow that analyzes CI logs to localize faults and generate candidate patches. Empirical results show that automated repair is most effective for localized, tool-enforced failures such as formatting and linting, while environment, dependency, and configuration-related failures remain challenging; the best-performing LLM achieves an 18.9% repair success rate. CI-Repair-Bench provides a realistic evaluation foundation for advancing research on CI-native automated program repair.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+Now's the Time: Computer Science Must Evolve to Emphasize Software and Systems Engineering with Artificial Intelligence (AI)
+Chandra N. Sekharan, George K. Thiruvathukal
+
+Computer science (CS) education needs to evolve to support software and artificial intelligence (AI) systems engineering, and it needs to happen now -- precisely because the core intellectual contributions of CS have never been more important. We argue that traditional curricula, built around programming, data structures, and algorithms as ends in themselves, must be reframed so that these topics become foundational building blocks within a systems- and engineering-centered education. Graduates should be prepared not to compete with AI on routine coding tasks, but to design, orchestrate, verify, and own complex AI-enabled systems operating under real-world constraints. More importantly, computer science education should be geared toward preparing students for future disruptions. The broad history of computing is marked by one disruptive technology after another, requiring us to rise to the moment instead of merely acquiescing to it.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+cs.CL
+To Diff or Not to Diff? Structure-Aware and Adaptive Output Formats for Efficient LLM-based Code Editing
+Wei Cheng, Yongchang Cao, Chen Shen +4 more
+
+Large Language Models (LLMs) are increasingly used for code editing, yet the prevalent full-code generation paradigm suffers from severe efficiency bottlenecks, posing challenges for interactive coding assistants that demand low latency and cost. Despite the predominant focus on scaling model capabilities, the edit format itself has been largely overlooked in model training. In this paper, we begin with a systematic study of conventional diff formats and reveal that fragile offsets and fragmented hunks make generation highly unnatural for LLMs. To address it, we introduce BlockDiff and FuncDiff, two structure-aware diff formats that represent changes as block-level rewrites of syntactically coherent units such as control structures and functions. Furthermore, we propose AdaEdit, a general adaptive edit strategy that trains LLMs to dynamically choose the most token-efficient format between a given diff format and full code. Extensive experiments demonstrate that AdaEdit paired with structure-aware diff formats consistently matches the accuracy of full-code generation, while reducing both latency and cost by over 30% on long-code editing tasks.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.CR
+cs.LG
+cs.SE
+REBENCH: A Procedural, Fair-by-Construction Benchmark for LLMs on Stripped-Binary Types and Names (Extended Version)
+Jun Yeon Won, Xin Jin, Shiqing Ma +1 more
+
+Large Language Models (LLMs) have achieved remarkable progress in recent years, driving their adoption across a wide range of domains, including computer security. In reverse engineering, LLMs are increasingly applied to critical tasks such as function and variable name recovery and type inference. However, despite the rapid growth of research in this area, progress has been hindered by the absence of a standardized dataset. Existing studies rely on disparate datasets, preprocessing pipelines, and evaluation metrics, making fair comparisons between approaches difficult and obscuring a clear understanding of LLM capabilities in binary analysis. To address these challenges, we present REBench, a comprehensive benchmark dataset for evaluating LLMs on binary reverse engineering tasks. REBench consolidates a superset of existing datasets, comprising hundreds of millions of lines of source code and a diverse collection of binaries spanning multiple architectures and optimization levels. REBench adopts a knowledge-base-driven methodology that stores byte-level stack information to generate ground truth, ensuring that task difficulty is preserved while maintaining universal applicability. This design enables fair evaluation across tasks while avoiding simplifications that could bias results. As a use case, we apply REBench to measure the reverse engineering performance of LLMs and the result demonstrates difficulties in complex tasks.
+
+
+
+
+Ask AI
+
+4 min ago
+cs.SE
+One Size Fits All? An Empirical Comparison of ADR Templates regarding Comprehension, Usability, and Ease of Adoption
+Fernando Nogueira, Nabson Silva, Tayana Conte
+
+Context: Documenting Architectural Design Decisions (ADDs) is a critical factor in the software lifecycle, essential for efficient system maintenance, developer onboarding, and preventing knowledge vaporization. Although various templates for Architectural Decision Records (ADRs) have been proposed, there is a lack of empirical evidence comparing them. Goal: To address this gap, this paper aims to identify which ADR template best supports comprehension, usability, and ease of adoption: Tyree/Akerman's template, Nygard's ADR, arc42, Y-statements, and MADR. Method: We compared these templates using the DESMET FA method in a two-step evaluation. First, the two primary authors evaluated the five templates through the DESMET FA, based on their software architecture expertise. The two top-performing templates were then used as treatments in a controlled experiment conducted with undergraduate students. Results: In the preliminary screening by experts, the top-performing templates were those of Nygard and MADR. In the subsequent controlled experiment, Nygard's template outperformed MADR in terms of the Overall Score. Qualitative analysis of participant feedback revealed the factors influencing template preference. The findings indicate that Nygard supports concise and objective documentation, while MADR facilitates structural details and specific architectural requirements. Conclusion: This paper provides an evidence-based strategy for ADR template adoption by offering a comparison between them. The findings present a decision-making guide that assists practitioners and researchers in selecting ADR templates aligned with project constraints, aiming to minimize documentation overhead and increase architectural knowledge retention.
+
+
+
+
+Ask AI
+
+
+
+Latest from X (Twitter)
+Curated tweets on AI, programming & tech
+
+View all
+No tweets yet

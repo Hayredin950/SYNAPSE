@@ -1,0 +1,330 @@
+version: '3.9'
+
+# ============================================================
+# SYNAPSE — Docker Compose (Local Development)
+# Usage: docker-compose up -d
+# ============================================================
+
+networks:
+  synapse_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_files:
+  static_files:
+
+services:
+
+  # ── PostgreSQL Database ──────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: synapse_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: synapse_db
+      POSTGRES_USER: synapse_user
+      POSTGRES_PASSWORD: synapse_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - synapse_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse_user -d synapse_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis Cache & Broker ────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: synapse_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+      - ./infrastructure/docker/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - synapse_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Django Backend ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: synapse_backend
+    restart: on-failure:5
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://synapse_user:synapse_pass@postgres:5432/synapse_db
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: synapse_db
+      DB_USER: synapse_user
+      DB_PASSWORD: synapse_pass
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      PYTHONPATH: /app:/ai_engine_pkg
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_MEDIA_ROOT: /app/media
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./ai_engine:/ai_engine_pkg/ai_engine
+      - ./scraper:/app/scraper
+      - media_files:/app/media
+      - static_files:/app/staticfiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+    command:
+      - sh
+      - -c
+      - |
+        echo "Waiting for PostgreSQL..."
+        until python -c "import psycopg2; psycopg2.connect(host='postgres',port=5432,dbname='synapse_db',user='synapse_user',password='synapse_pass')" 2>/dev/null; do
+          echo "PostgreSQL not ready, sleeping 3s..."; sleep 3
+        done
+        echo "PostgreSQL ready! Running migrations..."
+        python manage.py migrate --noinput
+        python manage.py collectstatic --noinput --clear 2>/dev/null || python manage.py collectstatic --noinput 2>/dev/null || echo "Static files skipped (permission issue — OK in dev)"
+        mkdir -p /app/media/documents /app/media/projects
+        chmod -R 777 /app/media 2>/dev/null || true
+        echo "Starting Django (Daphne ASGI server)..."
+        exec daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ── FastAPI AI Service ──────────────────────────────────
+  fastapi_ai:
+    build:
+      context: .
+      dockerfile: ai_engine/Dockerfile
+    container_name: synapse_fastapi_ai
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://synapse_user:synapse_pass@postgres:5432/synapse_db
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: synapse_db
+      DB_USER: synapse_user
+      DB_PASSWORD: synapse_pass
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      # Mount context is project root; ai_engine package lives at /app/ai_engine
+      PYTHONPATH: /app
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+    command: uvicorn ai_engine.main:app --host 0.0.0.0 --port 8001 --reload --app-dir /app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Next.js Frontend ────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: synapse_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+    networks:
+      - synapse_network
+    command: npm run dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Celery Worker ───────────────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: synapse_celery_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://synapse_user:synapse_pass@postgres:5432/synapse_db
+      DB_HOST: postgres
+      DJANGO_SETTINGS_MODULE: config.settings.development
+      DB_PORT: "5432"
+      DB_NAME: synapse_db
+      DB_USER: synapse_user
+      DB_PASSWORD: synapse_pass
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      # Override host path from .env — inside Docker, media is at /app/media
+      DJANGO_MEDIA_ROOT: /app/media
+      MEDIA_ROOT: /app/media
+      # ai_engine is mounted at /ai_engine and added to PYTHONPATH so that
+      # 'import ai_engine' works inside summarization / NLP tasks.
+      PYTHONPATH: /app:/ai_engine_pkg
+    volumes:
+      - ./backend:/app
+      - ./ai_engine:/ai_engine_pkg/ai_engine
+      - ./scraper:/app/scraper
+      - media_files:/app/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    # concurrency=3 allows parallel processing: scraping + NLP + workflow tasks
+    # NLP/summarization is rate-limited by Gemini free tier (20 RPM), so tasks
+    # are staggered via countdown in tasks.py. 3 workers with 15s stagger = ~12 RPM.
+    command: ["sh", "-c", "celery -A config.celery worker --loglevel=info --concurrency=3 -Q default,scraping,agents,nlp,embeddings,slow_scraping --prefetch-multiplier=1"]
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config.celery inspect ping -d celery@$$HOSTNAME --timeout 5 2>/dev/null | grep -q OK || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ── Celery Beat Scheduler ───────────────────────────────
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: synapse_celery_beat
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://synapse_user:synapse_pass@postgres:5432/synapse_db
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: synapse_db
+      DB_USER: synapse_user
+      DB_PASSWORD: synapse_pass
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      PYTHONPATH: /app:/ai_engine_pkg
+    volumes:
+      - ./backend:/app
+      - ./ai_engine:/ai_engine_pkg/ai_engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - synapse_network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+      - 1.1.1.1
+    command: ["sh", "-c", "celery -A config.celery beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler --pidfile=/tmp/celerybeat.pid"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/celerybeat.pid && kill -0 $$(cat /tmp/celerybeat.pid) 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── Flower (Celery Monitoring) ──────────────────────────
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: synapse_flower
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
+      FLOWER_BASIC_AUTH: admin:flower_password
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery_worker
+    networks:
+      - synapse_network
+    command: celery -A config.celery flower --port=5555
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5555/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── pgAdmin (optional DB GUI) ───────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: synapse_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@synapse.ai
+      PGADMIN_DEFAULT_PASSWORD: pgadmin_password
+    ports:
+      - "5051:80"
+    depends_on:
+      - postgres
+    networks:
+      - synapse_network
+    profiles:
+      - tools

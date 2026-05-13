@@ -1,0 +1,208 @@
+[
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "daily-digest",
+    "fields": {
+      "name": "Daily Tech Digest",
+      "description": "Every morning: collect news from all sources, summarize with AI, generate a PDF report, and email it to you.",
+      "icon": "\ud83d\udcf0",
+      "category": "digest",
+      "trigger_type": "schedule",
+      "cron_expression": "0 8 * * *",
+      "event_config": {},
+      "actions": [
+        {"type": "collect_news", "params": {"sources": ["hackernews", "github", "arxiv"], "limit": 50}},
+        {"type": "summarize_content", "params": {"batch_size": 30}},
+        {"type": "generate_pdf", "params": {"title": "Daily Tech Digest", "subtitle": "Your morning briefing", "article_limit": 10}},
+        {"type": "send_email", "params": {"subject": "Your Daily Tech Digest is ready"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "ai-research-brief",
+    "fields": {
+      "name": "AI Research Brief",
+      "description": "Every week: fetch the latest AI/ML papers from arXiv, run an AI digest on recent trends, and upload to Google Drive.",
+      "icon": "\ud83d\udd2c",
+      "category": "research",
+      "trigger_type": "schedule",
+      "cron_expression": "0 9 * * 1",
+      "event_config": {},
+      "actions": [
+        {"type": "collect_news", "params": {"sources": ["arxiv"], "days_back": 7, "max_papers": 50}},
+        {"type": "ai_digest", "params": {"topic": "latest AI and machine learning research"}},
+        {"type": "generate_pdf", "params": {"title": "Weekly AI Research Brief", "topic": "AI", "article_limit": 8}},
+        {"type": "upload_to_drive", "params": {"folder_name": "SYNAPSE/Research"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "trending-alert",
+    "fields": {
+      "name": "Trending Topic Alert",
+      "description": "Fires automatically when a topic spikes in trending. Collects news and sends you an instant notification.",
+      "icon": "\ud83d\udcc8",
+      "category": "alerts",
+      "trigger_type": "event",
+      "cron_expression": "",
+      "event_config": {"event_type": "trending_spike", "filter": {"topic": ""}, "cooldown_minutes": 120},
+      "actions": [
+        {"type": "collect_news", "params": {"sources": ["hackernews", "github"], "limit": 20}},
+        {"type": "send_email", "params": {"subject": "\ud83d\udd25 Trending Topic Spike Detected"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "new-article-workflow",
+    "fields": {
+      "name": "New Article Auto-Summarize",
+      "description": "Fires every time a new article is published. Automatically summarizes it and creates a notification.",
+      "icon": "\u26a1",
+      "category": "alerts",
+      "trigger_type": "event",
+      "cron_expression": "",
+      "event_config": {"event_type": "new_article", "filter": {"topic": ""}, "cooldown_minutes": 30},
+      "actions": [
+        {"type": "summarize_content", "params": {"batch_size": 5}},
+        {"type": "send_email", "params": {"subject": "New article published and summarized"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "weekly-report",
+    "fields": {
+      "name": "Weekly Intelligence Report",
+      "description": "Every Friday: run a full collection, AI digest on all topics, generate a comprehensive PDF, and upload to Drive.",
+      "icon": "\ud83d\udcca",
+      "category": "digest",
+      "trigger_type": "schedule",
+      "cron_expression": "0 17 * * 5",
+      "event_config": {},
+      "actions": [
+        {"type": "collect_news", "params": {"sources": ["hackernews", "github", "arxiv", "youtube"], "limit": 100}},
+        {"type": "summarize_content", "params": {"batch_size": 50}},
+        {"type": "ai_digest", "params": {"topic": "weekly technology trends and highlights"}},
+        {"type": "generate_pdf", "params": {"title": "Weekly Intelligence Report", "subtitle": "Powered by SYNAPSE AI", "article_limit": 15}},
+        {"type": "upload_to_drive", "params": {"folder_name": "SYNAPSE/Weekly Reports"}},
+        {"type": "send_email", "params": {"subject": "\ud83d\udcca Your Weekly Intelligence Report is ready"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "github-radar",
+    "fields": {
+      "name": "GitHub Trending Radar",
+      "description": "Every 6 hours: scrape GitHub trending repos, run AI analysis, notify you of standout projects.",
+      "icon": "\ud83d\udcbb",
+      "category": "research",
+      "trigger_type": "schedule",
+      "cron_expression": "0 */6 * * *",
+      "event_config": {},
+      "actions": [
+        {"type": "collect_news", "params": {"sources": ["github"], "days_back": 1, "limit": 30}},
+        {"type": "ai_digest", "params": {"topic": "trending GitHub repositories and open source projects"}},
+        {"type": "send_email", "params": {"subject": "\ud83d\udcbb GitHub Trending Radar Update"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "twitter-ai-pulse",
+    "fields": {
+      "name": "X/Twitter AI Pulse",
+      "description": "Every 2 hours: scrape the latest AI and tech tweets, run an AI digest on trends, and send you a curated summary.",
+      "icon": "\ud83d\udc26",
+      "category": "social",
+      "trigger_type": "schedule",
+      "cron_expression": "0 */2 * * *",
+      "event_config": {},
+      "actions": [
+        {"type": "scrape_tweets", "params": {"queries": "AI machine learning\nLLM GPT Claude\nPython programming\nWeb development", "max_results": 100}},
+        {"type": "ai_digest", "params": {"topic": "AI and tech trends from X/Twitter"}},
+        {"type": "send_email", "params": {"subject": "\ud83d\udc26 Your X/Twitter AI Pulse Report"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "twitter-trending-alert",
+    "fields": {
+      "name": "X/Twitter Trending Alert",
+      "description": "Fires when a trending spike is detected. Immediately scrapes relevant tweets and notifies you.",
+      "icon": "\ud83d\udce3",
+      "category": "alerts",
+      "trigger_type": "event",
+      "cron_expression": "",
+      "event_config": {"event_type": "trending_spike", "filter": {"topic": ""}, "cooldown_minutes": 60},
+      "actions": [
+        {"type": "scrape_tweets", "params": {"queries": "trending tech AI", "max_results": 50}},
+        {"type": "send_email", "params": {"subject": "\ud83d\udce3 Trending Spike \u2014 X/Twitter Alert"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "twitter-weekly-digest",
+    "fields": {
+      "name": "X/Twitter Weekly Tech Digest",
+      "description": "Every Sunday: scrape the week's best tech tweets, generate a PDF digest, and upload to Google Drive.",
+      "icon": "\ud83d\udccb",
+      "category": "digest",
+      "trigger_type": "schedule",
+      "cron_expression": "0 10 * * 0",
+      "event_config": {},
+      "actions": [
+        {"type": "scrape_tweets", "params": {"queries": "AI machine learning\nPython Rust TypeScript\nopen source software\nCybersecurity DevOps", "max_results": 200}},
+        {"type": "ai_digest", "params": {"topic": "weekly technology highlights from X/Twitter"}},
+        {"type": "generate_pdf", "params": {"title": "Weekly X/Twitter Tech Digest", "subtitle": "Curated by SYNAPSE AI", "article_limit": 15}},
+        {"type": "upload_to_drive", "params": {"folder_name": "SYNAPSE/Twitter Digests"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "automation.workflowtemplate",
+    "pk": "full-social-intel",
+    "fields": {
+      "name": "Full Social Intelligence",
+      "description": "Daily: scrape tweets + GitHub + news, run AI analysis across all sources, generate a comprehensive PDF and email it.",
+      "icon": "\ud83c\udf10",
+      "category": "digest",
+      "trigger_type": "schedule",
+      "cron_expression": "0 7 * * *",
+      "event_config": {},
+      "actions": [
+        {"type": "scrape_tweets", "params": {"queries": "AI machine learning\ntechnology trends\nopen source", "max_results": 150}},
+        {"type": "collect_news", "params": {"sources": ["hackernews", "github", "arxiv"], "limit": 50}},
+        {"type": "summarize_content", "params": {"batch_size": 30}},
+        {"type": "ai_digest", "params": {"topic": "daily technology intelligence from social and technical sources"}},
+        {"type": "generate_pdf", "params": {"title": "Daily Social Intelligence Report", "subtitle": "Powered by SYNAPSE AI", "article_limit": 15}},
+        {"type": "send_email", "params": {"subject": "\ud83c\udf10 Your Daily Social Intelligence Report"}}
+      ],
+      "is_active": true,
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  }
+]

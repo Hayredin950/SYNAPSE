@@ -1,0 +1,96 @@
+groups:
+
+  # ── Business Health Alerts ────────────────────────────────────────────────────
+  - name: business_health
+    interval: 60s
+    rules:
+
+      # North Star: Weekly Active Users using AI (alert if drops >20% week-over-week)
+      - alert: WAUDropped
+        expr: |
+          sum(increase(synapse_ai_queries_total[7d])) < 
+          sum(increase(synapse_ai_queries_total[7d] offset 7d)) * 0.8
+        for: 1h
+        labels:
+          severity: warning
+          team:     product
+        annotations:
+          summary: "WAU (AI queries) dropped >20% vs last week"
+          description: "North Star Metric regression — investigate churn or outage."
+
+      # Signup rate drop (compared to 24h ago)
+      - alert: SignupRateDrop
+        expr: |
+          sum(increase(synapse_user_signups_total[1h])) == 0
+        for: 4h
+        labels:
+          severity: warning
+          team:     growth
+        annotations:
+          summary: "No new signups in 4 hours"
+          description: "Signup flow may be broken — check registration endpoint."
+
+      # Document generation errors
+      - alert: DocumentGenerationFailing
+        expr: |
+          sum(increase(synapse_automation_runs_total{status="failure"}[15m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Document/automation failures spiking (>5 in 15min)"
+          description: "Check Celery workers and OpenAI API key limits."
+
+  # ── Performance SLOs ──────────────────────────────────────────────────────────
+  - name: slo_alerts
+    rules:
+
+      # SLO: 99% of requests < 2s (30-day window)
+      - alert: SLOLatencyBreach
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(django_http_requests_latency_seconds_by_view_method_bucket[30m]))
+            by (le)) > 2.0
+        for: 10m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary: "SLO breach: P99 latency > 2s"
+          description: "99th percentile latency exceeds 2s SLO target."
+
+      # SLO: error rate < 1%
+      - alert: SLOErrorRateBreach
+        expr: |
+          sum(rate(django_http_responses_total_by_status_view_method_total{status=~"5.."}[10m]))
+          /
+          sum(rate(django_http_responses_total_by_status_view_method_total[10m])) > 0.01
+        for: 5m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary: "SLO breach: 5xx error rate > 1%"
+          description: "Error rate exceeds 1% SLO — check Django logs and Sentry."
+
+      # DB slow queries > 1s
+      - alert: SlowDatabaseQueries
+        expr: |
+          pg_stat_activity_max_tx_duration{state="active"} > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database queries taking >1s"
+          description: "Slow query detected — check pg_stat_statements and add indexes."
+
+      # Redis memory > 80%
+      - alert: RedisMemoryCritical
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage {{ $value | humanize }}% (>80%)"
+          description: "Redis approaching maxmemory limit — may start evicting keys."

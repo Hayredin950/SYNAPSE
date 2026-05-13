@@ -1,0 +1,150 @@
+Freeing port 8000...
+Running database migrations...
+[celery] Applied langchain ContextOverflowError compatibility patch
+Operations to perform:
+  Apply all migrations: admin, agents, articles, auth, automation, axes, billing, contenttypes, core, django_celery_beat, django_celery_results, documents, integrations, notifications, organizations, papers, repositories, sessions, token_blacklist, trends, tweets, users, videos
+Running migrations:
+  No migrations to apply.
+Collecting static files...
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] ANTHROPIC_API_KEY is not set — Claude LLM support will be unavailable.
+  _warn_missing_keys()
+[celery] Applied langchain ContextOverflowError compatibility patch
+Starting Django backend on port 8000...
+[celery] Applied langchain ContextOverflowError compatibility patch
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GOOGLE_CLIENT_ID is not set — Google Drive / OAuth integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GOOGLE_CLIENT_SECRET is not set — Google Drive / OAuth integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] AWS_ACCESS_KEY_ID is not set — S3 storage integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] AWS_SECRET_ACCESS_KEY is not set — S3 storage integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] SENDGRID_API_KEY is not set — Email delivery via SendGrid will be unavailable; console backend used.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] STRIPE_SECRET_KEY is not set — Billing / Stripe integration will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] GITHUB_CLIENT_ID is not set — GitHub OAuth will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] OPENAI_API_KEY is not set — AI moderation and OpenAI LLM features will be unavailable.
+  _warn_missing_keys()
+/home/runner/workspace/synapse/backend/config/settings/base.py:463: RuntimeWarning: [Synapse] ANTHROPIC_API_KEY is not set — Claude LLM support will be unavailable.
+  _warn_missing_keys()
+Starting server at tcp:port=8000:interface=0.0.0.0
+HTTP/2 support not enabled (install the http2 and tls Twisted extras)
+Configuring endpoint tcp:port=8000:interface=0.0.0.0
+Listening on TCP address 0.0.0.0:8000
+127.0.0.1:33006 - - [03/May/2026:03:07:44] "POST /api/v1/auth/login/" 200 1095
+2026-05-03 03:07:44 [info     ] subscription_created           plan=free user=testnum99@test.com
+2026-05-03 03:07:44 [info     ] referral_code_created          user=testnum99@test.com
+Using Django send_mail fallback for verification email to testnum99@test.com
+Content-Type: multipart/alternative;
+ boundary="===============3577002164517892501=="
+MIME-Version: 1.0
+Subject: Verify your SYNAPSE email address
+From: noreply@synapse.ai
+To: testnum99@test.com
+Date: Sun, 03 May 2026 03:07:44 -0000
+Message-ID: <177777766433.14933.16428901815697135726@6cff2b8977d0>
+
+--===============3577002164517892501==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+
+Hi Test,
+
+Thanks for signing up for SYNAPSE!
+
+Please verify your email address by clicking the link below:
+http://localhost:3000/verify-email?token=c2fe4429-b9ed-4f40-86bd-4ca0fc7c6312
+
+This link expires in 24 hours.
+
+— The SYNAPSE Team
+--===============3577002164517892501==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+
+<div style=3D'font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-w=
+idth:480px;margin:0 auto;padding:32px'><div style=3D'text-align:center;marg=
+in-bottom:24px'><span style=3D'font-size:28px;font-weight:900;background:li=
+near-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-=
+text-fill-color:transparent'>SYNAPSE</span></div><h2 style=3D'color:#1e293b=
+;margin-bottom:8px;font-size:20px'>Verify your email</h2><p style=3D'color:=
+#475569'>Hi <strong>Test</strong>,</p><p style=3D'color:#475569'>Thanks for=
+ signing up for <strong>SYNAPSE</strong>! Please verify your email address =
+to get started.</p><div style=3D'text-align:center;margin:24px 0'><a href=
+=3D'http://localhost:3000/verify-email?token=3Dc2fe4429-b9ed-4f40-86bd-4ca0=
+fc7c6312' style=3D'display:inline-block;background:linear-gradient(135deg,#=
+6366f1,#7c3aed);color:white;padding:14px 32px;border-radius:12px;text-decor=
+ation:none;font-weight:bold;font-size:15px;box-shadow:0 4px 14px rgba(99,10=
+2,241,0.3)'>Verify Email Address</a></div><p style=3D'color:#94a3b8;font-si=
+ze:12px'>Or copy this link:<br><code style=3D'word-break:break-all;color:#6=
+366f1'>http://localhost:3000/verify-email?token=3Dc2fe4429-b9ed-4f40-86bd-4=
+ca0fc7c6312</code></p><hr style=3D'border:none;border-top:1px solid #e2e8f0=
+;margin:24px 0'><p style=3D'color:#94a3b8;font-size:11px;text-align:center'=
+>This link expires in <strong>24 hours</strong>.<br>If you didn't create an=
+ account, you can safely ignore this email.</p></div>
+--===============3577002164517892501==--
+
+-------------------------------------------------------------------------------
+2026-05-03 03:07:44 [info     ] analytics_signup               plan=free user_id=d4a38141-f361-4a8f-a4bc-e955343f78b9
+127.0.0.1:33008 - - [03/May/2026:03:07:44] "POST /api/v1/auth/register/" 201 804
+2026-05-03 03:07:44 [info     ] subscription_created           plan=free user=shortpw99@test.com
+2026-05-03 03:07:44 [info     ] referral_code_created          user=shortpw99@test.com
+Using Django send_mail fallback for verification email to shortpw99@test.com
+Content-Type: multipart/alternative;
+ boundary="===============3660617594254039608=="
+MIME-Version: 1.0
+Subject: Verify your SYNAPSE email address
+From: noreply@synapse.ai
+To: shortpw99@test.com
+Date: Sun, 03 May 2026 03:07:44 -0000
+Message-ID: <177777766454.14933.5466779289814252547@6cff2b8977d0>
+
+--===============3660617594254039608==
+Content-Type: text/plain; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 8bit
+
+Hi Short,
+
+Thanks for signing up for SYNAPSE!
+
+Please verify your email address by clicking the link below:
+http://localhost:3000/verify-email?token=b9794e6d-03ff-4181-ad37-797d10f478ca
+
+This link expires in 24 hours.
+
+— The SYNAPSE Team
+--===============3660617594254039608==
+Content-Type: text/html; charset="utf-8"
+MIME-Version: 1.0
+Content-Transfer-Encoding: quoted-printable
+
+<div style=3D'font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-w=
+idth:480px;margin:0 auto;padding:32px'><div style=3D'text-align:center;marg=
+in-bottom:24px'><span style=3D'font-size:28px;font-weight:900;background:li=
+near-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-=
+text-fill-color:transparent'>SYNAPSE</span></div><h2 style=3D'color:#1e293b=
+;margin-bottom:8px;font-size:20px'>Verify your email</h2><p style=3D'color:=
+#475569'>Hi <strong>Short</strong>,</p><p style=3D'color:#475569'>Thanks fo=
+r signing up for <strong>SYNAPSE</strong>! Please verify your email address=
+ to get started.</p><div style=3D'text-align:center;margin:24px 0'><a href=
+=3D'http://localhost:3000/verify-email?token=3Db9794e6d-03ff-4181-ad37-797d=
+10f478ca' style=3D'display:inline-block;background:linear-gradient(135deg,#=
+6366f1,#7c3aed);color:white;padding:14px 32px;border-radius:12px;text-decor=
+ation:none;font-weight:bold;font-size:15px;box-shadow:0 4px 14px rgba(99,10=
+2,241,0.3)'>Verify Email Address</a></div><p style=3D'color:#94a3b8;font-si=
+ze:12px'>Or copy this link:<br><code style=3D'word-break:break-all;color:#6=
+366f1'>http://localhost:3000/verify-email?token=3Db9794e6d-03ff-4181-ad37-7=
+97d10f478ca</code></p><hr style=3D'border:none;border-top:1px solid #e2e8f0=
+;margin:24px 0'><p style=3D'color:#94a3b8;font-size:11px;text-align:center'=
+>This link expires in <strong>24 hours</strong>.<br>If you didn't create an=
+ account, you can safely ignore this email.</p></div>
+--===============3660617594254039608==--
+
+-------------------------------------------------------------------------------
+2026-05-03 03:07:44 [info     ] analytics_signup               plan=free user_id=9a297db4-2efc-4491-8c3c-c35c8372be68
+127.0.0.1:33016 - - [03/May/2026:03:07:44] "POST /api/v1/auth/register/" 201 805
