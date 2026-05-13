@@ -11,14 +11,19 @@ export DB_PASSWORD="${PGPASSWORD:-password}"
 export DB_HOST="${PGHOST:-helium}"
 export DB_PORT="${PGPORT:-5432}"
 
-# Replit AI integration
-export OPENROUTER_API_KEY="${AI_INTEGRATIONS_OPENAI_API_KEY:-_DUMMY_API_KEY_}"
-export OPENROUTER_BASE_URL="${AI_INTEGRATIONS_OPENAI_BASE_URL:-http://localhost:1106/modelfarm/openai}"
-export OPENROUTER_MODEL="gpt-4o-mini"
+# Replit AI integration — env vars auto-provisioned by Replit AI Integrations
+# AI_INTEGRATIONS_OPENAI_BASE_URL and AI_INTEGRATIONS_OPENAI_API_KEY are set
+# by the platform. Provide safe fallbacks so Django starts even without them.
+export AI_INTEGRATIONS_OPENAI_BASE_URL="${AI_INTEGRATIONS_OPENAI_BASE_URL:-http://localhost:1106/modelfarm/openai}"
+export AI_INTEGRATIONS_OPENAI_API_KEY="${AI_INTEGRATIONS_OPENAI_API_KEY:-_replit_ai_key_}"
 
-# Used by Django settings for AI
-export OPENAI_API_KEY="${AI_INTEGRATIONS_OPENAI_API_KEY:-_DUMMY_API_KEY_}"
-export OPENAI_API_BASE="${AI_INTEGRATIONS_OPENAI_BASE_URL:-http://localhost:1106/modelfarm/openai}"
+# Legacy compat — do NOT set OPENROUTER_BASE_URL to the modelfarm URL;
+# OpenRouter pipeline must use the real openrouter.ai endpoint.
+# OPENROUTER_API_KEY and OPENROUTER_BASE_URL are intentionally left unset here
+# so the pipeline falls back to https://openrouter.ai/api/v1 by default.
+export OPENROUTER_MODEL="gpt-4o-mini"
+export OPENAI_API_KEY="${AI_INTEGRATIONS_OPENAI_API_KEY:-_placeholder_}"
+export OPENAI_API_BASE="${AI_INTEGRATIONS_OPENAI_BASE_URL:-}"
 
 export DISABLE_RATE_LIMITS=true
 export SECRET_KEY="synapse-replit-dev-secret-key-change-in-production-xyz123"

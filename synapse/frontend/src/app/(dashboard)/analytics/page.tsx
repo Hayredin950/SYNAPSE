@@ -139,6 +139,7 @@ export default function AnalyticsPage() {
   ], [])
 
   return (
+    <div className="flex-1 overflow-y-auto">
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
 
       {/* Header */}
@@ -279,6 +280,7 @@ export default function AnalyticsPage() {
 
       {/* Reading Speed Calibration Modal */}
       {showCalib && <ReadingSpeedCalibration onClose={() => setShowCalib(false)} />}
+    </div>
     </div>
   )
 }

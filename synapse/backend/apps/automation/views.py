@@ -167,26 +167,35 @@ class WorkflowTriggerView(APIView):
                 workers_online = False  # force sync branch below
 
         if not workers_online:
-            # No live Celery worker — run synchronously inside the request so
-            # the workflow actually executes. This is slower but guarantees
-            # behaviour on hosts that haven't deployed a worker service yet.
+            # No live Celery worker — run the workflow in a daemon background
+            # thread so we can return the HTTP 202 response immediately without
+            # blocking the request for the full duration of the task.
+            import threading
+
             logger.warning(
-                "No Celery worker responding; running workflow %s synchronously.",
+                "No Celery worker responding; running workflow %s in background thread.",
                 workflow.id,
             )
-            run.celery_task_id = "sync_fallback"
+            run.celery_task_id = "thread_fallback"
             run.save(update_fields=["celery_task_id"])
             task_id = run.celery_task_id
-            try:
-                execute_workflow(str(workflow.id), run_id=str(run.id))
-            except Exception as exec_err:
-                # Surface execution errors on the run record so the UI shows them
-                logger.exception("Synchronous workflow execution failed.")
-                run.refresh_from_db()
-                if run.status not in ("success", "failed"):
-                    run.status = "failed"
-                    run.error_message = str(exec_err)[:500]
-                    run.save(update_fields=["status", "error_message"])
+
+            def _run_in_thread():
+                try:
+                    execute_workflow(str(workflow.id), run_id=str(run.id))
+                except Exception as exec_err:
+                    logger.exception("Background-thread workflow execution failed.")
+                    try:
+                        run.refresh_from_db()
+                        if run.status not in ("success", "failed"):
+                            run.status = "failed"
+                            run.error_message = str(exec_err)[:500]
+                            run.save(update_fields=["status", "error_message"])
+                    except Exception:
+                        pass
+
+            t = threading.Thread(target=_run_in_thread, daemon=True)
+            t.start()
 
         logger.info(
             "Workflow %s manually triggered by %s. run=%s celery_task=%s",

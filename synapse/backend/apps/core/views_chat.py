@@ -860,6 +860,17 @@ class ChatView(APIView):  # TASK-501-B2: ChatRateThrottle applied
                 )
                 http_status = status.HTTP_429_TOO_MANY_REQUESTS
             elif (
+                "replit ai integrations is not configured" in exc_low
+                or "not configured" in exc_low
+                or "404" in exc_low
+            ):
+                user_msg = (
+                    "AI is not yet activated for this project. Please enable the "
+                    "Replit AI Integration in the Replit UI (Tools → AI → OpenAI), "
+                    "or add your own API key in Settings → AI Engine."
+                )
+                http_status = status.HTTP_503_SERVICE_UNAVAILABLE
+            elif (
                 "api_key" in exc_low
                 or "no ai provider" in exc_low
                 or "api key not configured" in exc_low
@@ -972,6 +983,11 @@ class ChatStreamView(APIView):
                     or "quota" in exc_str
                 ):
                     msg = "All AI quota limits reached. Please try again in a few minutes or add more API keys."
+                elif (
+                    "replit ai integrations is not configured" in exc_str
+                    or "not configured" in exc_str
+                ):
+                    msg = "AI is not yet activated. Please enable the Replit AI Integration in the Replit UI, or add an API key in Settings → AI Engine."
                 elif (
                     "api_key" in exc_str
                     or "invalid" in exc_str

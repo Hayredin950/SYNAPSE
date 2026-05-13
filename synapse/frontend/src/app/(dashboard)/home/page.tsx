@@ -388,7 +388,7 @@ export default function Dashboard() {
         {showProfileBuilder && <InterestProfileBuilder onClose={() => setShowProfileBuilder(false)} />}
 
         {/* ── Hero Banner ──────────────────────────────────────────── */}
-        <div className="relative bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-900 dark:via-indigo-950/80 dark:to-slate-900 px-4 sm:px-6 pt-6 sm:pt-8 pb-10 sm:pb-12 overflow-hidden border-b border-indigo-100 dark:border-transparent">
+        <div className="relative bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-900 dark:via-indigo-950/80 dark:to-slate-900 px-4 sm:px-6 pt-6 sm:pt-8 pb-10 sm:pb-12 border-b border-indigo-100 dark:border-transparent" style={{isolation:'isolate'}}>
           <div className="absolute inset-0 bg-grid-pattern opacity-10 dark:opacity-20" />
           <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-200/40 dark:bg-indigo-600/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
           <div className="absolute bottom-0 left-1/3 w-56 h-56 bg-violet-200/30 dark:bg-cyan-600/15 rounded-full blur-3xl translate-y-1/2" />

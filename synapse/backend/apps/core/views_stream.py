@@ -1,8 +1,12 @@
 """
 SSE (Server-Sent Events) streaming endpoint for real-time content updates.
 
-Streams live content counts to the dashboard so the UI can show "new articles" 
+Streams live content counts to the dashboard so the UI can show "new articles"
 notifications without polling.
+
+Implementation note: Daphne/ASGI runs sync views in a thread pool.
+We cap each SSE connection at MAX_DURATION seconds so threads don't stay
+blocked forever and Daphne is never starved of workers.
 """
 from __future__ import annotations
 
@@ -15,6 +19,12 @@ from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
+
+# Maximum duration (seconds) for a single SSE connection.
+# The browser's EventSource will automatically reconnect after this.
+MAX_DURATION = 240  # 4 minutes
+HEARTBEAT_INTERVAL = 15  # seconds
+CHECK_INTERVAL = 30  # seconds
 
 
 def _get_content_counts() -> dict:
@@ -55,18 +65,18 @@ def _validate_token(token: str) -> bool:
 
 def _event_stream():
     """
-    Generator that yields SSE-formatted events indefinitely.
+    Generator that yields SSE-formatted events for up to MAX_DURATION seconds.
 
     Events:
       heartbeat      — every 15 s to keep the connection alive
       content_update — whenever scraped content counts change (checked every 30 s)
       init           — sent immediately with current counts
+      close          — sent when MAX_DURATION is reached (signals reconnect)
     """
     last_counts: dict = {}
     last_heartbeat: float = 0.0
     last_check: float = 0.0
-    HEARTBEAT_INTERVAL = 15  # seconds
-    CHECK_INTERVAL = 30  # seconds
+    start_time: float = time.time()
 
     # Send initial snapshot immediately
     counts = _get_content_counts()
@@ -77,6 +87,12 @@ def _event_stream():
 
     while True:
         now = time.time()
+
+        # Gracefully close after MAX_DURATION so the Daphne thread is freed.
+        # The browser's EventSource auto-reconnects after a server close.
+        if now - start_time >= MAX_DURATION:
+            yield f"event: close\ndata: {json.dumps({'reason': 'reconnect', 'ts': int(now)})}\n\n"
+            return
 
         # Heartbeat — keeps the TCP connection alive through proxies
         if now - last_heartbeat >= HEARTBEAT_INTERVAL:
@@ -101,6 +117,8 @@ def _event_stream():
 
             last_check = now
 
+        # Sleep in small increments so we can honour MAX_DURATION precisely
+        # and not block the thread for the full CHECK_INTERVAL at once.
         time.sleep(1)
 
 
