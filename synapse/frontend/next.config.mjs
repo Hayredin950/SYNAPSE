@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Allow cross-origin requests from Replit dev preview domains
-  allowedDevOrigins: ['*.spock.replit.dev', '*.replit.dev', '*.repl.co'],
+  allowedDevOrigins: [
+    '*.spock.replit.dev',
+    '*.janeway.replit.dev',
+    '*.replit.dev',
+    '*.repl.co',
+  ],
   // Transpile ESM-only packages so Next.js / webpack can bundle them correctly.
   transpilePackages: [
     'react-markdown',

@@ -1,45 +1,63 @@
-# [Project name]
+# SYNAPSE — AI-Powered Technology Intelligence Platform
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+SYNAPSE aggregates articles, research papers, GitHub repos, X/Twitter posts and videos, then lets AI agents research, summarize, and automate so engineers never miss a breakthrough.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+| Service | Command | Port |
+|---------|---------|------|
+| Django Backend | `bash synapse/start-backend-replit.sh` | 8000 |
+| Next.js Frontend | `bash synapse/start-frontend-replit.sh` | 3000 |
+| Node API Proxy | (auto via workflow) | 8080 |
+
+- `SYNAPSE Backend` workflow — Django/Daphne ASGI server
+- `artifacts/synapse: web` workflow — Next.js dev server
+- `artifacts/api-server: API Server` — Node.js proxy that forwards `/api/*` to Django
+
+## Demo Login
+
+- **Email:** `demo@synapse.dev`
+- **Password:** `Demo1234!`
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- **Backend:** Django 4.2 + DRF + Daphne (ASGI/WebSockets) + Channels
+- **Frontend:** Next.js 15 + React 19 + TailwindCSS + shadcn/ui + Framer Motion
+- **Database:** PostgreSQL (Replit managed) + pgvector extension
+- **AI Engine:** LangChain + OpenAI (via Replit AI integration proxy)
+- **Task Queue:** Celery (in-memory broker in dev; Redis optional)
+- **Auth:** JWT (djangorestframework-simplejwt)
 
-## Where things live
+## Where Things Live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+| Path | Purpose |
+|------|---------|
+| `synapse/backend/` | Django project root |
+| `synapse/backend/config/settings/replit.py` | Replit-specific Django settings |
+| `synapse/backend/apps/` | Django apps (articles, users, agents, billing, …) |
+| `synapse/frontend/` | Next.js app |
+| `synapse/frontend/next.config.mjs` | Next.js config (proxy rewrites, allowed origins) |
+| `synapse/start-backend-replit.sh` | Backend startup script (sets Replit DB env vars) |
+| `synapse/start-frontend-replit.sh` | Frontend startup script |
+| `artifacts/api-server/src/app.ts` | Node proxy: forwards `/api/*` → Django port 8000 |
 
-## Architecture decisions
+## Architecture Decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- **Dual proxy pattern:** Replit routes `/api` → Node.js API server; that server proxies everything to Django at port 8000 (with `pathRewrite` to restore the `/api` prefix that Express strips).
+- **In-memory Channels:** WebSocket layer uses in-memory channel layer in dev (no Redis required).
+- **Replit AI integration:** Django reads `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` from env for all LLM calls — no external key needed.
+- **Auto email verify:** `replit.py` settings auto-verify email and disable rate limits for easy dev testing.
+- **pgvector:** Installed and enabled in the Replit PG database for semantic search on articles, papers, and videos.
 
-## Product
+## User Preferences
 
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep Django settings module at `config.settings.replit` for Replit environment.
+- Always use `--break-system-packages` when pip-installing in this Nix environment.
+- PYTHONPATH must include both `synapse/backend` and `synapse` for imports to resolve.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- The Replit proxy routes `/api` to the Node API server (port 8080), NOT directly to Django (port 8000). The Node server must be running and proxying to Django.
+- `pnpm run dev` at workspace root is blocked by design — use `restart_workflow` to start services.
+- Django `manage.py` commands need env vars: `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `SECRET_KEY`, `DJANGO_SETTINGS_MODULE`, `PYTHONPATH`, `OPENAI_API_KEY` (dummy value is fine).
+- `pgvector` Python package required at startup (`pip install pgvector --break-system-packages`).
