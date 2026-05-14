@@ -469,14 +469,14 @@ export default function Dashboard() {
                   <p className="text-slate-500 dark:text-slate-400">No repos yet</p>
                 </div>
               )}
+            </div>
+          </div>
 
-              {/* ── Reading Goals Widget ─────────────────────────────── */}
-              <ReadingGoals />
-
-              {/* ── What My Network Is Reading ───────────────────────── */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
-                <NetworkReading />
-              </div>
+          {/* ── Reading Goals + Trending Community (side by side) ─────── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ReadingGoals />
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
+              <NetworkReading />
             </div>
           </div>
 

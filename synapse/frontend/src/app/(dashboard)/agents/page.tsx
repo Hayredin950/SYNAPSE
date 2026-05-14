@@ -10,8 +10,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import remarkMath from 'remark-math'
-import rehypeKatex from 'rehype-katex'
 import { formatDistanceToNow } from 'date-fns'
 import {
   Bot,
@@ -544,8 +542,7 @@ function AgentMarkdown({ content }: { content: string }) {
   return (
     <div className="prose prose-sm prose-slate dark:prose-invert max-w-none">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        remarkPlugins={[remarkGfm]}
         components={{
           code({ className, children, ...props }: any) {
             const language = (className ?? '').replace('language-', '').trim()

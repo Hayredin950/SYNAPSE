@@ -59,10 +59,8 @@ const nextConfig = {
   },
   experimental: {
     optimizePackageImports: [
-      'framer-motion',
       'recharts',
       '@radix-ui/react-dialog',
-      '@tanstack/react-query',
     ],
   },
   env: {
@@ -87,40 +85,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  webpack(config, { isServer }) {
-    if (!isServer) {
-      config.optimization.splitChunks = {
-        ...config.optimization.splitChunks,
-        cacheGroups: {
-          ...(config.optimization.splitChunks?.cacheGroups ?? {}),
-          recharts: {
-            test: /[\\/]node_modules[\\/]recharts[\\/]/,
-            name: 'recharts',
-            chunks: 'all',
-            priority: 30,
-          },
-          framerMotion: {
-            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
-            name: 'framer-motion',
-            chunks: 'all',
-            priority: 29,
-          },
-          markdown: {
-            test: /[\\/]node_modules[\\/](react-markdown|remark|rehype|micromark|katex)[\\/]/,
-            name: 'markdown',
-            chunks: 'all',
-            priority: 28,
-          },
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-            priority: 10,
-            reuseExistingChunk: true,
-          },
-        },
-      };
-    }
+  webpack(config) {
     return config;
   },
 }

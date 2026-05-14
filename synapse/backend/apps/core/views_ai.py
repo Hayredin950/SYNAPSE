@@ -192,10 +192,19 @@ def catch_me_up(request):
 
     cutoff = timezone.now() - timedelta(days=days)
     articles, papers, repos = [], [], []
+    user = request.user
+    is_personalized = False
 
     try:
-        from apps.articles.models import Article
-        qs = Article.objects.filter(scraped_at__gte=cutoff).order_by("-scraped_at")[:20]
+        from apps.articles.models import Article, UserArticle
+        # Try user-specific content first (linked via UserArticle)
+        user_article_ids = UserArticle.objects.filter(user=user).values_list("article_id", flat=True)
+        qs = Article.objects.filter(id__in=user_article_ids, scraped_at__gte=cutoff).order_by("-scraped_at")[:20]
+        if qs.exists():
+            is_personalized = True
+        else:
+            # Fall back to global recent content
+            qs = Article.objects.filter(scraped_at__gte=cutoff).order_by("-scraped_at")[:20]
         articles = [{"title": a.title, "summary": (a.summary or "")[:200], "source": a.source_type} for a in qs]
     except Exception:
         pass
@@ -215,7 +224,16 @@ def catch_me_up(request):
         pass
 
     if not articles and not papers and not repos:
-        return Response({"success": True, "brief": "No new content found in the last few days. Check back soon!"})
+        return Response({
+            "success": True,
+            "brief": (
+                "## Nothing yet for this time window\n\n"
+                "No content found in the last {days} day{s}. "
+                "Run the automation from the **Automation** page to fetch the latest articles, "
+                "papers, and repositories for your watchlist.\n\n"
+                "> **Tip:** Shorter windows (1d) need very recent data. Try 7d for a broader look."
+            ).format(days=days, s="s" if days != 1 else ""),
+        })
 
     content_summary = ""
     if articles:

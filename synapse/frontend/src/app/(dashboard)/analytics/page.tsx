@@ -61,12 +61,41 @@ function StatCard({ icon: Icon, label, value, sub, colour }: any) {
   )
 }
 
-// ── Generate week-over-week reading data from local + API ─────────────────────
+// ── Generate week-over-week reading data from real API dates ──────────────────
 function useWeeklyData() {
   const { data: articles } = useQuery({
     queryKey: ['analytics-articles'],
-    queryFn: () => api.get('/articles/?limit=100&ordering=-scraped_at').then(r =>
-      Array.isArray(r.data?.results) ? r.data.results : []),
+    queryFn: () => api.get('/articles/?page_size=200&ordering=-scraped_at').then(r => {
+      const d = r.data
+      if (Array.isArray(d)) return d
+      if (Array.isArray(d?.data)) return d.data
+      if (Array.isArray(d?.results)) return d.results
+      return []
+    }),
+    staleTime: 5 * 60000,
+  })
+
+  const { data: papers } = useQuery({
+    queryKey: ['analytics-papers'],
+    queryFn: () => api.get('/papers/?page_size=100&ordering=-fetched_at').then(r => {
+      const d = r.data
+      if (Array.isArray(d)) return d
+      if (Array.isArray(d?.data)) return d.data
+      if (Array.isArray(d?.results)) return d.results
+      return []
+    }),
+    staleTime: 5 * 60000,
+  })
+
+  const { data: repos } = useQuery({
+    queryKey: ['analytics-repos'],
+    queryFn: () => api.get('/repos/?page_size=100&ordering=-scraped_at').then(r => {
+      const d = r.data
+      if (Array.isArray(d)) return d
+      if (Array.isArray(d?.data)) return d.data
+      if (Array.isArray(d?.results)) return d.results
+      return []
+    }),
     staleTime: 5 * 60000,
   })
 
@@ -79,35 +108,55 @@ function useWeeklyData() {
       const key = d.toISOString().slice(0, 10)
       days[key] = {
         date: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
-        articles: Math.floor(Math.random() * 8) + 1,
-        papers: Math.floor(Math.random() * 3),
-        repos: Math.floor(Math.random() * 4),
+        articles: 0,
+        papers: 0,
+        repos: 0,
       }
     }
+    // Count real articles by scraped_at date
+    if (Array.isArray(articles)) {
+      articles.forEach((a: any) => {
+        const key = a.scraped_at?.slice(0, 10)
+        if (key && days[key]) days[key].articles++
+      })
+    }
+    // Count real papers by fetched_at date
+    if (Array.isArray(papers)) {
+      papers.forEach((p: any) => {
+        const key = p.fetched_at?.slice(0, 10) || p.scraped_at?.slice(0, 10)
+        if (key && days[key]) days[key].papers++
+      })
+    }
+    // Count real repos by scraped_at date
+    if (Array.isArray(repos)) {
+      repos.forEach((r: any) => {
+        const key = r.scraped_at?.slice(0, 10)
+        if (key && days[key]) days[key].repos++
+      })
+    }
     return Object.values(days)
-  }, [articles])
+  }, [articles, papers, repos])
 }
 
 function useTopicData() {
   const { data } = useQuery({
     queryKey: ['analytics-trends'],
-    queryFn: () => api.get('/trends/?ordering=-trend_score&limit=20').then(r =>
-      Array.isArray(r.data?.results) ? r.data.results : []),
+    queryFn: () => api.get('/trends/?ordering=-trend_score&limit=20').then(r => {
+      const d = r.data
+      if (Array.isArray(d)) return d
+      if (Array.isArray(d?.data)) return d.data
+      if (Array.isArray(d?.results)) return d.results
+      return []
+    }),
     staleTime: 10 * 60000,
   })
 
   return useMemo(() => {
-    const topics: Record<string, number> = {}
-    if (Array.isArray(data)) {
-      data.slice(0, 7).forEach((t: any) => {
-        topics[t.technology_name || t.name] = Math.round(t.trend_score || Math.random() * 100)
-      })
-    }
-    if (Object.keys(topics).length === 0) {
-      const defaults = ['AI/ML', 'Rust', 'TypeScript', 'DevOps', 'Web3', 'Databases', 'Cloud']
-      defaults.forEach(d => { topics[d] = Math.floor(Math.random() * 80) + 20 })
-    }
-    return Object.entries(topics).map(([name, value]) => ({ name, value }))
+    if (!Array.isArray(data) || data.length === 0) return []
+    return data.slice(0, 7).map((t: any) => ({
+      name: t.technology_name || t.name || 'Unknown',
+      value: Math.round(t.trend_score ?? 0),
+    })).filter(t => t.name && t.value > 0)
   }, [data])
 }
 
@@ -129,14 +178,27 @@ export default function AnalyticsPage() {
   const bookmarkCount = bookmarks?.length ?? 0
   const totalArticles = weeklyData.reduce((s, d) => s + d.articles, 0)
 
-  const sourceData = useMemo(() => [
-    { name: 'Hacker News', value: 35 },
-    { name: 'arXiv',       value: 20 },
-    { name: 'GitHub',      value: 18 },
-    { name: 'Reddit',      value: 14 },
-    { name: 'YouTube',     value: 8  },
-    { name: 'Other',       value: 5  },
-  ], [])
+  const { data: allArticles } = useQuery({
+    queryKey: ['analytics-articles'],
+    staleTime: 5 * 60000,
+  })
+
+  const sourceData = useMemo(() => {
+    const items: any[] = Array.isArray(allArticles) ? allArticles
+      : Array.isArray((allArticles as any)?.data) ? (allArticles as any).data
+      : Array.isArray((allArticles as any)?.results) ? (allArticles as any).results
+      : []
+    if (items.length === 0) return []
+    const counts: Record<string, number> = {}
+    items.forEach((a: any) => {
+      const src = a.source_type || a.source || 'Other'
+      counts[src] = (counts[src] || 0) + 1
+    })
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 7)
+  }, [allArticles])
 
   return (
     <div className="flex-1 overflow-y-auto">
