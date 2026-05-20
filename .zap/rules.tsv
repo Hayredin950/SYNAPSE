@@ -1,0 +1,26 @@
+# OWASP ZAP rules configuration
+# Format: ruleId	IGNORE|WARN|FAIL	optional_message
+#
+# Phase 9.1 — Security Hardening
+# Adjust severity levels based on known false positives
+
+# Info leakage via headers — WARN (nginx removes Server header)
+10021	WARN	Server header leakage
+
+# Cookie without SameSite — WARN (handled in Django settings)
+10054	WARN	Cookie SameSite attribute
+
+# CSP issues — WARN (we have a strict CSP via middleware)
+10055	WARN	Content Security Policy
+
+# Anti-clickjacking — WARN (X-Frame-Options=DENY set in Django + Nginx)
+10020	WARN	Anti-clickjacking header
+
+# Missing HSTS — IGNORE (set via Nginx HSTS header)
+10035	IGNORE	Missing HSTS
+
+# Timestamp disclosure — IGNORE (not sensitive in API context)
+10096	IGNORE	Timestamp disclosure
+
+# Cross-Domain Misconfiguration — WARN
+10098	WARN	Cross-Domain misconfiguration
