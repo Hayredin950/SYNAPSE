@@ -206,3 +206,4 @@ def get_budget_status(user_id: str, role: str = "user") -> dict:
         "remaining_cents": max(0, budget_cents - used),
         "reset_at": f"{today}T23:59:59Z",
     }
+    }
