@@ -181,3 +181,6 @@
 ### 2026-05-08T11:13:46
 - style: align with enterprise standards
 
+### 2026-05-25T10:56:46
+- docs: update technical architecture
+
