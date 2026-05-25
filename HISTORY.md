@@ -187,3 +187,6 @@
 ### 2026-05-25T21:43:46
 - perf: enhance runtime performance
 
+### 2026-05-25T21:21:46
+- docs: update technical architecture
+
