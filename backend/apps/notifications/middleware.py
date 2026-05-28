@@ -51,3 +51,4 @@ class JwtAuthMiddleware(BaseMiddleware):
 
         scope["user"] = await get_user_from_token(token) if token else AnonymousUser()
         return await super().__call__(scope, receive, send)
+        return await super().__call__(scope, receive, send)
