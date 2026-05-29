@@ -202,3 +202,6 @@
 ### 2026-05-29T11:02:46
 - perf: enhance runtime performance
 
+### 2026-05-29T11:38:46
+- test: expand coverage for critical paths
+
