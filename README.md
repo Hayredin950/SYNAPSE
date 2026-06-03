@@ -55,4 +55,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 **Hayredin Mohammed**
-- GitHub: [@HayreKhan750](https://github.com/HayreKhan750)
+- GitHub: [@HayreBuilds](https://github.com/HayreBuilds)
