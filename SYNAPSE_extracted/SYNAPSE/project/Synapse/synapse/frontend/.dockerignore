@@ -1,9 +1,0 @@
-node_modules
-.next
-.git
-.gitignore
-*.log
-*.md
-.env*.local
-coverage
-.nyc_output
