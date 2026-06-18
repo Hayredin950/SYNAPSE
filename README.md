@@ -1,6 +1,6 @@
 <div align="center">
 
-![SYNAPSE Logo](https://coresg-normal.trae.ai/api/ide/v1/text-to-image?prompt=SYNAPSE%20AI%20platform%20logo%20with%20neural%20connections%20and%20blue-purple%20theme&image_size=square_hd)
+![SYNAPSE Logo](docs/assets/synapse-logo.png)
 
 # 🚀 SYNAPSE
 **FAANG-Grade Tech Intelligence & RAG Platform**
