@@ -1,6 +1,6 @@
 <div align="center">
 
-![SYNAPSE Logo](docs/assets/synapse-logo.png)
+<img src="docs/assets/synapse-logo.png" alt="SYNAPSE Logo" height="400">
 
 # 🚀 SYNAPSE
 **FAANG-Grade Tech Intelligence & RAG Platform**
