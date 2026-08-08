@@ -1,0 +1,142 @@
+{
+  "description": "SYNAPSE Business Metrics — signups, AI queries, documents, searches, bookmarks",
+  "editable": true,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "📈 Growth Metrics",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "steps": [{ "color": "green", "value": null }] } } },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 1 },
+      "id": 1,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "title": "Total Signups",
+      "type": "stat",
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(synapse_user_signups_total)", "legendFormat": "Signups", "refId": "A" }]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 1 },
+      "id": 2,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "title": "AI Queries (Total)",
+      "type": "stat",
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(synapse_ai_queries_total)", "legendFormat": "AI Queries", "refId": "A" }]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 1 },
+      "id": 3,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "title": "Documents Generated",
+      "type": "stat",
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(synapse_documents_generated_total)", "refId": "A" }]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 1 },
+      "id": 4,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "title": "Articles Scraped",
+      "type": "stat",
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(synapse_articles_scraped_total)", "refId": "A" }]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 1 },
+      "id": 5,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "title": "Total Searches",
+      "type": "stat",
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(synapse_searches_total)", "refId": "A" }]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 1 },
+      "id": 6,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value" },
+      "title": "Automation Runs",
+      "type": "stat",
+      "targets": [{ "datasource": "Prometheus", "expr": "sum(synapse_automation_runs_total)", "refId": "A" }]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "📊 Trends (rate per hour)",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 10,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "Signups & Logins per Hour",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": "Prometheus", "expr": "sum(increase(synapse_user_signups_total[1h]))", "legendFormat": "Signups/h", "refId": "A" },
+        { "datasource": "Prometheus", "expr": "sum(increase(synapse_user_logins_total[1h]))", "legendFormat": "Logins/h", "refId": "B" }
+      ]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 11,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "title": "AI Queries by Type per Hour",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": "Prometheus", "expr": "sum by (type)(increase(synapse_ai_queries_total[1h]))", "legendFormat": "{{ type }}", "refId": "A" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 102,
+      "title": "⚙️ Celery Tasks",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "id": 20,
+      "title": "Task Success Rate",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": "Prometheus", "expr": "rate(synapse_automation_runs_total{status='success'}[5m]) / rate(synapse_automation_runs_total[5m]) * 100", "legendFormat": "Success %", "refId": "A" }
+      ]
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 2 } } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "id": 21,
+      "title": "Documents Generated by Type",
+      "type": "timeseries",
+      "targets": [
+        { "datasource": "Prometheus", "expr": "sum by (doc_type)(increase(synapse_documents_generated_total[1h]))", "legendFormat": "{{ doc_type }}", "refId": "A" }
+      ]
+    }
+  ],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "tags": ["synapse", "business", "analytics"],
+  "time": { "from": "now-24h", "to": "now" },
+  "timezone": "browser",
+  "title": "SYNAPSE — Business Metrics",
+  "uid": "synapse-business",
+  "version": 1
+}

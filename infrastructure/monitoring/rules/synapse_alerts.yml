@@ -1,0 +1,104 @@
+groups:
+
+  # ── API Availability ─────────────────────────────────────────────────────────
+  - name: api_availability
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(django_http_responses_total_by_status_view_method_total{status=~"5.."}[5m]))
+          /
+          sum(rate(django_http_responses_total_by_status_view_method_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "High 5xx error rate ({{ $value | humanizePercentage }})"
+          description: "Error rate exceeds 5% — check Django logs immediately."
+          runbook: "https://github.com/HayreKhan750/SYNAPSE/blob/main/DEPLOYMENT.md#runbook-high-error-rate"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(django_http_requests_latency_seconds_by_view_method_bucket[5m]))
+            by (le, view)) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 latency above 2s (view: {{ $labels.view }})"
+          description: "Requests taking >2s at 95th percentile."
+
+  # ── System Resources ─────────────────────────────────────────────────────────
+  - name: system_resources
+    rules:
+      - alert: HighCPU
+        expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage {{ $value | humanize }}% on {{ $labels.instance }}"
+
+      - alert: HighMemory
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage {{ $value | humanize }}% on {{ $labels.instance }}"
+
+      - alert: DiskSpaceLow
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} * 100 < 15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low disk space: {{ $value | humanize }}% free on {{ $labels.instance }}"
+
+  # ── Celery ───────────────────────────────────────────────────────────────────
+  - name: celery
+    rules:
+      - alert: CeleryQueueBacklog
+        expr: flower_events_total{type="task-received"} - flower_events_total{type="task-succeeded"} > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery queue backlog > 100 tasks"
+
+  # ── Database ─────────────────────────────────────────────────────────────────
+  - name: database
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is DOWN"
+
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_activity_count > 150
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connections high: {{ $value }}/200"
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis is DOWN"
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Redis memory usage {{ $value | humanize }}%"
