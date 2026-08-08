@@ -1,0 +1,21 @@
+# Generated migration — Phase 2.3 Vector Search
+# Enables the pgvector extension in PostgreSQL.
+# SQLite-safe: skips the CREATE EXTENSION statement on non-PostgreSQL backends.
+
+from django.db import migrations
+
+
+def enable_pgvector(apps, schema_editor):
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ("repositories", "0001_initial"),
+    ]
+
+    operations = [
+        migrations.RunPython(enable_pgvector, migrations.RunPython.noop),
+    ]

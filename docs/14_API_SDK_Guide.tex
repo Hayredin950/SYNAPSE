@@ -1,0 +1,2903 @@
+\documentclass{report}
+\usepackage[latin1]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    breakatwhitespace=true,
+    frame=single,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue!60!black},
+    commentstyle=\color{gray!60},
+    stringstyle=\color{red!70!black},
+    showstringspaces=false,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    numbersep=5pt,
+    tabsize=2
+}
+
+\title{SYNAPSE API SDK Guide}
+\author{SYNAPSE Development Team}
+\date{March 2026}
+
+\pagestyle{fancy}
+\fancyhf{}
+\chead{SYNAPSE API SDK Guide}
+\rhead{Version 1.0.0}
+\lfoot{Page \thepage\ of \pageref{LastPage}}
+\cfoot{}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+
+\section{Overview}
+
+The SYNAPSE API is a comprehensive REST API built with Django and FastAPI that provides developers with programmatic access to the world's largest curated technology knowledge base. The API enables integration of SYNAPSE's powerful capabilities into custom applications, workflows, and automation systems.
+
+SYNAPSE API offers the following core capabilities:
+
+\begin{itemize}
+    \item Access to curated technology articles, research papers, and code repositories
+    \item Semantic search across all content with advanced filtering capabilities
+    \item AI-powered chat and content summarization
+    \item Autonomous agent task execution for document generation and analysis
+    \item Workflow automation and customization
+    \item Real-time trend analysis and technology radar
+    \item Webhook support for event-driven integrations
+    \item WebSocket and Server-Sent Events (SSE) for real-time updates
+\end{itemize}
+
+\section{Authentication Overview}
+
+SYNAPSE API uses JWT (JSON Web Token) Bearer token authentication as the primary authentication method. Developers can authenticate using:
+
+\begin{enumerate}
+    \item API Key: A long-lived key issued for server-to-server communication
+    \item JWT Bearer Token: Short-lived access tokens obtained through the login flow
+\end{enumerate}
+
+All API requests must include the authentication token in the Authorization header:
+
+\begin{lstlisting}[language=bash]
+Authorization: Bearer YOUR_ACCESS_TOKEN
+\end{lstlisting}
+
+\section{Base URL and Versioning}
+
+The base URL for all API requests is:
+
+\begin{lstlisting}[language=bash]
+https://api.synapse.ai/api/v1/
+\end{lstlisting}
+
+SYNAPSE follows semantic versioning. The current version is v1, which is reflected in all endpoint URLs. Future major version changes will be available at /api/v2/, /api/v3/, etc.
+
+\section{Rate Limits}
+
+The SYNAPSE API implements rate limiting based on subscription tier:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Tier} & \textbf{Rate Limit} & \textbf{Burst Allowance} \\
+\midrule
+Free & 100 requests/minute & 150 requests/minute \\
+Pro & 1000 requests/minute & 1500 requests/minute \\
+Enterprise & Unlimited & Unlimited \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Rate limits are reset on a rolling basis every 60 seconds. Burst allowances permit temporary traffic spikes beyond the stated limit.
+
+\section{Response Format}
+
+All API responses follow a standardized JSON envelope format:
+
+\begin{lstlisting}[language=bash]
+{
+  "success": true,
+  "data": { /* response data */ },
+  "error": null,
+  "meta": {
+    "timestamp": "2026-03-15T10:30:45Z",
+    "request_id": "req_abc123xyz",
+    "version": "1.0.0"
+  }
+}
+\end{lstlisting}
+
+For successful requests, the \texttt{success} field is \texttt{true}, data is populated, and \texttt{error} is \texttt{null}. For failed requests, \texttt{success} is \texttt{false}, \texttt{data} is \texttt{null}, and \texttt{error} contains error details.
+
+\section{Error Codes Reference}
+
+The following table lists standard error codes returned by the SYNAPSE API:
+
+\begin{center}
+\begin{tabular}{llp{4cm}}
+\toprule
+\textbf{Code} & \textbf{HTTP Status} & \textbf{Description} \\
+\midrule
+INVALID\_REQUEST & 400 & Request validation failed \\
+UNAUTHORIZED & 401 & Missing or invalid authentication token \\
+FORBIDDEN & 403 & Insufficient permissions for resource \\
+NOT\_FOUND & 404 & Resource not found \\
+CONFLICT & 409 & Resource conflict (e.g., duplicate) \\
+RATE\_LIMITED & 429 & Request rate limit exceeded \\
+INTERNAL\_ERROR & 500 & Internal server error \\
+SERVICE\_UNAVAILABLE & 503 & Service temporarily unavailable \\
+AUTH\_EXPIRED & 401 & Authentication token expired \\
+AUTH\_INVALID & 401 & Authentication token invalid or malformed \\
+VALIDATION\_ERROR & 400 & Request parameters validation failed \\
+NOT\_IMPLEMENTED & 501 & Feature not yet implemented \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{SDK Availability}
+
+Official SYNAPSE SDKs are available for the following platforms:
+
+\begin{enumerate}
+    \item Python 3.8+ - \texttt{synapse-sdk} package
+    \item JavaScript/TypeScript - \texttt{@synapse-ai/sdk} package
+\end{enumerate}
+
+These SDKs provide type safety, automatic error handling, built-in retry logic, and convenient methods for all API endpoints. SDKs can be installed via package managers (\texttt{pip} for Python, \texttt{npm} for JavaScript/TypeScript).
+
+\chapter{Python SDK}
+
+\section{Installation}
+
+Install the SYNAPSE Python SDK via pip:
+
+\begin{lstlisting}[language=bash]
+pip install synapse-sdk
+\end{lstlisting}
+
+The SDK requires Python 3.8 or higher. For async support, install with the async extra:
+
+\begin{lstlisting}[language=bash]
+pip install synapse-sdk[async]
+\end{lstlisting}
+
+\section{Client Initialization}
+
+Initialize the SYNAPSE client with your API key:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+# Initialize with API key
+client = SynapseClient(api_key='your_api_key_here')
+
+# Or initialize with explicit token (after obtaining via login)
+client = SynapseClient(token='your_access_token')
+
+# Optional: specify custom base URL or timeout
+client = SynapseClient(
+    api_key='your_api_key',
+    base_url='https://api.synapse.ai/api/v1/',
+    timeout=30
+)
+\end{lstlisting}
+
+\section{Authentication}
+
+\subsection{Token-based Authentication}
+
+Authenticate using email and password to obtain a JWT token:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient()
+token = client.auth.login(
+    email='user@example.com',
+    password='secure_password'
+)
+
+# Token is automatically stored and used for subsequent requests
+# Token will be automatically refreshed when expired
+\end{lstlisting}
+
+\subsection{API Key Authentication}
+
+For server-to-server integrations, use API key authentication:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+# Initialize with API key for seamless authentication
+client = SynapseClient(api_key='sk_live_abc123xyz')
+
+# All requests are automatically authenticated
+response = client.articles.list()
+\end{lstlisting}
+
+\subsection{Token Auto-Refresh}
+
+The SDK automatically handles token refresh:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='your_api_key')
+
+# If token expires, SDK automatically refreshes it
+# behind the scenes. No additional code needed.
+for article in client.articles.list(page_size=100):
+    print(article.title)
+\end{lstlisting}
+
+\section{Articles API}
+
+\subsection{List Articles}
+
+Retrieve paginated list of articles:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='your_api_key')
+
+# List all articles
+response = client.articles.list()
+for article in response.results:
+    print(f"{article.id}: {article.title}")
+
+# Filter by topic
+response = client.articles.list(topic='machine-learning')
+
+# Pagination
+response = client.articles.list(page=2, page_size=50)
+print(f"Total articles: {response.total}")
+print(f"Pages: {response.total_pages}")
+\end{lstlisting}
+
+\subsection{Get Article}
+
+Retrieve a specific article by ID:
+
+\begin{lstlisting}[language=Python]
+article = client.articles.get('article_id_123')
+print(article.title)
+print(article.content)
+print(article.topic)
+print(article.published_at)
+print(article.source_url)
+\end{lstlisting}
+
+\subsection{Search Articles}
+
+Search articles with semantic search:
+
+\begin{lstlisting}[language=Python]
+# Semantic search (default)
+results = client.articles.search(
+    query='transformer models in NLP',
+    semantic=True
+)
+
+# Keyword search
+results = client.articles.search(
+    query='attention mechanism',
+    semantic=False
+)
+
+# Search with filters
+results = client.articles.search(
+    query='deep learning',
+    semantic=True,
+    topic='artificial-intelligence',
+    min_score=0.7
+)
+\end{lstlisting}
+
+\subsection{Bookmark Article}
+
+Bookmark an article for later reference:
+
+\begin{lstlisting}[language=Python]
+# Bookmark an article
+client.articles.bookmark(article_id='article_123')
+
+# List bookmarks
+bookmarks = client.articles.list_bookmarks()
+
+# Remove bookmark
+client.articles.unbookmark(article_id='article_123')
+\end{lstlisting}
+
+\section{Papers API}
+
+\subsection{List Papers}
+
+Retrieve research papers:
+
+\begin{lstlisting}[language=Python]
+# List all papers
+papers = client.papers.list()
+
+# Filter by category
+papers = client.papers.list(category='natural-language-processing')
+
+# Filter by difficulty
+papers = client.papers.list(difficulty='advanced')
+
+# Combined filters
+papers = client.papers.list(
+    category='computer-vision',
+    difficulty='intermediate'
+)
+
+# Pagination
+papers = client.papers.list(page=1, page_size=20)
+\end{lstlisting}
+
+\subsection{Get Paper}
+
+Retrieve a specific paper:
+
+\begin{lstlisting}[language=Python]
+paper = client.papers.get('paper_id_456')
+print(paper.title)
+print(paper.authors)
+print(paper.abstract)
+print(paper.pdf_url)
+print(paper.published_date)
+\end{lstlisting}
+
+\section{Repositories API}
+
+\subsection{Trending Repositories}
+
+Get trending code repositories:
+
+\begin{lstlisting}[language=Python]
+# Trending repositories overall
+repos = client.repos.trending()
+
+# Filter by programming language
+repos = client.repos.trending(language='python')
+
+# Filter by time period
+repos = client.repos.trending(period='weekly')  # daily, weekly, monthly
+
+# Combined filters
+repos = client.repos.trending(
+    language='typescript',
+    period='monthly'
+)
+
+# Iterate through results
+for repo in repos.results:
+    print(f"{repo.owner}/{repo.name}: {repo.stars} stars")
+\end{lstlisting}
+
+\section{AI Chat API}
+
+\subsection{Send Chat Message}
+
+Chat with SYNAPSE AI:
+
+\begin{lstlisting}[language=Python]
+# Simple chat
+response = client.ai.chat(
+    message='What are the latest advances in transformer models?'
+)
+print(response.reply)
+
+# Conversation with context
+response = client.ai.chat(
+    message='Tell me more about attention mechanisms',
+    conversation_id='conv_789'
+)
+\end{lstlisting}
+
+\subsection{Summarize Content}
+
+Generate summaries of content:
+
+\begin{lstlisting}[language=Python]
+# Summarize an article
+summary = client.ai.summarize(
+    content_type='article',
+    content_id='article_123'
+)
+print(summary.summary_text)
+
+# Summarize a paper
+summary = client.ai.summarize(
+    content_type='paper',
+    content_id='paper_456'
+)
+\end{lstlisting}
+
+\section{Agents API}
+
+\subsection{Create Task}
+
+Create an autonomous agent task:
+
+\begin{lstlisting}[language=Python]
+# Create a document generation task
+task = client.agents.create_task(
+    task_type='generate_document',
+    prompt='Create a comprehensive guide on RAG systems',
+    parameters={
+        'document_type': 'pdf',
+        'style': 'technical'
+    }
+)
+print(f"Task ID: {task.id}")
+print(f"Status: {task.status}")
+\end{lstlisting}
+
+\subsection{Get Task Status}
+
+Retrieve task status and results:
+
+\begin{lstlisting}[language=Python]
+import time
+
+task_id = 'task_abc123'
+
+# Poll for task completion
+while True:
+    task = client.agents.get_task(task_id)
+    print(f"Status: {task.status}")
+    
+    if task.status == 'completed':
+        print(f"Result: {task.result}")
+        break
+    elif task.status == 'failed':
+        print(f"Error: {task.error}")
+        break
+    
+    time.sleep(2)
+\end{lstlisting}
+
+\subsection{Generate Document}
+
+Generate documents using AI agents:
+
+\begin{lstlisting}[language=Python]
+# Generate a PDF document
+doc = client.agents.generate_document(
+    doc_type='pdf',
+    topic='Quantum Computing Fundamentals',
+    prompt='Create a beginner friendly guide'
+)
+
+# Generate PowerPoint presentation
+ppt = client.agents.generate_document(
+    doc_type='pptx',
+    topic='Latest AI Trends 2026',
+    prompt='Include charts and key findings'
+)
+
+# Generate Word document
+word = client.agents.generate_document(
+    doc_type='docx',
+    topic='Enterprise ML Deployment',
+    prompt='Technical implementation guide'
+)
+\end{lstlisting}
+
+\section{Workflows API}
+
+\subsection{Create Workflow}
+
+Create automation workflows:
+
+\begin{lstlisting}[language=Python]
+# Create a workflow
+workflow = client.workflows.create(
+    name='Daily AI News Digest',
+    trigger='schedule',
+    trigger_config={'cron': '0 9 * * *'},
+    actions=[
+        {
+            'type': 'fetch_articles',
+            'config': {'topic': 'artificial-intelligence', 'limit': 10}
+        },
+        {
+            'type': 'summarize',
+            'config': {'style': 'brief'}
+        },
+        {
+            'type': 'send_email',
+            'config': {'recipient': 'user@example.com'}
+        }
+    ]
+)
+\end{lstlisting}
+
+\subsection{List Workflows}
+
+Retrieve all workflows:
+
+\begin{lstlisting}[language=Python]
+workflows = client.workflows.list()
+for wf in workflows:
+    print(f"{wf.name}: {wf.status}")
+\end{lstlisting}
+
+\subsection{Trigger Workflow}
+
+Manually trigger a workflow:
+
+\begin{lstlisting}[language=Python]
+result = client.workflows.trigger(workflow_id='workflow_123')
+print(f"Execution ID: {result.execution_id}")
+\end{lstlisting}
+
+\section{Trends API}
+
+\subsection{Get Technology Radar}
+
+Retrieve technology trends and radar:
+
+\begin{lstlisting}[language=Python]
+# Get overall technology radar
+radar = client.trends.get_radar()
+
+# Filter by category
+radar = client.trends.get_radar(category='machine-learning')
+
+# Iterate through trends
+for trend in radar.trends:
+    print(f"{trend.name}: {trend.momentum}")
+\end{lstlisting}
+
+\subsection{Get Timeline}
+
+Get technology timeline:
+
+\begin{lstlisting}[language=Python]
+# Get timeline for a technology
+timeline = client.trends.get_timeline(
+    technology='transformer-models',
+    period='30d'  # 7d, 30d, 90d, 1y
+)
+
+for event in timeline.events:
+    print(f"{event.date}: {event.description}")
+\end{lstlisting}
+
+\section{Async Client}
+
+For high-concurrency applications, use the async client:
+
+\begin{lstlisting}[language=Python]
+import asyncio
+from synapse import SynapseAsyncClient
+
+async def fetch_articles():
+    async with SynapseAsyncClient(api_key='your_api_key') as client:
+        articles = await client.articles.list(page_size=50)
+        return articles
+
+# Run async function
+articles = asyncio.run(fetch_articles())
+\end{lstlisting}
+
+\subsection{Concurrent Requests}
+
+Execute multiple concurrent requests:
+
+\begin{lstlisting}[language=Python]
+import asyncio
+from synapse import SynapseAsyncClient
+
+async def concurrent_requests():
+    async with SynapseAsyncClient(api_key='your_api_key') as client:
+        # Execute multiple requests concurrently
+        articles, papers, repos = await asyncio.gather(
+            client.articles.list(),
+            client.papers.list(),
+            client.repos.trending()
+        )
+        return articles, papers, repos
+
+result = asyncio.run(concurrent_requests())
+\end{lstlisting}
+
+\section{Pagination Helper}
+
+Auto-paginate through large result sets:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='your_api_key')
+
+# Auto-pagination generator
+for article in client.articles.paginate(page_size=100):
+    print(f"Processing: {article.title}")
+    # Automatically fetches next page when exhausted
+\end{lstlisting}
+
+\section{Error Handling}
+
+\subsection{Exception Classes}
+
+The SDK provides specific exception classes:
+
+\begin{lstlisting}[language=Python]
+from synapse import (
+    SynapseAPIError,
+    SynapseAuthError,
+    SynapseRateLimitError,
+    SynapseNotFoundError,
+    SynapseValidationError
+)
+
+try:
+    article = client.articles.get('nonexistent_id')
+except SynapseNotFoundError as e:
+    print(f"Article not found: {e}")
+except SynapseAuthError as e:
+    print(f"Authentication failed: {e}")
+except SynapseRateLimitError as e:
+    print(f"Rate limited. Retry after {e.retry_after} seconds")
+except SynapseValidationError as e:
+    print(f"Invalid parameters: {e}")
+except SynapseAPIError as e:
+    print(f"API error: {e}")
+\end{lstlisting}
+
+\subsection{Retry Logic}
+
+SDK automatically retries on transient failures:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+# Configure retry behavior
+client = SynapseClient(
+    api_key='your_api_key',
+    max_retries=3,
+    retry_backoff_factor=2.0  # exponential backoff
+)
+
+# Automatic retries on 429, 503, 504 errors
+response = client.articles.list()
+\end{lstlisting}
+
+\section{Webhook Handler}
+
+Handle webhooks from SYNAPSE:
+
+\begin{lstlisting}[language=Python]
+from synapse import WebhookHandler
+from flask import Flask, request
+
+app = Flask(__name__)
+webhook_handler = WebhookHandler(secret_key='your_webhook_secret')
+
+@app.route('/webhooks/synapse', methods=['POST'])
+def handle_webhook():
+    try:
+        event = webhook_handler.verify_and_parse(
+            request.data,
+            request.headers.get('X-Signature')
+        )
+        
+        if event.type == 'article.created':
+            print(f"New article: {event.data.title}")
+        elif event.type == 'agent_task.completed':
+            print(f"Task completed: {event.data.task_id}")
+        
+        return {'status': 'ok'}, 200
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return {'error': str(e)}, 400
+
+if __name__ == '__main__':
+    app.run(port=5000)
+\end{lstlisting}
+
+\chapter{JavaScript/TypeScript SDK}
+
+\section{Installation}
+
+Install the SYNAPSE JavaScript/TypeScript SDK via npm:
+
+\begin{lstlisting}[language=bash]
+npm install @synapse-ai/sdk
+\end{lstlisting}
+
+Or with yarn:
+
+\begin{lstlisting}[language=bash]
+yarn add @synapse-ai/sdk
+\end{lstlisting}
+
+For TypeScript projects, type definitions are included by default.
+
+\section{TypeScript Types}
+
+The SDK includes comprehensive TypeScript types:
+
+\begin{lstlisting}[language=Python]
+// Article type
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  topic: string;
+  published_at: string;
+  source_url: string;
+  author: string;
+  read_time_minutes: number;
+}
+
+// Paper type
+interface Paper {
+  id: string;
+  title: string;
+  authors: string[];
+  abstract: string;
+  category: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  pdf_url: string;
+  published_date: string;
+  citations: number;
+}
+
+// Repository type
+interface Repository {
+  id: string;
+  owner: string;
+  name: string;
+  url: string;
+  language: string;
+  stars: number;
+  forks: number;
+  open_issues: number;
+  description: string;
+  last_updated: string;
+}
+
+// AgentTask type
+interface AgentTask {
+  id: string;
+  task_type: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  prompt: string;
+  result?: any;
+  error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Workflow type
+interface Workflow {
+  id: string;
+  name: string;
+  trigger: string;
+  trigger_config: Record<string, any>;
+  actions: WorkflowAction[];
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+}
+\end{lstlisting}
+
+\section{Client Initialization}
+
+Initialize the SYNAPSE client:
+
+\begin{lstlisting}[language=Python]
+import { SynapseClient } from '@synapse-ai/sdk';
+
+// Initialize with API key
+const client = new SynapseClient({
+  apiKey: 'your_api_key_here'
+});
+
+// Or initialize with explicit token
+const client = new SynapseClient({
+  token: 'your_access_token'
+});
+
+// With custom configuration
+const client = new SynapseClient({
+  apiKey: 'your_api_key',
+  baseURL: 'https://api.synapse.ai/api/v1/',
+  timeout: 30000,
+  maxRetries: 3
+});
+\end{lstlisting}
+
+\section{Articles API}
+
+\subsection{List Articles}
+
+\begin{lstlisting}[language=Python]
+// List all articles
+const articles = await client.articles.list();
+
+// With pagination
+const articles = await client.articles.list({
+  page: 1,
+  pageSize: 50
+});
+
+// Filter by topic
+const articles = await client.articles.list({
+  topic: 'machine-learning',
+  page: 1,
+  pageSize: 20
+});
+
+// Iterate results
+articles.results.forEach((article) => {
+  console.log(`${article.id}: ${article.title}`);
+});
+\end{lstlisting}
+
+\subsection{Get Article}
+
+\begin{lstlisting}[language=Python]
+const article = await client.articles.get('article_id_123');
+console.log(article.title);
+console.log(article.content);
+\end{lstlisting}
+
+\subsection{Search Articles}
+
+\begin{lstlisting}[language=Python]
+// Semantic search
+const results = await client.articles.search({
+  query: 'transformer models in NLP',
+  semantic: true
+});
+
+// Keyword search
+const results = await client.articles.search({
+  query: 'attention mechanism',
+  semantic: false
+});
+
+// Search with filters
+const results = await client.articles.search({
+  query: 'deep learning',
+  semantic: true,
+  topic: 'artificial-intelligence',
+  minScore: 0.7
+});
+\end{lstlisting}
+
+\subsection{Bookmark Article}
+
+\begin{lstlisting}[language=Python]
+// Bookmark
+await client.articles.bookmark('article_id_123');
+
+// List bookmarks
+const bookmarks = await client.articles.listBookmarks();
+
+// Remove bookmark
+await client.articles.unbookmark('article_id_123');
+\end{lstlisting}
+
+\section{Papers API}
+
+\begin{lstlisting}[language=Python]
+// List papers
+const papers = await client.papers.list();
+
+// Filter by category
+const papers = await client.papers.list({
+  category: 'natural-language-processing'
+});
+
+// Filter by difficulty
+const papers = await client.papers.list({
+  difficulty: 'advanced'
+});
+
+// Get single paper
+const paper = await client.papers.get('paper_id_456');
+\end{lstlisting}
+
+\section{Repositories API}
+
+\begin{lstlisting}[language=Python]
+// Trending repositories
+const repos = await client.repos.trending();
+
+// Filter by language
+const repos = await client.repos.trending({
+  language: 'python'
+});
+
+// Filter by period
+const repos = await client.repos.trending({
+  period: 'weekly'  // daily, weekly, monthly
+});
+
+// Combined filters
+const repos = await client.repos.trending({
+  language: 'typescript',
+  period: 'monthly'
+});
+\end{lstlisting}
+
+\section{AI Chat API}
+
+\begin{lstlisting}[language=Python]
+// Simple chat
+const response = await client.ai.chat({
+  message: 'What are latest transformer advances?'
+});
+console.log(response.reply);
+
+// Conversation with context
+const response = await client.ai.chat({
+  message: 'Tell me more about attention',
+  conversationId: 'conv_789'
+});
+
+// Summarize content
+const summary = await client.ai.summarize({
+  contentType: 'article',
+  contentId: 'article_123'
+});
+console.log(summary.summaryText);
+\end{lstlisting}
+
+\section{Agents API}
+
+\begin{lstlisting}[language=Python]
+// Create task
+const task = await client.agents.createTask({
+  taskType: 'generate_document',
+  prompt: 'Create guide on RAG systems',
+  parameters: {
+    documentType: 'pdf',
+    style: 'technical'
+  }
+});
+
+// Get task status
+const task = await client.agents.getTask('task_abc123');
+
+// Generate document
+const doc = await client.agents.generateDocument({
+  docType: 'pdf',
+  topic: 'Quantum Computing',
+  prompt: 'Create beginner guide'
+});
+\end{lstlisting}
+
+\section{Workflows API}
+
+\begin{lstlisting}[language=Python]
+// Create workflow
+const workflow = await client.workflows.create({
+  name: 'Daily AI News Digest',
+  trigger: 'schedule',
+  triggerConfig: { cron: '0 9 * * *' },
+  actions: [
+    {
+      type: 'fetch_articles',
+      config: { topic: 'ai', limit: 10 }
+    },
+    {
+      type: 'summarize',
+      config: { style: 'brief' }
+    }
+  ]
+});
+
+// List workflows
+const workflows = await client.workflows.list();
+
+// Trigger workflow
+const result = await client.workflows.trigger('workflow_123');
+\end{lstlisting}
+
+\section{Trends API}
+
+\begin{lstlisting}[language=Python]
+// Get technology radar
+const radar = await client.trends.getRadar();
+
+// Filter by category
+const radar = await client.trends.getRadar({
+  category: 'machine-learning'
+});
+
+// Get timeline
+const timeline = await client.trends.getTimeline({
+  technology: 'transformer-models',
+  period: '30d'  // 7d, 30d, 90d, 1y
+});
+\end{lstlisting}
+
+\section{React Hooks}
+
+\subsection{useSynapseArticles}
+
+\begin{lstlisting}[language=Python]
+import { useSynapseArticles } from '@synapse-ai/sdk/react';
+
+export function ArticleList() {
+  const { articles, loading, error } = useSynapseArticles({
+    topic: 'machine-learning',
+    pageSize: 20
+  });
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      {articles.map((article) => (
+        <div key={article.id}>
+          <h3>{article.title}</h3>
+          <p>{article.content.substring(0, 200)}...</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+\end{lstlisting}
+
+\subsection{useSynapseChat}
+
+\begin{lstlisting}[language=Python]
+import { useSynapseChat } from '@synapse-ai/sdk/react';
+
+export function ChatBox() {
+  const { sendMessage, messages, loading } = useSynapseChat();
+
+  const handleSend = async (message: string) => {
+    const response = await sendMessage(message);
+    console.log(response.reply);
+  };
+
+  return (
+    <div>
+      {messages.map((msg, idx) => (
+        <div key={idx} className={msg.type}>
+          {msg.text}
+        </div>
+      ))}
+      <button 
+        onClick={() => handleSend('Hello')}
+        disabled={loading}
+      >
+        Send
+      </button>
+    </div>
+  );
+}
+\end{lstlisting}
+
+\subsection{useSynapseTrends}
+
+\begin{lstlisting}[language=Python]
+import { useSynapseTrends } from '@synapse-ai/sdk/react';
+
+export function TrendsDashboard() {
+  const { trends, loading } = useSynapseTrends({
+    category: 'machine-learning'
+  });
+
+  if (loading) return <div>Loading trends...</div>;
+
+  return (
+    <ul>
+      {trends.map((trend) => (
+        <li key={trend.id}>
+          {trend.name}: {trend.momentum}
+        </li>
+      ))}
+    </ul>
+  );
+}
+\end{lstlisting}
+
+\section{Error Handling}
+
+\begin{lstlisting}[language=Python]
+import {
+  SynapseAPIError,
+  SynapseAuthError,
+  SynapseRateLimitError,
+  SynapseNotFoundError
+} from '@synapse-ai/sdk';
+
+try {
+  const article = await client.articles.get('invalid_id');
+} catch (error) {
+  if (error instanceof SynapseNotFoundError) {
+    console.log('Article not found');
+  } else if (error instanceof SynapseAuthError) {
+    console.log('Auth failed');
+  } else if (error instanceof SynapseRateLimitError) {
+    console.log(`Rate limited. Retry after ${error.retryAfter}s`);
+  } else if (error instanceof SynapseAPIError) {
+    console.log(`API error: ${error.message}`);
+  }
+}
+\end{lstlisting}
+
+\chapter{Authentication Guide}
+
+\section{Register and Get API Key}
+
+To obtain an API key for the SYNAPSE API:
+
+\begin{enumerate}
+    \item Visit the SYNAPSE dashboard at \texttt{https://dashboard.synapse.ai}
+    \item Navigate to Settings \textgreater{} API Keys
+    \item Click \textquotedblleft Create New Key\textquotedblright
+    \item Give your key a name (e.g., \textquotedblleft Production API Key\textquotedblright)
+    \item Select the appropriate permissions scope
+    \item Copy the generated key and store securely
+\end{enumerate}
+
+API keys are long-lived and should be kept secret. Never commit keys to version control.
+
+\section{JWT Authentication Flow}
+
+The standard JWT authentication flow works as follows:
+
+\begin{enumerate}
+    \item \textbf{Login}: Exchange credentials for access and refresh tokens
+    \item \textbf{Use}: Include access token in Authorization header
+    \item \textbf{Refresh}: When token expires, use refresh token to obtain new access token
+    \item \textbf{Repeat}: Continue using new access token
+\end{enumerate}
+
+\subsection{Login Endpoint}
+
+\begin{lstlisting}[language=bash]
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "secure_password"
+}
+\end{lstlisting}
+
+Response:
+
+\begin{lstlisting}[language=bash]
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+    "expires_in": 3600,
+    "token_type": "Bearer"
+  },
+  "error": null,
+  "meta": { ... }
+}
+\end{lstlisting}
+
+\subsection{Refresh Token Endpoint}
+
+\begin{lstlisting}[language=bash]
+POST /api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs..."
+}
+\end{lstlisting}
+
+\subsection{Python JWT Example}
+
+\begin{lstlisting}[language=Python]
+import requests
+from datetime import datetime, timedelta
+
+class JWTAuthManager:
+    def __init__(self, email, password, base_url):
+        self.email = email
+        self.password = password
+        self.base_url = base_url
+        self.access_token = None
+        self.refresh_token = None
+        self.token_expires = None
+    
+    def login(self):
+        response = requests.post(
+            f'{self.base_url}/auth/login',
+            json={'email': self.email, 'password': self.password}
+        )
+        data = response.json()['data']
+        self.access_token = data['access_token']
+        self.refresh_token = data['refresh_token']
+        self.token_expires = datetime.now() + timedelta(
+            seconds=data['expires_in']
+        )
+    
+    def get_token(self):
+        if self._is_expired():
+            self._refresh()
+        return self.access_token
+    
+    def _is_expired(self):
+        return datetime.now() >= self.token_expires - timedelta(minutes=5)
+    
+    def _refresh(self):
+        response = requests.post(
+            f'{self.base_url}/auth/refresh',
+            json={'refresh_token': self.refresh_token}
+        )
+        data = response.json()['data']
+        self.access_token = data['access_token']
+        self.token_expires = datetime.now() + timedelta(
+            seconds=data['expires_in']
+        )
+\end{lstlisting}
+
+\section{API Key Authentication}
+
+For server-to-server integrations, API key authentication is simpler:
+
+\begin{lstlisting}[language=bash]
+Authorization: Bearer sk_live_abc123xyz
+\end{lstlisting}
+
+API keys are treated the same as JWT tokens in the Authorization header. They do not expire and do not require refresh.
+
+\subsection{Python API Key Example}
+
+\begin{lstlisting}[language=Python]
+import requests
+
+class APIKeyAuth:
+    def __init__(self, api_key):
+        self.api_key = api_key
+    
+    def get_headers(self):
+        return {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+
+auth = APIKeyAuth('sk_live_abc123xyz')
+
+response = requests.get(
+    'https://api.synapse.ai/api/v1/articles/',
+    headers=auth.get_headers()
+)
+\end{lstlisting}
+
+\section{Token Storage Best Practices}
+
+\begin{itemize}
+    \item Store tokens in secure, encrypted storage
+    \item Use environment variables for API keys
+    \item Implement token rotation regularly
+    \item Set appropriate token expiration times
+    \item Never expose tokens in client-side code
+    \item Use HTTPS for all API communication
+    \item Implement secure logout that invalidates tokens
+    \item Monitor token usage for suspicious patterns
+\end{itemize}
+
+\subsection{Secure Token Storage (Python)}
+
+\begin{lstlisting}[language=Python]
+import os
+import json
+from pathlib import Path
+import keyring
+
+class SecureTokenStore:
+    def __init__(self, service_name='synapse-api'):
+        self.service_name = service_name
+    
+    def save_token(self, token_key, token_value):
+        # Use system keyring for storage
+        keyring.set_password(self.service_name, token_key, token_value)
+    
+    def get_token(self, token_key):
+        return keyring.get_password(self.service_name, token_key)
+    
+    def delete_token(self, token_key):
+        keyring.delete_password(self.service_name, token_key)
+
+store = SecureTokenStore()
+store.save_token('access_token', token_value)
+token = store.get_token('access_token')
+\end{lstlisting}
+
+\section{Handling 401 Errors}
+
+A 401 error indicates authentication failure. Common causes:
+
+\begin{itemize}
+    \item Missing or malformed Authorization header
+    \item Token has expired
+    \item Token is invalid or revoked
+    \item Insufficient permissions
+\end{itemize}
+
+\subsection{Automatic Token Refresh (Python)}
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='sk_live_abc123xyz')
+
+try:
+    response = client.articles.list()
+except SynapseAuthError as e:
+    if e.status_code == 401:
+        # Token expired, refresh and retry
+        client.refresh_auth()
+        response = client.articles.list()
+    else:
+        raise
+\end{lstlisting}
+
+\chapter{Webhooks}
+
+\section{Available Webhook Events}
+
+SYNAPSE API supports the following webhook events:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Event Type} & \textbf{Description} \\
+\midrule
+article.created & Triggered when new article is published \\
+article.updated & Triggered when article is updated \\
+trend.updated & Triggered when technology trends change \\
+agent\_task.completed & Triggered when agent task completes \\
+workflow.completed & Triggered when workflow execution finishes \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Webhook Registration}
+
+Register a webhook endpoint via the API:
+
+\begin{lstlisting}[language=bash]
+POST /api/v1/webhooks/
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN
+
+{
+  "url": "https://your-domain.com/webhooks/synapse",
+  "events": ["article.created", "trend.updated"],
+  "active": true
+}
+\end{lstlisting}
+
+Response:
+
+\begin{lstlisting}[language=bash]
+{
+  "success": true,
+  "data": {
+    "id": "webhook_abc123",
+    "url": "https://your-domain.com/webhooks/synapse",
+    "events": ["article.created", "trend.updated"],
+    "active": true,
+    "secret": "whsec_xyz789",
+    "created_at": "2026-03-15T10:30:45Z"
+  },
+  "error": null,
+  "meta": { ... }
+}
+\end{lstlisting}
+
+\section{Webhook Payload Format}
+
+Each webhook includes a standard payload:
+
+\begin{lstlisting}[language=bash]
+{
+  "id": "event_123abc",
+  "type": "article.created",
+  "timestamp": "2026-03-15T10:30:45Z",
+  "data": {
+    "article_id": "article_xyz",
+    "title": "New AI Research Breakthrough",
+    "topic": "artificial-intelligence"
+  }
+}
+\end{lstlisting}
+
+\section{Webhook Signature Verification}
+
+All webhooks are signed with HMAC-SHA256. Verify signatures:
+
+\begin{lstlisting}[language=Python]
+import hmac
+import hashlib
+import json
+
+def verify_webhook_signature(payload, signature, secret):
+    expected_signature = hmac.new(
+        secret.encode(),
+        payload.encode(),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(signature, expected_signature)
+
+# In webhook handler
+payload = request.get_data(as_text=True)
+signature = request.headers.get('X-Signature')
+secret = 'whsec_xyz789'
+
+if verify_webhook_signature(payload, signature, secret):
+    event = json.loads(payload)
+    process_event(event)
+else:
+    return {'error': 'Invalid signature'}, 403
+\end{lstlisting}
+
+\section{Webhook Handler Example}
+
+\subsection{FastAPI Webhook Handler}
+
+\begin{lstlisting}[language=Python]
+from fastapi import FastAPI, Request, HTTPException
+import hmac
+import hashlib
+
+app = FastAPI()
+WEBHOOK_SECRET = 'whsec_xyz789'
+
+@app.post('/webhooks/synapse')
+async def handle_webhook(request: Request):
+    payload = await request.body()
+    signature = request.headers.get('X-Signature')
+    
+    # Verify signature
+    expected_sig = hmac.new(
+        WEBHOOK_SECRET.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    
+    if not hmac.compare_digest(signature, expected_sig):
+        raise HTTPException(status_code=403, detail='Invalid signature')
+    
+    # Process event
+    event = await request.json()
+    
+    if event['type'] == 'article.created':
+        await handle_article_created(event['data'])
+    elif event['type'] == 'agent_task.completed':
+        await handle_task_completed(event['data'])
+    
+    return {'status': 'ok'}
+
+async def handle_article_created(data):
+    print(f"New article: {data['title']}")
+    # Send notification, update database, etc.
+
+async def handle_task_completed(data):
+    print(f"Task completed: {data['task_id']}")
+    # Process task result
+\end{lstlisting}
+
+\section{Retry Policy}
+
+Failed webhook deliveries are retried with exponential backoff:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Attempt} & \textbf{Delay} \\
+\midrule
+1st attempt & Immediate \\
+2nd attempt & 5 minutes \\
+3rd attempt & 25 minutes \\
+4th attempt & 2 hours \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Webhooks are considered failed if they return HTTP status \textgreater= 400 or timeout after 30 seconds. After 4 failed attempts, the webhook is disabled.
+
+\chapter{Real-Time Updates}
+
+\section{WebSocket Endpoint}
+
+Connect to SYNAPSE WebSocket for real-time updates:
+
+\begin{lstlisting}[language=bash]
+wss://api.synapse.ai/ws/
+\end{lstlisting}
+
+WebSocket connections require authentication via token parameter in query string.
+
+\section{Server-Sent Events (SSE) Endpoint}
+
+For simple real-time updates without bidirectional communication:
+
+\begin{lstlisting}[language=bash]
+GET /api/v1/stream/?token=YOUR_TOKEN
+\end{lstlisting}
+
+\section{Available Channels}
+
+Subscribe to the following real-time channels:
+
+\begin{center}
+\begin{tabular}{lp{5cm}}
+\toprule
+\textbf{Channel} & \textbf{Description} \\
+\midrule
+news\_feed & Real-time new articles and papers \\
+github\_trends & Live GitHub trending repositories \\
+agent\_task\_progress & Agent task status updates \\
+ai\_chat\_stream & AI chat token-by-token responses \\
+market\_updates & Technology market insights \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Python SSE Client Example}
+
+\begin{lstlisting}[language=Python]
+import requests
+import json
+
+class SynapseSSEClient:
+    def __init__(self, api_key, channel='news_feed'):
+        self.api_key = api_key
+        self.channel = channel
+        self.base_url = 'https://api.synapse.ai/api/v1'
+    
+    def subscribe(self, callback):
+        headers = {'Authorization': f'Bearer {self.api_key}'}
+        url = f'{self.base_url}/stream/?channel={self.channel}'
+        
+        response = requests.get(url, headers=headers, stream=True)
+        
+        for line in response.iter_lines():
+            if line:
+                try:
+                    data = json.loads(line)
+                    callback(data)
+                except json.JSONDecodeError:
+                    pass
+
+# Usage
+def on_article(data):
+    print(f"New article: {data['title']}")
+
+client = SynapseSSEClient(api_key='your_api_key')
+client.subscribe(on_article)
+\end{lstlisting}
+
+\section{JavaScript EventSource Example}
+
+\begin{lstlisting}[language=Python]
+const token = 'your_access_token';
+const eventSource = new EventSource(
+  'https://api.synapse.ai/api/v1/stream/?channel=news_feed&token=' + token
+);
+
+eventSource.addEventListener('article.created', (event) => {
+  const article = JSON.parse(event.data);
+  console.log('New article:', article.title);
+});
+
+eventSource.addEventListener('error', (event) => {
+  console.error('Connection error:', event);
+  eventSource.close();
+});
+\end{lstlisting}
+
+\section{AI Chat Streaming (SSE)}
+
+Stream AI chat responses token by token:
+
+\begin{lstlisting}[language=Python]
+import requests
+import json
+
+def stream_chat(message, api_key):
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    data = {
+        'message': message,
+        'stream': True
+    }
+    
+    url = 'https://api.synapse.ai/api/v1/ai/chat/'
+    response = requests.post(url, json=data, headers=headers, stream=True)
+    
+    full_response = ''
+    for line in response.iter_lines():
+        if line:
+            try:
+                chunk = json.loads(line)
+                token = chunk.get('token', '')
+                full_response += token
+                print(token, end='', flush=True)
+            except json.JSONDecodeError:
+                pass
+    
+    return full_response
+
+# Usage
+response = stream_chat('Explain transformers', 'your_api_key')
+\end{lstlisting}
+
+\chapter{Rate Limiting}
+
+\section{Rate Limit Headers}
+
+Every API response includes rate limit information:
+
+\begin{lstlisting}[language=bash]
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 987
+X-RateLimit-Reset: 1647345645
+X-RateLimit-Retry-After: 30
+\end{lstlisting}
+
+\begin{itemize}
+    \item \texttt{X-RateLimit-Limit}: Total requests allowed in current window
+    \item \texttt{X-RateLimit-Remaining}: Requests remaining in current window
+    \item \texttt{X-RateLimit-Reset}: Unix timestamp when limit resets
+    \item \texttt{X-RateLimit-Retry-After}: Seconds to wait before retry (on 429)
+\end{itemize}
+
+\section{Rate Limits by Endpoint}
+
+Different endpoints have different rate limits:
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+\textbf{Endpoint} & \textbf{Limit (Pro)} & \textbf{Cost} \\
+\midrule
+/articles/ & 1000/min & 1 req \\
+/search/ & 500/min & 5 req \\
+/ai/chat/ & 100/min & 10 req \\
+/agents/tasks/ & 50/min & 20 req \\
+/webhooks/ & 100/min & 1 req \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Handling 429 Too Many Requests}
+
+When rate limited, implement exponential backoff:
+
+\begin{lstlisting}[language=Python]
+import time
+import requests
+
+def make_request_with_backoff(url, headers, max_retries=3):
+    for attempt in range(max_retries):
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 429:
+            retry_after = int(response.headers.get(
+                'X-RateLimit-Retry-After', 
+                2 ** attempt
+            ))
+            print(f"Rate limited. Waiting {retry_after} seconds...")
+            time.sleep(retry_after)
+            continue
+        
+        return response
+    
+    raise Exception("Max retries exceeded")
+
+# Usage
+response = make_request_with_backoff(
+    'https://api.synapse.ai/api/v1/articles/',
+    headers={'Authorization': 'Bearer token'}
+)
+\end{lstlisting}
+
+\section{SDK Automatic Retry with Backoff}
+
+The Python SDK automatically handles rate limiting:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+# SDK automatically retries on 429 with exponential backoff
+client = SynapseClient(
+    api_key='your_api_key',
+    max_retries=5,
+    retry_backoff_factor=2.0,
+    retry_backoff_max=120  # Max 120 seconds between retries
+)
+
+# This will automatically retry if rate limited
+articles = client.articles.list(page_size=100)
+\end{lstlisting}
+
+\chapter{Pagination}
+
+\section{Standard Pagination Format}
+
+All list endpoints use consistent pagination:
+
+\begin{lstlisting}[language=bash]
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "page_size": 20,
+    "total": 5000,
+    "total_pages": 250,
+    "results": [
+      { "id": "article_1", "title": "..." },
+      { "id": "article_2", "title": "..." }
+    ]
+  },
+  "error": null,
+  "meta": { ... }
+}
+\end{lstlisting}
+
+Fields:
+
+\begin{itemize}
+    \item \texttt{page}: Current page number (1-indexed)
+    \item \texttt{page\_size}: Items per page (default: 20, max: 100)
+    \item \texttt{total}: Total number of items
+    \item \texttt{total\_pages}: Total number of pages
+    \item \texttt{results}: Array of items
+\end{itemize}
+
+\section{Cursor-based Pagination for Real-Time Feeds}
+
+For high-frequency feeds, use cursor pagination:
+
+\begin{lstlisting}[language=bash]
+GET /api/v1/articles/?cursor=abc123xyz&limit=50
+
+{
+  "success": true,
+  "data": {
+    "results": [ ... ],
+    "next_cursor": "def456uvw",
+    "has_more": true
+  }
+}
+\end{lstlisting}
+
+\section{Python Pagination Helper}
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='your_api_key')
+
+# Manual pagination
+page = 1
+while True:
+    response = client.articles.list(page=page, page_size=100)
+    
+    for article in response.results:
+        process_article(article)
+    
+    if page >= response.total_pages:
+        break
+    
+    page += 1
+
+# Auto-pagination with generator
+for article in client.articles.paginate(page_size=100):
+    process_article(article)
+    # Automatically fetches next page when exhausted
+\end{lstlisting}
+
+\section{JavaScript Pagination}
+
+\begin{lstlisting}[language=Python]
+async function fetchAllArticles() {
+  const client = new SynapseClient({ apiKey: 'your_api_key' });
+  let page = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const response = await client.articles.list({
+      page: page,
+      pageSize: 100
+    });
+    
+    for (const article of response.results) {
+      processArticle(article);
+    }
+    
+    hasMore = page < response.total_pages;
+    page++;
+  }
+}
+
+// Or with async generator
+async function* paginateArticles() {
+  let page = 1;
+  let hasMore = true;
+  
+  while (hasMore) {
+    const response = await client.articles.list({ page });
+    
+    for (const item of response.results) {
+      yield item;
+    }
+    
+    hasMore = page < response.total_pages;
+    page++;
+  }
+}
+
+// Usage
+for await (const article of paginateArticles()) {
+  processArticle(article);
+}
+\end{lstlisting}
+
+\chapter{Integration Examples}
+
+\section{Example 1: Personal Tech Newsletter}
+
+Build a Python script that fetches articles, summarizes them with AI, and sends via email:
+
+\begin{lstlisting}[language=Python]
+import smtplib
+from email.mime.text import MIMEText
+from synapse import SynapseClient
+from datetime import datetime, timedelta
+
+class TechNewsletterGenerator:
+    def __init__(self, api_key, email_config):
+        self.client = SynapseClient(api_key=api_key)
+        self.email_config = email_config
+    
+    def generate_newsletter(self, topic='artificial-intelligence'):
+        # Fetch recent articles
+        articles = self.client.articles.list(
+            topic=topic,
+            page_size=10
+        )
+        
+        # Summarize each article
+        summaries = []
+        for article in articles.results:
+            summary = self.client.ai.summarize(
+                content_type='article',
+                content_id=article.id
+            )
+            summaries.append({
+                'title': article.title,
+                'summary': summary.summary_text,
+                'url': article.source_url
+            })
+        
+        # Format as HTML
+        html_content = self._format_newsletter(summaries)
+        
+        # Send email
+        self._send_email(html_content)
+    
+    def _format_newsletter(self, summaries):
+        html = '<h2>Tech Newsletter - ' + datetime.now().strftime(
+            '%Y-%m-%d'
+        ) + '</h2>'
+        
+        for item in summaries:
+            html += f'''
+            <div style="margin: 20px 0; border-left: 3px solid #0066cc;">
+                <h3>{item['title']}</h3>
+                <p>{item['summary']}</p>
+                <a href="{item['url']}">Read More</a>
+            </div>
+            '''
+        
+        return html
+    
+    def _send_email(self, html_content):
+        msg = MIMEText(html_content, 'html')
+        msg['Subject'] = 'Tech Newsletter'
+        msg['From'] = self.email_config['from']
+        msg['To'] = self.email_config['to']
+        
+        with smtplib.SMTP(self.email_config['smtp_server']) as server:
+            server.starttls()
+            server.login(
+                self.email_config['username'],
+                self.email_config['password']
+            )
+            server.send_message(msg)
+
+# Usage
+config = {
+    'from': 'newsletter@example.com',
+    'to': 'user@example.com',
+    'smtp_server': 'smtp.gmail.com',
+    'username': 'your_email',
+    'password': 'your_app_password'
+}
+
+generator = TechNewsletterGenerator('your_api_key', config)
+generator.generate_newsletter(topic='machine-learning')
+\end{lstlisting}
+
+\section{Example 2: Slack Bot for Tech Questions}
+
+Create a Slack bot that answers tech questions using SYNAPSE AI:
+
+\begin{lstlisting}[language=Python]
+from slack_bolt import App
+from synapse import SynapseClient
+
+app = App(token='xoxb-your-token')
+synapse_client = SynapseClient(api_key='your_api_key')
+
+@app.message('^(?!.*<@).*')
+def handle_message(message, say):
+    user_message = message['text']
+    
+    # Search for relevant articles
+    search_results = synapse_client.articles.search(
+        query=user_message,
+        semantic=True,
+        page_size=5
+    )
+    
+    # Get AI response
+    ai_response = synapse_client.ai.chat(
+        message=user_message
+    )
+    
+    # Format response with sources
+    response_text = f"*{ai_response.reply}*\n\n"
+    response_text += "*Related Articles:*\n"
+    
+    for article in search_results.results[:3]:
+        response_text += (
+            f"- <{article.source_url}|{article.title}>\n"
+        )
+    
+    say(response_text)
+
+if __name__ == '__main__':
+    app.start(port=3000)
+\end{lstlisting}
+
+\section{Example 3: Automated Weekly AI Research Report}
+
+Generate weekly AI research reports and upload to Google Drive:
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+import tempfile
+
+class ResearchReportGenerator:
+    def __init__(self, api_key, google_creds):
+        self.synapse = SynapseClient(api_key=api_key)
+        self.drive_service = build(
+            'drive', 'v3',
+            credentials=service_account.Credentials.from_service_account_file(
+                google_creds
+            )
+        )
+    
+    def generate_report(self):
+        # Generate document using agents
+        doc = self.synapse.agents.generate_document(
+            doc_type='pdf',
+            topic='Latest AI Research Trends 2026',
+            prompt='Create a comprehensive research report with findings'
+        )
+        
+        # Save to temporary file
+        with tempfile.NamedTemporaryFile(
+            suffix='.pdf',
+            delete=False
+        ) as tmp:
+            tmp.write(doc.content)
+            tmp_path = tmp.name
+        
+        # Upload to Google Drive
+        file_metadata = {
+            'name': f'AI_Research_Report_{datetime.now().date()}.pdf',
+            'mimeType': 'application/pdf'
+        }
+        
+        media = MediaFileUpload(
+            tmp_path,
+            mimetype='application/pdf'
+        )
+        
+        self.drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+        
+        print(f"Report uploaded: {file_metadata['name']}")
+
+# Usage
+generator = ResearchReportGenerator(
+    'your_api_key',
+    'google_creds.json'
+)
+generator.generate_report()
+\end{lstlisting}
+
+\section{Example 4: GitHub Actions Release Notes Generator}
+
+Use SYNAPSE API in GitHub Actions to generate release notes:
+
+\begin{lstlisting}[language=bash]
+name: Generate Release Notes
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          pip install synapse-sdk
+      
+      - name: Generate release notes
+        env:
+          SYNAPSE_API_KEY: ${{ secrets.SYNAPSE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/generate_release_notes.py
+\end{lstlisting}
+
+Python script for release notes:
+
+\begin{lstlisting}[language=Python]
+import os
+from synapse import SynapseClient
+import github
+
+def generate_release_notes(repo_name, version):
+    api_key = os.getenv('SYNAPSE_API_KEY')
+    gh_token = os.getenv('GITHUB_TOKEN')
+    
+    synapse = SynapseClient(api_key=api_key)
+    
+    # Get trending repos and related articles
+    trending = synapse.repos.trending(period='daily')
+    
+    # Get AI analysis
+    analysis = synapse.ai.chat(
+        message=f'Summarize key changes and improvements in {repo_name} v{version}'
+    )
+    
+    # Create release notes
+    notes = f'''
+## Release Notes v{version}
+
+{analysis.reply}
+
+### Related Trending Projects
+'''
+    
+    for repo in trending.results[:5]:
+        notes += f'- [{repo.name}]({repo.url})\n'
+    
+    # Post to GitHub
+    g = github.Github(gh_token)
+    repo = g.get_repo(repo_name)
+    release = repo.get_latest_release()
+    release.edit(body=notes)
+
+if __name__ == '__main__':
+    generate_release_notes('owner/repo', '1.0.0')
+\end{lstlisting}
+
+\section{Example 5: React Component for Trending Technologies}
+
+Display SYNAPSE trending technologies in a React component:
+
+\begin{lstlisting}[language=Python]
+import React, { useState, useEffect } from 'react';
+import { useSynapseTrends } from '@synapse-ai/sdk/react';
+
+export function TrendingTechnologies() {
+  const [category, setCategory] = useState('machine-learning');
+  const { trends, loading, error } = useSynapseTrends({
+    category: category
+  });
+  
+  const categories = [
+    'machine-learning',
+    'web-development',
+    'devops',
+    'cybersecurity',
+    'data-engineering'
+  ];
+  
+  if (loading) return <div className="spinner">Loading trends...</div>;
+  if (error) return <div className="error">{error.message}</div>;
+  
+  return (
+    <div className="trends-container">
+      <h2>Trending Technologies</h2>
+      
+      <div className="category-selector">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setCategory(cat)}
+            className={category === cat ? 'active' : ''}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+      
+      <div className="trends-grid">
+        {trends.map((trend) => (
+          <div key={trend.id} className="trend-card">
+            <h3>{trend.name}</h3>
+            <div className="momentum-bar">
+              <div 
+                className="momentum-fill"
+                style={{width: `${trend.momentum * 100}%`}}
+              />
+            </div>
+            <p className="momentum-text">{
+              Math.round(trend.momentum * 100)
+            }% momentum</p>
+            <div className="trend-stats">
+              <span>Mentions: {trend.mention_count}</span>
+              <span>Growth: {trend.growth_rate}%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+\end{lstlisting}
+
+\chapter{Semantic Search Guide}
+
+\section{How Semantic Search Works}
+
+SYNAPSE semantic search uses embeddings and cosine similarity to find conceptually relevant content rather than exact keyword matches. The search engine:
+
+\begin{enumerate}
+    \item Converts your query to a vector embedding
+    \item Compares against embeddings of all content
+    \item Returns results ranked by semantic similarity
+    \item Applies filters and re-ranks results
+\end{enumerate}
+
+\section{Semantic Search Endpoint}
+
+\begin{lstlisting}[language=bash]
+POST /api/v1/search/semantic/
+Content-Type: application/json
+Authorization: Bearer YOUR_TOKEN
+
+{
+  "query": "machine learning in healthcare",
+  "limit": 20,
+  "content_types": ["article", "paper"],
+  "filters": {
+    "topic": "healthcare",
+    "min_score": 0.7,
+    "published_after": "2025-01-01"
+  }
+}
+\end{lstlisting}
+
+\section{Search Filters}
+
+Available search filters:
+
+\begin{center}
+\begin{tabular}{lp{4cm}}
+\toprule
+\textbf{Filter} & \textbf{Description} \\
+\midrule
+content\_type & article, paper, repo, video \\
+topic & Technology topic (e.g., nlp, cv) \\
+date\_range & published\_after, published\_before \\
+min\_score & Minimum similarity score (0-1) \\
+language & Content language (en, fr, de, etc.) \\
+difficulty & beginner, intermediate, advanced \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Search Result Ranking}
+
+Results are ranked by:
+
+\begin{enumerate}
+    \item Semantic similarity score (cosine similarity)
+    \item Content freshness and recency
+    \item Engagement metrics (views, bookmarks)
+    \item Author credibility
+\end{enumerate}
+
+\section{Best Practices for Query Formulation}
+
+\begin{itemize}
+    \item Use natural language rather than keywords
+    \item Be specific about your intent
+    \item Include context when needed
+    \item Avoid common stop words
+    \item Use multiple searches if unsure
+\end{itemize}
+
+\subsection{Examples}
+
+\begin{lstlisting}[language=Python]
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='your_api_key')
+
+# Good: Natural language query
+results = client.articles.search(
+    query='How do transformers improve NLP tasks',
+    semantic=True
+)
+
+# Better: With context and filters
+results = client.articles.search(
+    query='practical applications of diffusion models in image generation',
+    semantic=True,
+    topic='computer-vision',
+    min_score=0.75
+)
+
+# Search across multiple content types
+results = client.search(
+    query='reinforcement learning for robotics',
+    content_types=['article', 'paper', 'repo'],
+    min_score=0.7
+)
+\end{lstlisting}
+
+\section{Cross-Content-Type Search}
+
+Search across articles, papers, repositories, and videos:
+
+\begin{lstlisting}[language=Python]
+results = client.search(
+    query='graph neural networks applications',
+    content_types=['article', 'paper', 'repo', 'video'],
+    limit=50
+)
+
+articles = [r for r in results if r.type == 'article']
+papers = [r for r in results if r.type == 'paper']
+repos = [r for r in results if r.type == 'repo']
+videos = [r for r in results if r.type == 'video']
+
+for article in articles:
+    print(f"Article: {article.title}")
+
+for paper in papers:
+    print(f"Paper: {paper.title} by {', '.join(paper.authors)}")
+
+for repo in repos:
+    print(f"Repo: {repo.owner}/{repo.name} ({repo.stars} stars)")
+\end{lstlisting}
+
+\chapter{AI Agent API Guide}
+
+\section{Available Agent Task Types}
+
+SYNAPSE supports the following autonomous agent task types:
+
+\begin{center}
+\begin{tabular}{llp{4cm}}
+\toprule
+\textbf{Task Type} & \textbf{Output} & \textbf{Description} \\
+\midrule
+generate\_document & PDF/PPTX/DOCX & AI generates formatted document \\
+analyze\_trends & JSON report & AI analyzes technology trends \\
+create\_project & ZIP archive & Scaffolds coding project \\
+research\_topic & Markdown report & Comprehensive research summary \\
+summarize\_content & Text & Detailed content summary \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Async Task Execution Pattern}
+
+Agent tasks execute asynchronously. The typical flow:
+
+\begin{enumerate}
+    \item Create task (returns task ID immediately)
+    \item Poll task status until completion
+    \item Retrieve final result
+\end{enumerate}
+
+\subsection{Implementation}
+
+\begin{lstlisting}[language=Python]
+import time
+from synapse import SynapseClient
+
+client = SynapseClient(api_key='your_api_key')
+
+# Step 1: Create task
+task = client.agents.create_task(
+    task_type='generate_document',
+    prompt='Create comprehensive guide on Transformer models',
+    parameters={'document_type': 'pdf'}
+)
+
+task_id = task.id
+print(f"Task created: {task_id}")
+
+# Step 2: Poll for completion
+max_wait = 300  # 5 minutes
+start_time = time.time()
+
+while time.time() - start_time < max_wait:
+    task = client.agents.get_task(task_id)
+    print(f"Status: {task.status}")
+    
+    if task.status == 'completed':
+        print("Task completed!")
+        break
+    elif task.status == 'failed':
+        print(f"Task failed: {task.error}")
+        break
+    
+    time.sleep(2)
+
+# Step 3: Get result
+if task.status == 'completed':
+    result = task.result
+    with open('guide.pdf', 'wb') as f:
+        f.write(result)
+\end{lstlisting}
+
+\section{Task Status Enum}
+
+Tasks progress through these states:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Status} & \textbf{Description} \\
+\midrule
+pending & Waiting to start execution \\
+processing & Currently being executed \\
+completed & Finished successfully \\
+failed & Execution failed with error \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{WebSocket Real-Time Agent Progress}
+
+Monitor agent progress in real-time via WebSocket:
+
+\begin{lstlisting}[language=Python]
+import asyncio
+import websockets
+import json
+
+async def monitor_task(task_id, api_key):
+    url = f'wss://api.synapse.ai/ws/agent-progress/{task_id}?token={api_key}'
+    
+    async with websockets.connect(url) as websocket:
+        async for message in websocket:
+            event = json.loads(message)
+            print(f"Status: {event['status']}")
+            print(f"Progress: {event['progress']}%")
+            
+            if event['status'] == 'completed':
+                print(f"Result: {event['result']}")
+                break
+
+# Usage
+asyncio.run(monitor_task('task_abc123', 'your_api_key'))
+\end{lstlisting}
+
+\section{Generate Document Task}
+
+\begin{lstlisting}[language=Python]
+# PDF document
+pdf_doc = client.agents.generate_document(
+    doc_type='pdf',
+    topic='Quantum Computing Fundamentals',
+    prompt='Create comprehensive beginner guide with diagrams'
+)
+
+# PowerPoint presentation
+pptx_doc = client.agents.generate_document(
+    doc_type='pptx',
+    topic='2026 AI Trends',
+    prompt='Include slide deck with key trends and statistics'
+)
+
+# Word document
+word_doc = client.agents.generate_document(
+    doc_type='docx',
+    topic='Microservices Architecture',
+    prompt='Technical guide for enterprise deployment'
+)
+\end{lstlisting}
+
+\section{Create Project Task}
+
+Generate code project scaffolds:
+
+\begin{lstlisting}[language=Python]
+# Generate Python project
+project = client.agents.create_task(
+    task_type='create_project',
+    prompt='Create FastAPI REST API for article management',
+    parameters={
+        'language': 'python',
+        'framework': 'fastapi',
+        'features': ['authentication', 'pagination', 'search']
+    }
+)
+
+# Wait for completion...
+task = client.agents.get_task(project.id)
+
+# Download project as ZIP
+with open('project.zip', 'wb') as f:
+    f.write(task.result)
+\end{lstlisting}
+
+\section{Analyze Trends Task}
+
+Get AI-powered trend analysis:
+
+\begin{lstlisting}[language=Python]
+analysis_task = client.agents.create_task(
+    task_type='analyze_trends',
+    prompt='Analyze emerging trends in AI for 2026',
+    parameters={
+        'categories': ['machine-learning', 'nlp', 'robotics'],
+        'depth': 'detailed',
+        'include_predictions': True
+    }
+)
+
+# Poll until complete
+while True:
+    task = client.agents.get_task(analysis_task.id)
+    if task.status == 'completed':
+        analysis = task.result
+        print(f"Trend analysis: {analysis}")
+        break
+    time.sleep(5)
+\end{lstlisting}
+
+\chapter{API Changelog}
+
+\section{Version 1.0.0 - March 2026}
+
+Initial release of SYNAPSE API v1.
+
+\subsection{Features}
+
+\begin{itemize}
+    \item REST API with JWT Bearer token authentication
+    \item Articles, Papers, and Repositories endpoints
+    \item Semantic search across content
+    \item AI Chat and Content Summarization
+    \item Autonomous Agent Task Execution
+    \item Workflow Automation
+    \item Technology Trends and Radar
+    \item Real-time updates via WebSocket and SSE
+    \item Webhook event notifications
+    \item Rate limiting by subscription tier
+    \item Comprehensive error handling and codes
+\end{itemize}
+
+\subsection{SDKs}
+
+\begin{itemize}
+    \item Python SDK (synapse-sdk)
+    \item JavaScript/TypeScript SDK (@synapse-ai/sdk)
+\end{itemize}
+
+\subsection{Endpoints}
+
+\begin{center}
+\begin{tabular}{llp{4cm}}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+/articles/ & GET & List articles \\
+/articles/{id}/ & GET & Get single article \\
+/articles/search/ & POST & Semantic search \\
+/papers/ & GET & List papers \\
+/papers/{id}/ & GET & Get single paper \\
+/repos/trending/ & GET & Trending repositories \\
+/ai/chat/ & POST & Chat with AI \\
+/ai/summarize/ & POST & Summarize content \\
+/agents/tasks/ & POST & Create agent task \\
+/agents/tasks/{id}/ & GET & Get task status \\
+/workflows/ & GET, POST & List/create workflows \\
+/trends/radar/ & GET & Technology radar \\
+/trends/timeline/ & GET & Technology timeline \\
+/webhooks/ & POST & Register webhook \\
+/search/semantic/ & POST & Advanced semantic search \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Versioning Policy}
+
+SYNAPSE API follows semantic versioning:
+
+\begin{itemize}
+    \item \textbf{MAJOR}: Breaking changes (e.g., /api/v2/)
+    \item \textbf{MINOR}: New features, backward compatible
+    \item \textbf{PATCH}: Bug fixes, backward compatible
+\end{itemize}
+
+All versions are available at their respective endpoints (e.g., /api/v1/, /api/v2/). Breaking changes require a new major version. Clients should pin to a specific version.
+
+\section{Deprecation Policy}
+
+When deprecating API features:
+
+\begin{enumerate}
+    \item Announce deprecation with 6 months notice
+    \item Return \texttt{Deprecation} header in responses
+    \item Provide migration guide
+    \item Support deprecated features for 12 months minimum
+    \item Remove after 12 month period with major version bump
+\end{enumerate}
+
+\subsection{Deprecation Example}
+
+When a feature is deprecated, responses include:
+
+\begin{lstlisting}[language=bash]
+HTTP/1.1 200 OK
+Deprecation: true
+Sunset: Sun, 15 Mar 2027 00:00:00 GMT
+Link: <https://docs.synapse.ai/migration/old-to-new>; rel="deprecation"
+
+{
+  "success": true,
+  "data": { ... },
+  "meta": {
+    "warning": "This endpoint is deprecated. Use /api/v2/articles/ instead."
+  }
+}
+\end{lstlisting}
+
+\section{Migration Guide Format}
+
+Migration guides follow this format:
+
+\begin{enumerate}
+    \item Summary of changes
+    \item Old code example
+    \item New code example
+    \item Troubleshooting section
+    \item FAQs
+\end{enumerate}
+
+\subsection{Example Migration Guide}
+
+\textbf{Migrating from v0.x to v1.0}
+
+\textbf{Summary}: Response format changed to include metadata envelope.
+
+\textbf{Old Format}:
+
+\begin{lstlisting}[language=bash]
+{
+  "data": [ ... ],
+  "total": 100
+}
+\end{lstlisting}
+
+\textbf{New Format}:
+
+\begin{lstlisting}[language=bash]
+{
+  "success": true,
+  "data": {
+    "results": [ ... ],
+    "total": 100
+  },
+  "error": null,
+  "meta": { ... }
+}
+\end{lstlisting}
+
+\textbf{Migration Code}:
+
+\begin{lstlisting}[language=Python]
+# Old code (v0.x)
+response = requests.get('https://api.synapse.ai/articles/')
+articles = response.json()['data']
+
+# New code (v1.0)
+response = requests.get('https://api.synapse.ai/api/v1/articles/')
+articles = response.json()['data']['results']
+\end{lstlisting}
+
+\section{Future Versions Roadmap}
+
+\subsection{v1.1 (Expected June 2026)}
+
+\begin{itemize}
+    \item Advanced filtering for search
+    \item Batch operations endpoints
+    \item Analytics dashboard API
+    \item Team management features
+\end{itemize}
+
+\subsection{v1.2 (Expected September 2026)}
+
+\begin{itemize}
+    \item Custom embedding models
+    \item Advanced workflow triggers
+    \item Webhook transformations
+    \item Rate limit customization per endpoint
+\end{itemize}
+
+\subsection{v2.0 (Expected March 2027)}
+
+\begin{itemize}
+    \item GraphQL API alongside REST
+    \item Custom AI model fine-tuning
+    \item Advanced access control (RBAC)
+    \item Multi-tenant support
+    \item Enhanced analytics and reporting
+\end{itemize}
+
+\section{Support and Feedback}
+
+For API issues and questions:
+
+\begin{itemize}
+    \item \textbf{Documentation}: https://docs.synapse.ai/api/
+    \item \textbf{Status Page}: https://status.synapse.ai/
+    \item \textbf{Support Email}: api-support@synapse.ai
+    \item \textbf{Community Forum}: https://community.synapse.ai/
+    \item \textbf{GitHub Issues}: https://github.com/synapse-ai/api-issues
+    \item \textbf{Feature Requests}: https://feedback.synapse.ai/
+\end{itemize}
+
+\section{Rate Limit Status}
+
+Check your current rate limit usage via headers:
+
+\begin{lstlisting}[language=Python]
+import requests
+
+response = requests.get(
+    'https://api.synapse.ai/api/v1/articles/',
+    headers={'Authorization': 'Bearer token'}
+)
+
+print(f"Limit: {response.headers.get('X-RateLimit-Limit')}")
+print(f"Remaining: {response.headers.get('X-RateLimit-Remaining')}")
+print(f"Reset: {response.headers.get('X-RateLimit-Reset')}")
+\end{lstlisting}
+
+\section{API Health and Monitoring}
+
+Monitor API health and uptime:
+
+\begin{lstlisting}[language=bash]
+GET https://api.synapse.ai/health/
+
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "timestamp": "2026-03-15T10:30:45Z",
+  "services": {
+    "database": "healthy",
+    "cache": "healthy",
+    "search": "healthy",
+    "ai_engine": "healthy"
+  }
+}
+\end{lstlisting}
+
+\section{API Performance Metrics}
+
+Expected API performance characteristics:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Metric} & \textbf{Target} \\
+\midrule
+Average Response Time & < 200ms \\
+P95 Response Time & < 500ms \\
+P99 Response Time & < 1000ms \\
+Availability & 99.9\% \\
+Cache Hit Rate & > 80\% \\
+Search Query Time & < 500ms \\
+AI Response Time & 2-10s \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Best Practices Summary}
+
+\subsection{API Usage}
+
+\begin{itemize}
+    \item Use connection pooling for multiple requests
+    \item Implement exponential backoff for retries
+    \item Cache responses when appropriate
+    \item Use pagination for large result sets
+    \item Monitor rate limit headers
+    \item Implement proper error handling
+    \item Use webhooks for event notifications
+    \item Use semantic search for better results
+\end{itemize}
+
+\subsection{Security}
+
+\begin{itemize}
+    \item Never expose API keys in client-side code
+    \item Store keys in secure environment variables
+    \item Use HTTPS for all requests
+    \item Implement API key rotation
+    \item Monitor token usage
+    \item Verify webhook signatures
+    \item Implement request signing for critical operations
+\end{itemize}
+
+\subsection{Performance}
+
+\begin{itemize}
+    \item Batch API requests when possible
+    \item Use async clients for concurrent operations
+    \item Enable response compression
+    \item Cache frequently accessed data
+    \item Use cursor-based pagination for large datasets
+    \item Implement request deduplication
+    \item Monitor and optimize slow queries
+\end{itemize}
+
+\chapter{Appendix: Complete API Reference}
+
+\section{Environment Variables}
+
+Standard environment variables for SYNAPSE SDK:
+
+\begin{lstlisting}[language=bash]
+SYNAPSE_API_KEY=sk_live_abc123xyz
+SYNAPSE_API_BASE_URL=https://api.synapse.ai/api/v1/
+SYNAPSE_TIMEOUT=30
+SYNAPSE_MAX_RETRIES=3
+SYNAPSE_DEBUG=false
+\end{lstlisting}
+
+\section{Common Response Codes}
+
+\begin{center}
+\begin{tabular}{llp{4cm}}
+\toprule
+\textbf{Code} & \textbf{Status} & \textbf{Meaning} \\
+\midrule
+200 & OK & Request succeeded \\
+201 & Created & Resource created \\
+204 & No Content & Success, no response body \\
+400 & Bad Request & Invalid request \\
+401 & Unauthorized & Invalid credentials \\
+403 & Forbidden & No permission \\
+404 & Not Found & Resource not found \\
+409 & Conflict & Resource conflict \\
+429 & Too Many Requests & Rate limited \\
+500 & Internal Error & Server error \\
+502 & Bad Gateway & Service temporarily unavailable \\
+503 & Service Unavailable & Maintenance or overload \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Request Header Reference}
+
+Standard headers to include with requests:
+
+\begin{lstlisting}[language=bash]
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+User-Agent: YourApp/1.0
+X-Request-ID: unique-request-id
+Accept: application/json
+\end{lstlisting}
+
+\section{Response Header Reference}
+
+Standard headers in API responses:
+
+\begin{lstlisting}[language=bash]
+Content-Type: application/json
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 987
+X-RateLimit-Reset: 1647345645
+X-Request-ID: req_abc123
+Cache-Control: public, max-age=300
+ETag: "abc123xyz"
+\end{lstlisting}
+
+\section{Useful Resources}
+
+\begin{itemize}
+    \item Official API Documentation: https://docs.synapse.ai/
+    \item API Explorer (Interactive): https://api.synapse.ai/explore/
+    \item SDK Documentation: https://sdk.synapse.ai/
+    \item GitHub Repository: https://github.com/synapse-ai/sdk
+    \item Stack Overflow Tag: synapse-api
+    \item Community Slack: https://slack.synapse.ai/
+    \item Blog and Tutorials: https://blog.synapse.ai/
+\end{itemize}
+
+\section{Code Examples Repository}
+
+Complete working examples available at:
+
+\begin{lstlisting}[language=bash]
+https://github.com/synapse-ai/api-examples/
+
+Structure:
+  python/
+    - newsletter_generator.py
+    - slack_bot.py
+    - research_automation.py
+  javascript/
+    - react_components.js
+    - node_examples.js
+  workflows/
+    - github_actions_example.yml
+\end{lstlisting}
+
+\end{document}

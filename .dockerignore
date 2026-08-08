@@ -1,0 +1,42 @@
+# ── Virtual environments (huge, never needed in Docker) ───────────────────────
+**/venv/
+**/.venv/
+**/env/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# ── Node modules (managed per-stage in frontend Dockerfile) ───────────────────
+frontend/node_modules/
+frontend/.next/
+
+# ── Git & IDE ──────────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# ── Docs & temp files ─────────────────────────────────────────────────────────
+docs/
+*.pdf
+*.tex
+*.md
+TASKS.md
+SYNAPSE.pdf
+
+# ── Test & coverage ───────────────────────────────────────────────────────────
+**/.pytest_cache/
+**/htmlcov/
+**/.coverage
+**/coverage.xml
+
+# ── Local env files ───────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Logs & data ───────────────────────────────────────────────────────────────
+**/*.log
+**/logs/

@@ -1,0 +1,8 @@
+/* Synapse content script styles */
+/* The floating Save button is styled inline in content.js for isolation */
+/* This file provides any additional style resets if needed */
+
+#synapse-save-btn {
+  /* Fallback font stack if system-ui unavailable */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}

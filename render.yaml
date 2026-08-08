@@ -1,0 +1,96 @@
+# render.yaml — SYNAPSE Infrastructure Blueprint
+# Docs: https://render.com/docs/blueprint-syntax
+# Usage: render blueprint apply
+
+# ── PostgreSQL Database ──────────────────────────────────────
+# Primary relational database for SYNAPSE
+database:
+  name: synapse-db
+  plan: starter
+  databaseName: synapse_db
+  ipAllowList: []
+
+# ── Redis ───────────────────────────────────────────────────
+# Used for Celery task queue and caching
+redis:
+  name: synapse-redis
+  plan: starter
+  ipAllowList: []
+
+# ── Web Service (Django + Daphne ASGI) ───────────────────────
+# Main backend API — serves DRF API + WebSockets
+web:
+  name: synapse-backend
+  runtime: docker
+  dockerfilePath: ./backend/Dockerfile
+  plan: starter
+  region: oregon
+  branch: main
+  rootDirectory: /
+  healthCheckPath: /api/v1/health/
+  envVars:
+    - key: DATABASE_URL
+      sync: false
+    - key: REDIS_URL
+      sync: false
+    - key: DJANGO_SETTINGS_MODULE
+      value: config.settings.production
+    - key: SECRET_KEY
+      generateValue: true
+    - key: GITHUB_CLIENT_ID
+      sync: false
+    - key: GITHUB_CLIENT_SECRET
+      sync: false
+    - key: GITHUB_REDIRECT_URI
+      fromDatabase:
+        name: synapse-db
+        property: GITHUB_REDIRECT_URI
+    - key: OPENROUTER_API_KEY
+      sync: false
+    - key: GEMINI_API_KEY
+      sync: false
+    - key: TAVILY_API_KEY
+      sync: false
+    - key: GITHUB_TOKEN
+      sync: false
+    - key: STRIPE_SECRET_KEY
+      sync: false
+    - key: ALLOWED_HOSTS
+      value: "synapse-backend.onrender.com,srv-d7iv5h3bc2fs739bbpt0.render.com,synapse-app-six.vercel.app"
+    - key: CORS_ALLOWED_ORIGINS
+      value: "http://localhost:3000,https://synapse-app-six.vercel.app"
+    - key: CELERY_WORKERS
+      value: "2"
+    - key: ENABLE_AGENTS
+      value: "true"
+    - key: ENABLE_SCRAPING
+      value: "true"
+
+# ── Background Worker (Celery) ────────────────────────────────
+# Celery worker + beat scheduler for async tasks
+worker:
+  name: synapse-worker
+  runtime: docker
+  dockerfilePath: ./backend/Dockerfile
+  plan: starter
+  region: oregon
+  branch: main
+  rootDirectory: /
+  numInstances: 1
+  envVars:
+    - key: DATABASE_URL
+      sync: false
+    - key: REDIS_URL
+      sync: false
+    - key: DJANGO_SETTINGS_MODULE
+      value: config.settings.production
+    - key: SECRET_KEY
+      generateValue: true
+    - key: OPENROUTER_API_KEY
+      sync: false
+    - key: GEMINI_API_KEY
+      sync: false
+    - key: TAVILY_API_KEY
+      sync: false
+    - key: CELERY_WORKERS
+      value: "2"

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synapse Extension Settings</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; max-width: 480px; margin: 0 auto; padding: 32px 24px; }
+    h1 { font-size: 20px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .logo { width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 16px; }
+    p.subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; margin-top: 20px; }
+    input { width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #e2e8f0; outline: none; transition: border-color 0.15s; box-sizing: border-box; }
+    input:focus { border-color: #6366f1; }
+    .help { font-size: 11px; color: #475569; margin-top: 4px; }
+    .help a { color: #6366f1; text-decoration: none; }
+    .btn { margin-top: 24px; width: 100%; background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.9; }
+    .status { margin-top: 12px; font-size: 13px; text-align: center; display: none; }
+    .status.success { color: #10b981; }
+    .status.error   { color: #ef4444; }
+    .divider { border: none; border-top: 1px solid #1e293b; margin: 28px 0; }
+  </style>
+</head>
+<body>
+  <h1>
+    <div class="logo">S</div>
+    Synapse Extension Settings
+  </h1>
+  <p class="subtitle">Connect your Synapse account to enable Save, AI Explain, and Quick Search.</p>
+
+  <label for="api-key">API Key</label>
+  <input type="password" id="api-key" placeholder="sk-syn-your-api-key-here" autocomplete="off" />
+  <p class="help">
+    Get your API key at <a href="https://app.synapse.app/settings" target="_blank">app.synapse.app/settings</a> → API Keys tab.
+  </p>
+
+  <label for="api-base">API Base URL</label>
+  <input type="url" id="api-base" placeholder="https://api.synapse.app" />
+  <p class="help">Leave default unless you're running a self-hosted instance.</p>
+
+  <label for="app-url">App URL</label>
+  <input type="url" id="app-url" placeholder="https://app.synapse.app" />
+
+  <hr class="divider" />
+
+  <button class="btn" id="save-btn">Save Settings</button>
+  <div class="status" id="status-msg"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

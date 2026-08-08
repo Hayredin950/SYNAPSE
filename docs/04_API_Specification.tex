@@ -1,0 +1,2079 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+
+% Code formatting
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    breakatwhitespace=true,
+    frame=single,
+    numbers=left,
+    numberstyle=\tiny,
+    backgroundcolor=\color{gray!10},
+    keywordstyle=\color{blue},
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    language=Python
+}
+
+\title{\textbf{SYNAPSE API Specification}\\{\normalsize Comprehensive API Documentation for AI-Powered Technology Intelligence Platform}}
+\author{SYNAPSE Development Team}
+\date{\today}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SYNAPSE API Specification}
+\cfoot{Page \thepage\ of \pageref{LastPage}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\chapter{Introduction}
+
+\section{Overview}
+
+SYNAPSE is a FAANG-style AI-powered technology intelligence platform built with FastAPI and Django REST framework. This document provides comprehensive documentation for all API endpoints, authentication mechanisms, and integration guidelines.
+
+The SYNAPSE platform enables users to:
+\begin{itemize}
+    \item Access curated technology articles and research papers
+    \item Search across multiple content sources using semantic search
+    \item Interact with AI assistants for insights and summarization
+    \item Manage automated workflows and agent tasks
+    \item Track technology trends and create custom collections
+    \item Generate comprehensive reports and documents
+\end{itemize}
+
+\section{API Base URL}
+
+All API endpoints are prefixed with the base URL:
+\begin{lstlisting}
+https://api.synapse.ai/api/v1
+\end{lstlisting}
+
+\section{API Versioning}
+
+The SYNAPSE API uses URL-based versioning. The current version is \texttt{v1}. Future versions will be introduced with breaking changes while maintaining backward compatibility for at least one major version.
+
+Version information is included in the URL path: \texttt{/api/v1/...}
+
+\chapter{Authentication}
+
+\section{JWT Bearer Tokens}
+
+SYNAPSE uses JWT (JSON Web Tokens) for authentication. All authenticated endpoints require an \texttt{Authorization} header with a Bearer token.
+
+\section{Token Structure}
+
+The system maintains two types of tokens:
+
+\begin{itemize}
+    \item \textbf{Access Token}: Short-lived token (15 minutes expiration) used for API requests
+    \item \textbf{Refresh Token}: Long-lived token (7 days expiration) used to obtain new access tokens
+\end{itemize}
+
+\section{Token Refresh Strategy}
+
+The recommended token refresh strategy is:
+
+\begin{enumerate}
+    \item Client stores both access and refresh tokens upon successful login
+    \item Client uses access token for API requests
+    \item When access token expires (401 Unauthorized), client uses refresh token to obtain a new access token
+    \item If refresh token is also expired, user must re-authenticate
+\end{enumerate}
+
+\section{Authorization Header Format}
+
+\begin{lstlisting}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+\end{lstlisting}
+
+\chapter{Rate Limiting}
+
+\section{Rate Limit Tiers}
+
+SYNAPSE implements rate limiting based on subscription tier:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Tier} & \textbf{Requests per Minute} & \textbf{Monthly Limit} \\
+\midrule
+Free & 100 & 100,000 \\
+Premium & 1,000 & 5,000,000 \\
+Enterprise & Unlimited & Unlimited \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Rate Limit Headers}
+
+Each response includes rate limit information:
+
+\begin{itemize}
+    \item \texttt{X-RateLimit-Limit}: Maximum requests allowed per minute
+    \item \texttt{X-RateLimit-Remaining}: Requests remaining in current window
+    \item \texttt{X-RateLimit-Reset}: Unix timestamp when the rate limit resets
+\end{itemize}
+
+\chapter{Error Response Format}
+
+\section{Standard Error Envelope}
+
+All errors are returned in a consistent format:
+
+\begin{lstlisting}
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "One or more fields are invalid",
+    "details": [
+      {
+        "field": "email",
+        "message": "Invalid email format"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{HTTP Status Codes}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lp{10cm}}
+\toprule
+\textbf{Status Code} & \textbf{Description} \\
+\midrule
+200 & OK - Request succeeded \\
+201 & Created - Resource successfully created \\
+204 & No Content - Request succeeded, no response body \\
+400 & Bad Request - Invalid request parameters \\
+401 & Unauthorized - Missing or invalid authentication \\
+403 & Forbidden - Authenticated but not authorized for resource \\
+404 & Not Found - Resource does not exist \\
+422 & Unprocessable Entity - Request validation failed \\
+429 & Too Many Requests - Rate limit exceeded \\
+500 & Internal Server Error - Server error \\
+503 & Service Unavailable - Server temporarily unavailable \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\chapter{Pagination}
+
+\section{Pagination Format}
+
+List endpoints support pagination with the following query parameters:
+
+\begin{itemize}
+    \item \texttt{page}: Page number (1-indexed, default: 1)
+    \item \texttt{page\_size}: Number of results per page (default: 20, max: 100)
+\end{itemize}
+
+\section{Paginated Response}
+
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "page_size": 20,
+    "total": 1250,
+    "total_pages": 63,
+    "results": [
+      { /* items */ }
+    ]
+  }
+}
+\end{lstlisting}
+
+
+\chapter{Authentication Endpoints}
+
+\section{POST /auth/register}
+
+\textbf{Description}: Register a new user account
+
+\textbf{Headers}:
+\begin{lstlisting}
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!",
+  "first_name": "John",
+  "last_name": "Doe",
+  "company": "Tech Corp",
+  "job_title": "AI Engineer"
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "usr_12345abcde",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{201}: User successfully created
+    \item \texttt{400}: Invalid request data
+    \item \texttt{422}: Email already exists or validation failed
+\end{itemize}
+
+\section{POST /auth/login}
+
+\textbf{Description}: Authenticate user and return JWT tokens
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 900,
+    "user": {
+      "id": "usr_12345abcde",
+      "email": "user@example.com",
+      "first_name": "John",
+      "last_name": "Doe"
+    }
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{200}: Login successful
+    \item \texttt{400}: Invalid credentials
+    \item \texttt{404}: User not found
+\end{itemize}
+
+\section{POST /auth/logout}
+
+\textbf{Description}: Logout and invalidate current token
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+\end{lstlisting}
+
+\textbf{Response (204 No Content)}:
+\begin{lstlisting}
+(empty response body)
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{204}: Successfully logged out
+    \item \texttt{401}: Unauthorized
+\end{itemize}
+
+\section{POST /auth/token/refresh}
+
+\textbf{Description}: Refresh expired access token using refresh token
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "bearer",
+    "expires_in": 900
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{200}: Token refreshed successfully
+    \item \texttt{401}: Invalid or expired refresh token
+\end{itemize}
+
+\section{POST /auth/password/reset}
+
+\textbf{Description}: Request password reset link via email
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "email": "user@example.com"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "message": "Password reset email sent",
+    "email": "user@example.com"
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{200}: Reset email sent
+    \item \texttt{404}: User not found
+\end{itemize}
+
+\section{POST /auth/password/reset/confirm}
+
+\textbf{Description}: Confirm password reset with token and new password
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "token": "reset_token_from_email",
+  "password": "NewPassword456!"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "message": "Password successfully reset"
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{200}: Password reset successful
+    \item \texttt{400}: Invalid or expired token
+    \item \texttt{422}: Password validation failed
+\end{itemize}
+
+\section{GET /auth/me}
+
+\textbf{Description}: Get current authenticated user profile
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "usr_12345abcde",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "company": "Tech Corp",
+    "subscription_tier": "premium",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{200}: Profile retrieved successfully
+    \item \texttt{401}: Unauthorized
+\end{itemize}
+
+\section{PUT /auth/me}
+
+\textbf{Description}: Update current user profile
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "first_name": "John",
+  "last_name": "Smith",
+  "company": "New Tech Corp",
+  "job_title": "Senior AI Engineer"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "usr_12345abcde",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Smith",
+    "company": "New Tech Corp",
+    "job_title": "Senior AI Engineer"
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}:
+\begin{itemize}
+    \item \texttt{200}: Profile updated successfully
+    \item \texttt{401}: Unauthorized
+    \item \texttt{422}: Validation failed
+\end{itemize}
+
+
+\chapter{Articles Endpoints}
+
+\section{GET /articles/}
+
+\textbf{Description}: List articles with pagination and filtering
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number (default: 1)
+    \item \texttt{page\_size}: Results per page (default: 20, max: 100)
+    \item \texttt{topic}: Filter by topic (e.g., machine\_learning)
+    \item \texttt{source}: Filter by source (e.g., arxiv, medium)
+    \item \texttt{date\_from}: Start date (ISO 8601)
+    \item \texttt{date\_to}: End date (ISO 8601)
+    \item \texttt{trending}: Boolean to get trending articles
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "page_size": 20,
+    "total": 5423,
+    "results": [
+      {
+        "id": "art_abc123",
+        "title": "Advances in Transformer Architecture",
+        "summary": "Recent developments in transformer models...",
+        "source": "arxiv",
+        "topic": "machine_learning",
+        "published_at": "2024-01-20T10:00:00Z",
+        "url": "https://arxiv.org/...",
+        "read_time_minutes": 12
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}: \texttt{200}, \texttt{401}, \texttt{422}
+
+\section{GET /articles/\{id\}}
+
+\textbf{Description}: Get detailed article content
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "art_abc123",
+    "title": "Advances in Transformer Architecture",
+    "summary": "Recent developments in transformer models...",
+    "content": "Full HTML content of the article...",
+    "source": "arxiv",
+    "topic": "machine_learning",
+    "author": "John Researcher",
+    "published_at": "2024-01-20T10:00:00Z",
+    "url": "https://arxiv.org/...",
+    "views": 1250,
+    "bookmarked": true,
+    "related_articles": [
+      {"id": "art_def456", "title": "..."}
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /articles/trending}
+
+\textbf{Description}: Get trending articles
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{period}: Time period (24h, 7d, 30d, default: 7d)
+    \item \texttt{limit}: Number of results (default: 10, max: 50)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "period": "7d",
+    "results": [
+      {
+        "id": "art_abc123",
+        "title": "Trending Article Title",
+        "trend_score": 95.5,
+        "view_count": 5000
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /articles/topics}
+
+\textbf{Description}: Get all available article topics
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "topics": [
+      {
+        "name": "machine_learning",
+        "label": "Machine Learning",
+        "article_count": 2341
+      },
+      {
+        "name": "cloud_computing",
+        "label": "Cloud Computing",
+        "article_count": 1876
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{POST /articles/\{id\}/bookmark}
+
+\textbf{Description}: Bookmark an article
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "article_id": "art_abc123",
+    "bookmarked": true,
+    "created_at": "2024-01-20T10:30:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{DELETE /articles/\{id\}/bookmark}
+
+\textbf{Description}: Remove article bookmark
+
+\textbf{Response (204 No Content)}
+
+\section{GET /articles/search}
+
+\textbf{Description}: Keyword search across articles
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{q}: Search query (required)
+    \item \texttt{page}: Page number (default: 1)
+    \item \texttt{page\_size}: Results per page (default: 20)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "query": "transformers",
+    "page": 1,
+    "total": 342,
+    "results": [
+      {
+        "id": "art_abc123",
+        "title": "...",
+        "excerpt": "...transformer models...",
+        "relevance_score": 0.95
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\chapter{Semantic Search}
+
+\section{POST /search/semantic}
+
+\textbf{Description}: Perform semantic/vector search across all content
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "query": "How are transformers improving NLP?",
+  "limit": 20,
+  "filters": {
+    "content_type": ["articles", "papers"],
+    "source": "arxiv",
+    "date_from": "2024-01-01",
+    "date_to": "2024-01-31"
+  }
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "query": "How are transformers improving NLP?",
+    "results": [
+      {
+        "id": "art_abc123",
+        "type": "article",
+        "title": "Advances in Transformer Architecture",
+        "summary": "...",
+        "similarity_score": 0.92,
+        "source": "arxiv",
+        "published_at": "2024-01-20T10:00:00Z"
+      }
+    ],
+    "execution_time_ms": 145
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}: \texttt{200}, \texttt{401}, \texttt{422}
+
+
+\chapter{Research Papers Endpoints}
+
+\section{GET /papers/}
+
+\textbf{Description}: List research papers with filtering
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number (default: 1)
+    \item \texttt{page\_size}: Results per page (default: 20)
+    \item \texttt{category}: Filter by category (theoretical, applied, experimental)
+    \item \texttt{difficulty}: Filter by difficulty (beginner, intermediate, advanced)
+    \item \texttt{date\_from}: Start date (ISO 8601)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 8932,
+    "results": [
+      {
+        "id": "pap_xyz789",
+        "title": "Attention Is All You Need",
+        "authors": ["Vaswani, A.", "Shazeer, N."],
+        "abstract": "The dominant sequence transduction...",
+        "category": "theoretical",
+        "difficulty": "advanced",
+        "published_date": "2017-06-12",
+        "citation_count": 45000,
+        "pdf_url": "https://arxiv.org/pdf/..."
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /papers/\{id\}}
+
+\textbf{Description}: Get paper detail with full metadata
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "pap_xyz789",
+    "title": "Attention Is All You Need",
+    "authors": ["Vaswani, A.", "Shazeer, N."],
+    "abstract": "...",
+    "category": "theoretical",
+    "difficulty": "advanced",
+    "published_date": "2017-06-12",
+    "citation_count": 45000,
+    "pdf_url": "https://arxiv.org/pdf/...",
+    "key_concepts": ["attention", "transformers", "NLP"],
+    "bookmarked": false
+  }
+}
+\end{lstlisting}
+
+\section{GET /papers/trending}
+
+\textbf{Description}: Get trending research papers
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "period": "7d",
+    "results": [
+      {
+        "id": "pap_xyz789",
+        "title": "...",
+        "citations_this_period": 234
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{POST /papers/\{id\}/bookmark}
+
+\textbf{Description}: Bookmark a research paper
+
+\textbf{Response (201 Created)}
+
+\chapter{Repositories Endpoints}
+
+\section{GET /repos/}
+
+\textbf{Description}: List code repositories with filtering
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{language}: Filter by programming language
+    \item \texttt{topic}: Filter by topic tag
+    \item \texttt{stars\_min}: Minimum GitHub stars
+    \item \texttt{sort}: Sort by (stars, forks, recent, default: stars)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 12450,
+    "results": [
+      {
+        "id": "repo_123abc",
+        "name": "transformers",
+        "owner": "huggingface",
+        "url": "https://github.com/huggingface/transformers",
+        "description": "State-of-the-art NLP library",
+        "language": "Python",
+        "stars": 95000,
+        "forks": 18000,
+        "topics": ["nlp", "transformers", "hugging-face"],
+        "last_updated": "2024-01-20T15:30:00Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /repos/\{id\}}
+
+\textbf{Description}: Get repository details
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "repo_123abc",
+    "name": "transformers",
+    "owner": "huggingface",
+    "url": "https://github.com/huggingface/transformers",
+    "description": "State-of-the-art NLP library",
+    "language": "Python",
+    "stars": 95000,
+    "forks": 18000,
+    "open_issues": 234,
+    "topics": ["nlp", "transformers"],
+    "readme": "Markdown content of README...",
+    "license": "Apache-2.0",
+    "bookmarked": true
+  }
+}
+\end{lstlisting}
+
+\section{GET /repos/trending}
+
+\textbf{Description}: Get trending repositories
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "period": "7d",
+    "results": [
+      {
+        "id": "repo_123abc",
+        "name": "...",
+        "stars_gained_this_period": 500
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{POST /repos/\{id\}/bookmark}
+
+\textbf{Description}: Bookmark a repository
+
+\textbf{Response (201 Created)}
+
+\chapter{Videos Endpoints}
+
+\section{GET /videos/}
+
+\textbf{Description}: List technology videos and tutorials
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number
+    \item \texttt{topic}: Filter by topic
+    \item \texttt{duration}: Filter by video length (short, medium, long)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 3421,
+    "results": [
+      {
+        "id": "vid_456def",
+        "title": "Transformers Explained",
+        "channel": "3Blue1Brown",
+        "duration_seconds": 1245,
+        "published_at": "2024-01-15T10:00:00Z",
+        "view_count": 125000,
+        "topic": "machine_learning",
+        "youtube_id": "ABC123XYZ"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /videos/\{id\}}
+
+\textbf{Description}: Get video details with transcript
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "vid_456def",
+    "title": "Transformers Explained",
+    "channel": "3Blue1Brown",
+    "duration_seconds": 1245,
+    "description": "In this video...",
+    "transcript": "Timestamp: 00:00\nTranscript text...",
+    "topic": "machine_learning",
+    "youtube_id": "ABC123XYZ",
+    "bookmarked": false
+  }
+}
+\end{lstlisting}
+
+\section{GET /videos/trending}
+
+\textbf{Description}: Get trending videos
+
+\textbf{Response (200 OK)}
+
+
+\chapter{AI Assistant Endpoints}
+
+\section{POST /ai/chat}
+
+\textbf{Description}: Send message to AI assistant and receive intelligent response
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "message": "Explain the concept of attention mechanisms",
+  "conversation_id": "conv_abc123",
+  "context": {
+    "focus_areas": ["transformers", "NLP"],
+    "difficulty_level": "intermediate"
+  }
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "response": "Attention mechanisms allow models to...",
+    "sources": [
+      {
+        "title": "Attention Is All You Need",
+        "url": "https://arxiv.org/...",
+        "type": "paper",
+        "relevance": 0.95
+      }
+    ],
+    "conversation_id": "conv_abc123",
+    "response_time_ms": 2340
+  }
+}
+\end{lstlisting}
+
+\textbf{Status Codes}: \texttt{200}, \texttt{401}, \texttt{422}
+
+\section{GET /ai/chat/\{conversation\_id\}/history}
+
+\textbf{Description}: Get chat history for a conversation
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "conversation_id": "conv_abc123",
+    "created_at": "2024-01-20T10:00:00Z",
+    "messages": [
+      {
+        "id": "msg_123",
+        "role": "user",
+        "content": "Explain attention mechanisms",
+        "timestamp": "2024-01-20T10:00:00Z"
+      },
+      {
+        "id": "msg_124",
+        "role": "assistant",
+        "content": "Attention mechanisms allow...",
+        "timestamp": "2024-01-20T10:00:30Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{DELETE /ai/chat/\{conversation\_id\}}
+
+\textbf{Description}: Clear/delete a conversation
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Response (204 No Content)}
+
+\section{POST /ai/summarize}
+
+\textbf{Description}: Request AI to summarize content
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "content_type": "article",
+  "content_id": "art_abc123"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "content_id": "art_abc123",
+    "summary": "This article discusses...",
+    "key_points": [
+      "First key point",
+      "Second key point"
+    ],
+    "character_count": 1245
+  }
+}
+\end{lstlisting}
+
+\section{POST /ai/explain}
+
+\textbf{Description}: Get AI explanation of research paper or concept
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "type": "paper",
+  "id": "pap_xyz789",
+  "target_audience": "intermediate"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "pap_xyz789",
+    "explanation": "This paper introduces the concept of...",
+    "key_concepts": ["attention", "transformers"],
+    "learning_resources": [
+      {
+        "title": "Understanding Attention",
+        "url": "https://..."
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\chapter{Agent Tasks Endpoints}
+
+\section{POST /agents/tasks}
+
+\textbf{Description}: Create an agent task for automated research
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "task_type": "research",
+  "prompt": "Find latest papers on quantum computing",
+  "parameters": {
+    "date_range": "last_30_days",
+    "min_citations": 10,
+    "include_preprints": true
+  }
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "task_12345",
+    "task_type": "research",
+    "status": "pending",
+    "created_at": "2024-01-20T10:00:00Z",
+    "estimated_completion": "2024-01-20T10:15:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{GET /agents/tasks}
+
+\textbf{Description}: List user's agent tasks
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{status}: Filter by status (pending, running, completed, failed)
+    \item \texttt{page}: Page number
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 24,
+    "results": [
+      {
+        "id": "task_12345",
+        "task_type": "research",
+        "status": "completed",
+        "created_at": "2024-01-20T10:00:00Z",
+        "completed_at": "2024-01-20T10:15:00Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /agents/tasks/\{id\}}
+
+\textbf{Description}: Get task status and result
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "task_12345",
+    "task_type": "research",
+    "status": "completed",
+    "prompt": "Find latest papers on quantum computing",
+    "progress": 100,
+    "created_at": "2024-01-20T10:00:00Z",
+    "completed_at": "2024-01-20T10:15:00Z",
+    "result": {
+      "papers_found": 45,
+      "items": [
+        {
+          "id": "pap_xyz789",
+          "title": "...",
+          "relevance_score": 0.98
+        }
+      ]
+    }
+  }
+}
+\end{lstlisting}
+
+\section{DELETE /agents/tasks/\{id\}}
+
+\textbf{Description}: Cancel a running task
+
+\textbf{Response (204 No Content)}
+
+\section{GET /agents/tools}
+
+\textbf{Description}: List available agent tools
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "tools": [
+      {
+        "name": "research_papers",
+        "description": "Search and filter research papers",
+        "parameters": {
+          "query": "string",
+          "date_range": "string"
+        }
+      },
+      {
+        "name": "github_search",
+        "description": "Search GitHub repositories",
+        "parameters": {
+          "query": "string",
+          "language": "string"
+        }
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+
+\chapter{Document Generation Endpoints}
+
+\section{POST /documents/generate}
+
+\textbf{Description}: Generate comprehensive documents (PDF, PPT, Word, Markdown)
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "doc_type": "pdf",
+  "topic": "Machine Learning in 2024",
+  "prompt": "Create a comprehensive report on ML trends",
+  "include_sections": [
+    "introduction",
+    "market_analysis",
+    "key_technologies",
+    "case_studies"
+  ]
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "doc_789xyz",
+    "doc_type": "pdf",
+    "title": "Machine Learning in 2024",
+    "status": "generating",
+    "created_at": "2024-01-20T10:00:00Z",
+    "estimated_completion": "2024-01-20T10:30:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{GET /documents/}
+
+\textbf{Description}: List user's generated documents
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number
+    \item \texttt{status}: Filter by status (generating, completed, failed)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 15,
+    "results": [
+      {
+        "id": "doc_789xyz",
+        "title": "Machine Learning in 2024",
+        "doc_type": "pdf",
+        "status": "completed",
+        "created_at": "2024-01-20T10:00:00Z",
+        "file_size_bytes": 2145000
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /documents/\{id\}}
+
+\textbf{Description}: Get document metadata
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "doc_789xyz",
+    "title": "Machine Learning in 2024",
+    "doc_type": "pdf",
+    "status": "completed",
+    "created_at": "2024-01-20T10:00:00Z",
+    "page_count": 42,
+    "file_size_bytes": 2145000,
+    "download_url": "https://..."
+  }
+}
+\end{lstlisting}
+
+\section{GET /documents/\{id\}/download}
+
+\textbf{Description}: Download generated document file
+
+\textbf{Response}: File binary stream
+
+\section{DELETE /documents/\{id\}}
+
+\textbf{Description}: Delete a generated document
+
+\textbf{Response (204 No Content)}
+
+\chapter{Automation Workflows Endpoints}
+
+\section{POST /workflows/}
+
+\textbf{Description}: Create automation workflow
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "name": "Weekly ML Research Digest",
+  "description": "Gather trending ML papers weekly",
+  "trigger": {
+    "type": "schedule",
+    "cron": "0 9 * * 1"
+  },
+  "actions": [
+    {
+      "type": "search",
+      "params": {
+        "query": "machine learning",
+        "date_range": "7d"
+      }
+    },
+    {
+      "type": "summarize",
+      "params": {
+        "max_items": 10
+      }
+    },
+    {
+      "type": "send_email",
+      "params": {
+        "template": "digest"
+      }
+    }
+  ]
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "wf_123abc",
+    "name": "Weekly ML Research Digest",
+    "enabled": true,
+    "created_at": "2024-01-20T10:00:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{GET /workflows/}
+
+\textbf{Description}: List user's workflows
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 8,
+    "results": [
+      {
+        "id": "wf_123abc",
+        "name": "Weekly ML Research Digest",
+        "enabled": true,
+        "created_at": "2024-01-20T10:00:00Z",
+        "last_run": "2024-01-19T09:00:00Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /workflows/\{id\}}
+
+\textbf{Description}: Get workflow detail
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "wf_123abc",
+    "name": "Weekly ML Research Digest",
+    "description": "...",
+    "enabled": true,
+    "trigger": {"type": "schedule", "cron": "0 9 * * 1"},
+    "actions": [{"type": "search", "params": {}}],
+    "created_at": "2024-01-20T10:00:00Z",
+    "updated_at": "2024-01-20T10:00:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{PUT /workflows/\{id\}}
+
+\textbf{Description}: Update workflow
+
+\textbf{Response (200 OK)}
+
+\section{DELETE /workflows/\{id\}}
+
+\textbf{Description}: Delete workflow
+
+\textbf{Response (204 No Content)}
+
+\section{POST /workflows/\{id\}/run}
+
+\textbf{Description}: Manually trigger workflow execution
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "run_id": "run_456def",
+    "workflow_id": "wf_123abc",
+    "status": "running",
+    "started_at": "2024-01-20T10:15:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{GET /workflows/\{id\}/runs}
+
+\textbf{Description}: Get workflow run history
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "workflow_id": "wf_123abc",
+    "runs": [
+      {
+        "id": "run_456def",
+        "status": "completed",
+        "started_at": "2024-01-19T09:00:00Z",
+        "completed_at": "2024-01-19T09:15:00Z",
+        "items_processed": 45
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{PATCH /workflows/\{id\}/toggle}
+
+\textbf{Description}: Enable or disable workflow
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "enabled": false
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}
+
+\chapter{Trends Endpoints}
+
+\section{GET /trends/}
+
+\textbf{Description}: Get technology trends with analysis
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{category}: Filter by category (ai, cloud, security, data)
+    \item \texttt{period}: Time period (3m, 6m, 12m, default: 6m)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "period": "6m",
+    "category": "ai",
+    "trends": [
+      {
+        "technology": "Large Language Models",
+        "trend_score": 98,
+        "trajectory": "up",
+        "mentions_count": 2450,
+        "growth_rate": 0.35
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /trends/radar}
+
+\textbf{Description}: Get technology radar data for visualization
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "quadrants": {
+      "techniques": [
+        {"name": "Few-shot Learning", "ring": "trial"}
+      ],
+      "tools": [
+        {"name": "LLaMA", "ring": "assess"}
+      ],
+      "platforms": [
+        {"name": "Cloud GPU Services", "ring": "adopt"}
+      ],
+      "languages": [
+        {"name": "Rust", "ring": "trial"}
+      ]
+    }
+  }
+}
+\end{lstlisting}
+
+\section{GET /trends/timeline}
+
+\textbf{Description}: Get timeline for specific technology adoption
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{tech}: Technology name (required)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "technology": "Kubernetes",
+    "timeline": [
+      {
+        "year": 2015,
+        "adoption_percentage": 2,
+        "milestone": "Kubernetes 1.0 released"
+      },
+      {
+        "year": 2024,
+        "adoption_percentage": 68,
+        "milestone": "Industry standard for orchestration"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+
+\chapter{Collections Endpoints}
+
+\section{POST /collections/}
+
+\textbf{Description}: Create custom collection for organizing content
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+Content-Type: application/json
+\end{lstlisting}
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "name": "AI Safety Research",
+  "description": "Papers and articles on AI safety",
+  "is_public": false,
+  "tags": ["ai", "safety", "alignment"]
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "col_abc123",
+    "name": "AI Safety Research",
+    "description": "...",
+    "is_public": false,
+    "item_count": 0,
+    "created_at": "2024-01-20T10:00:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{GET /collections/}
+
+\textbf{Description}: List user's collections
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number
+    \item \texttt{sort}: Sort by (name, created, updated)
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 12,
+    "results": [
+      {
+        "id": "col_abc123",
+        "name": "AI Safety Research",
+        "item_count": 24,
+        "created_at": "2024-01-20T10:00:00Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /collections/\{id\}}
+
+\textbf{Description}: Get collection with all items
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number
+    \item \texttt{page\_size}: Items per page
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "col_abc123",
+    "name": "AI Safety Research",
+    "description": "...",
+    "item_count": 24,
+    "items": [
+      {
+        "id": "item_123",
+        "content_id": "pap_xyz789",
+        "content_type": "paper",
+        "title": "...",
+        "added_at": "2024-01-20T10:00:00Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{PUT /collections/\{id\}}
+
+\textbf{Description}: Update collection metadata
+
+\textbf{Response (200 OK)}
+
+\section{DELETE /collections/\{id\}}
+
+\textbf{Description}: Delete collection
+
+\textbf{Response (204 No Content)}
+
+\section{POST /collections/\{id\}/items}
+
+\textbf{Description}: Add item to collection
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "content_type": "paper",
+  "content_id": "pap_xyz789",
+  "notes": "Important foundational paper on AI safety"
+}
+\end{lstlisting}
+
+\textbf{Response (201 Created)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "item_124",
+    "content_id": "pap_xyz789",
+    "added_at": "2024-01-20T10:05:00Z"
+  }
+}
+\end{lstlisting}
+
+\section{DELETE /collections/\{id\}/items/\{item\_id\}}
+
+\textbf{Description}: Remove item from collection
+
+\textbf{Response (204 No Content)}
+
+\chapter{Notifications Endpoints}
+
+\section{GET /notifications/}
+
+\textbf{Description}: List user notifications
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number
+    \item \texttt{unread\_only}: Boolean, default false
+\end{itemize}
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 34,
+    "unread_count": 5,
+    "results": [
+      {
+        "id": "notif_abc123",
+        "type": "new_paper",
+        "title": "New paper matching your interests",
+        "message": "A new paper on AI safety...",
+        "read": false,
+        "created_at": "2024-01-20T10:00:00Z",
+        "data": {
+          "paper_id": "pap_xyz789"
+        }
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{PATCH /notifications/\{id\}/read}
+
+\textbf{Description}: Mark notification as read
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <access_token>
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "notif_abc123",
+    "read": true
+  }
+}
+\end{lstlisting}
+
+\section{POST /notifications/read-all}
+
+\textbf{Description}: Mark all notifications as read
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "marked_read": 5
+  }
+}
+\end{lstlisting}
+
+\chapter{Admin Endpoints}
+
+\section{GET /admin/stats}
+
+\textbf{Description}: Get platform-wide statistics (admin only)
+
+\textbf{Headers}:
+\begin{lstlisting}
+Authorization: Bearer <admin_token>
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "users": {
+      "total": 15234,
+      "active_this_month": 8923,
+      "new_this_week": 234
+    },
+    "content": {
+      "total_articles": 54000,
+      "total_papers": 128000,
+      "total_repositories": 45000
+    },
+    "engagement": {
+      "avg_sessions_per_user": 8.5,
+      "bookmarks_created_this_week": 12450
+    }
+  }
+}
+\end{lstlisting}
+
+\section{POST /admin/scrapers/trigger}
+
+\textbf{Description}: Manually trigger content scrapers
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "sources": ["arxiv", "github", "medium"],
+  "force_refresh": true
+}
+\end{lstlisting}
+
+\textbf{Response (202 Accepted)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "job_id": "scrape_12345",
+    "status": "queued",
+    "sources": ["arxiv", "github", "medium"]
+  }
+}
+\end{lstlisting}
+
+\section{GET /admin/scrapers/status}
+
+\textbf{Description}: Get current scraper status and health
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "scrapers": [
+      {
+        "source": "arxiv",
+        "status": "running",
+        "last_update": "2024-01-20T10:15:00Z",
+        "items_processed_today": 1250,
+        "error_count": 0
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{GET /admin/users}
+
+\textbf{Description}: List all platform users (admin only)
+
+\textbf{Query Parameters}:
+\begin{itemize}
+    \item \texttt{page}: Page number
+    \item \texttt{status}: Filter by status (active, inactive, suspended)
+    \item \texttt{tier}: Filter by subscription tier
+\end{itemize}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "total": 15234,
+    "results": [
+      {
+        "id": "usr_12345abcde",
+        "email": "user@example.com",
+        "name": "John Doe",
+        "tier": "premium",
+        "status": "active",
+        "created_at": "2024-01-15T10:30:00Z"
+      }
+    ]
+  }
+}
+\end{lstlisting}
+
+\section{PATCH /admin/users/\{id\}/role}
+
+\textbf{Description}: Change user subscription tier or role
+
+\textbf{Request Body}:
+\begin{lstlisting}
+{
+  "tier": "enterprise",
+  "role": "admin"
+}
+\end{lstlisting}
+
+\textbf{Response (200 OK)}:
+\begin{lstlisting}
+{
+  "success": true,
+  "data": {
+    "id": "usr_12345abcde",
+    "tier": "enterprise",
+    "role": "admin",
+    "updated_at": "2024-01-20T10:30:00Z"
+  }
+}
+\end{lstlisting}
+
+\chapter{WebSocket Endpoints}
+
+\section{Real-time Updates}
+
+SYNAPSE provides WebSocket endpoints for real-time updates and live data streaming.
+
+\section{Connection}
+
+\textbf{WebSocket URL}:
+\begin{lstlisting}
+wss://api.synapse.ai/ws/v1?token=<access_token>
+\end{lstlisting}
+
+\textbf{Connection Message}:
+\begin{lstlisting}
+{
+  "type": "subscribe",
+  "channels": [
+    "notifications",
+    "trending_updates",
+    "conversation_typing"
+  ]
+}
+\end{lstlisting}
+
+\section{Message Types}
+
+\subsection{Notification Updates}
+
+\textbf{Channel}: \texttt{notifications}
+
+\textbf{Message}:
+\begin{lstlisting}
+{
+  "type": "notification",
+  "data": {
+    "id": "notif_abc123",
+    "message": "New trending article",
+    "created_at": "2024-01-20T10:30:00Z"
+  }
+}
+\end{lstlisting}
+
+\subsection{Trending Updates}
+
+\textbf{Channel}: \texttt{trending\_updates}
+
+\textbf{Message}:
+\begin{lstlisting}
+{
+  "type": "trending_update",
+  "data": {
+    "technology": "Large Language Models",
+    "current_trend_score": 98,
+    "change_percentage": 5.2
+  }
+}
+\end{lstlisting}
+
+\subsection{Chat Typing Indicator}
+
+\textbf{Channel}: \texttt{conversation\_typing}
+
+\textbf{Message}:
+\begin{lstlisting}
+{
+  "type": "typing",
+  "data": {
+    "conversation_id": "conv_abc123",
+    "user_id": "usr_12345abcde",
+    "is_typing": true
+  }
+}
+\end{lstlisting}
+
+\chapter{Summary and Best Practices}
+
+\section{API Best Practices}
+
+\begin{enumerate}
+    \item \textbf{Always include Authorization header} for authenticated endpoints
+    \item \textbf{Implement exponential backoff} for rate limit retries
+    \item \textbf{Use pagination} for list endpoints to manage large datasets
+    \item \textbf{Monitor X-RateLimit headers} to avoid hitting rate limits
+    \item \textbf{Cache responses} where appropriate to reduce API calls
+    \item \textbf{Use semantic search} instead of keyword search for better results
+\end{enumerate}
+
+\section{Error Handling}
+
+Implement comprehensive error handling in your client:
+
+\begin{itemize}
+    \item Check HTTP status codes and error response structure
+    \item Implement retry logic with exponential backoff for 5xx errors
+    \item Handle 401 errors by refreshing the access token
+    \item Log API errors for debugging and monitoring
+\end{itemize}
+
+\section{Pagination Best Practices}
+
+\begin{itemize}
+    \item Start with default page size and adjust based on performance
+    \item Use cursor-based pagination for large datasets if available
+    \item Cache pagination state on client side
+    \item Never assume page count remains constant
+\end{itemize}
+
+\end{document}
+

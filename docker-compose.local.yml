@@ -1,0 +1,72 @@
+# ============================================================
+# SYNAPSE — Local development stack
+# ============================================================
+# Brings up the data layer (Postgres + pgvector, Redis) so the app can be run
+# and verified locally. Start here before touching a production host: it means
+# debugging one unknown (the app) instead of two (app + server).
+#
+#   docker compose -f docker-compose.local.yml up -d
+#   docker compose -f docker-compose.local.yml ps
+#
+# The application services live in docker-compose.yml; this file deliberately
+# covers only backing services, which are quick to start and are what the
+# migrations actually need.
+# ============================================================
+
+name: synapse-local
+
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: synapse_postgres_local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-synapse_db}
+      POSTGRES_USER: ${DB_USER:-synapse_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-synapse_dev_password}
+      # Speeds up first start; safe for a local dev database.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    ports:
+      # 5433 on the host by default: a local Postgres commonly already owns
+      # 5432, and this stack must not collide with it.
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data_local:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      # Both the server AND the pgvector extension must be ready — pg_isready
+      # alone returns true before init.sql has run, so migrations could start
+      # against a database with no `vector` type.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-synapse_user} -d ${DB_NAME:-synapse_db} && psql -U ${DB_USER:-synapse_user} -d ${DB_NAME:-synapse_db} -tAc \"SELECT 1 FROM pg_extension WHERE extname='vector'\" | grep -q 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    container_name: synapse_redis_local
+    restart: unless-stopped
+    command: >
+      redis-server
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+        --appendonly yes
+        --appendfsync everysec
+    ports:
+      # 6380 for the same reason as Postgres above.
+      - "${REDIS_PORT:-6380}:6379"
+    volumes:
+      - redis_data_local:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data_local:
+    driver: local
+  redis_data_local:
+    driver: local

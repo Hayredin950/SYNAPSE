@@ -1,0 +1,1253 @@
+\documentclass[12pt,a4paper]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xspace}
+\usepackage{graphicx}
+\usepackage{tikz}
+
+% Custom colors
+\definecolor{darkblue}{RGB}{0,51,102}
+\definecolor{lightblue}{RGB}{230,242,255}
+\definecolor{darkgreen}{RGB}{34,139,34}
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{SYNAPSE Database Schema}
+\lhead{Version 1.0}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Title formatting
+\title{\textbf{\Large SYNAPSE Database Schema Design}}
+\author{Technology Intelligence Platform\\AI-Powered Architecture}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{repositories Table}
+
+GitHub repositories tracked for trending analysis and intelligence gathering.
+
+\begin{table}[h]
+\centering
+\small
+\caption{repositories Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique repository identifier \\
+github\_id & BIGINT & UNIQUE, NOT NULL & GitHub repository ID \\
+name & VARCHAR(500) & NOT NULL & Repository name \\
+full\_name & VARCHAR(500) & NOT NULL & Full repository path \\
+description & TEXT & NULL & Repository description \\
+url & VARCHAR(1000) & NOT NULL & GitHub repository URL \\
+clone\_url & VARCHAR(1000) & NULL & Git clone URL \\
+stars & INTEGER & DEFAULT 0 & Star count \\
+forks & INTEGER & DEFAULT 0 & Fork count \\
+watchers & INTEGER & DEFAULT 0 & Watcher count \\
+language & VARCHAR(100) & NULL & Primary programming language \\
+topics & TEXT[] & NULL & Repository topics/tags \\
+owner & VARCHAR(200) & NOT NULL & Repository owner username \\
+is\_trending & BOOLEAN & DEFAULT FALSE & Trending indicator \\
+scraped\_at & TIMESTAMP & NOT NULL & Last data collection \\
+created\_at & TIMESTAMP & NOT NULL & Repository creation time \\
+readme\_summary & TEXT & NULL & Extracted README summary \\
+embedding\_id & VARCHAR(200) & NULL & Vector DB reference \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE repositories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    github_id BIGINT UNIQUE NOT NULL,
+    name VARCHAR(500) NOT NULL,
+    full_name VARCHAR(500) NOT NULL,
+    description TEXT,
+    url VARCHAR(1000) NOT NULL,
+    clone_url VARCHAR(1000),
+    stars INTEGER DEFAULT 0,
+    forks INTEGER DEFAULT 0,
+    watchers INTEGER DEFAULT 0,
+    language VARCHAR(100),
+    topics TEXT[],
+    owner VARCHAR(200) NOT NULL,
+    is_trending BOOLEAN DEFAULT FALSE,
+    scraped_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    readme_summary TEXT,
+    embedding_id VARCHAR(200)
+);
+\end{lstlisting}
+
+\newpage
+\section{research\_papers Table}
+
+Academic research papers and preprints from arXiv and similar sources.
+
+\begin{table}[h]
+\centering
+\small
+\caption{research\_papers Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique paper identifier \\
+arxiv\_id & VARCHAR(50) & UNIQUE, NOT NULL & arXiv paper ID \\
+title & TEXT & NOT NULL & Paper title \\
+abstract & TEXT & NULL & Paper abstract \\
+summary & TEXT & NULL & AI-generated summary \\
+authors & TEXT[] & NOT NULL & Array of author names \\
+categories & TEXT[] & NULL & arXiv category tags \\
+published\_date & DATE & NULL & Publication date \\
+url & VARCHAR(1000) & NOT NULL & Paper URL \\
+pdf\_url & VARCHAR(1000) & NULL & PDF download URL \\
+citation\_count & INTEGER & DEFAULT 0 & Citation count \\
+difficulty\_level & VARCHAR(50) & NULL & beginner, intermediate, advanced \\
+key\_contributions & TEXT & NULL & Paper key contributions \\
+applications & TEXT & NULL & Practical applications \\
+embedding\_id & VARCHAR(200) & NULL & Vector DB reference \\
+fetched\_at & TIMESTAMP & NOT NULL & Data retrieval timestamp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE research_papers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    arxiv_id VARCHAR(50) UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    abstract TEXT,
+    summary TEXT,
+    authors TEXT[] NOT NULL,
+    categories TEXT[],
+    published_date DATE,
+    url VARCHAR(1000) NOT NULL,
+    pdf_url VARCHAR(1000),
+    citation_count INTEGER DEFAULT 0,
+    difficulty_level VARCHAR(50) CHECK (difficulty_level IN 
+        ('beginner', 'intermediate', 'advanced')),
+    key_contributions TEXT,
+    applications TEXT,
+    embedding_id VARCHAR(200),
+    fetched_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+\end{lstlisting}
+
+\newpage
+\section{videos Table}
+
+Video content from YouTube and other video platforms.
+
+\begin{table}[h]
+\centering
+\small
+\caption{videos Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique video identifier \\
+youtube\_id & VARCHAR(50) & UNIQUE, NOT NULL & YouTube video ID \\
+title & TEXT & NOT NULL & Video title \\
+description & TEXT & NULL & Video description \\
+summary & TEXT & NULL & AI-generated summary \\
+channel\_name & VARCHAR(300) & NOT NULL & Channel name \\
+channel\_id & VARCHAR(300) & NOT NULL & YouTube channel ID \\
+url & VARCHAR(1000) & NOT NULL & Video URL \\
+thumbnail\_url & VARCHAR(1000) & NULL & Thumbnail image URL \\
+duration\_seconds & INTEGER & NULL & Video duration in seconds \\
+view\_count & INTEGER & DEFAULT 0 & View count \\
+like\_count & INTEGER & DEFAULT 0 & Like count \\
+published\_at & TIMESTAMP & NULL & Upload date \\
+transcript & TEXT & NULL & Video transcript \\
+topics & TEXT[] & NULL & Video topics/tags \\
+embedding\_id & VARCHAR(200) & NULL & Vector DB reference \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE videos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    youtube_id VARCHAR(50) UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    summary TEXT,
+    channel_name VARCHAR(300) NOT NULL,
+    channel_id VARCHAR(300) NOT NULL,
+    url VARCHAR(1000) NOT NULL,
+    thumbnail_url VARCHAR(1000),
+    duration_seconds INTEGER,
+    view_count INTEGER DEFAULT 0,
+    like_count INTEGER DEFAULT 0,
+    published_at TIMESTAMP,
+    transcript TEXT,
+    topics TEXT[],
+    embedding_id VARCHAR(200)
+);
+\end{lstlisting}
+
+\newpage
+
+\chapter{User Interaction Tables}
+
+\section{user\_bookmarks Table}
+
+Bookmarks and saved content by users across all content types.
+
+\begin{table}[h]
+\centering
+\small
+\caption{user\_bookmarks Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique bookmark identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+content\_type & VARCHAR(50) & NOT NULL & article, repository, research\_paper, video \\
+content\_id & UUID & NOT NULL & Reference to content \\
+notes & TEXT & NULL & User personal notes \\
+tags & TEXT[] & NULL & User-assigned tags \\
+created\_at & TIMESTAMP & NOT NULL & Bookmark creation time \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE user_bookmarks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    content_type VARCHAR(50) NOT NULL CHECK (content_type IN 
+        ('article', 'repository', 'research_paper', 'video')),
+    content_id UUID NOT NULL,
+    notes TEXT,
+    tags TEXT[],
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+\end{lstlisting}
+
+\newpage
+\section{collections Table}
+
+User-curated collections of content.
+
+\begin{table}[h]
+\centering
+\small
+\caption{collections Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique collection identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+name & VARCHAR(500) & NOT NULL & Collection name \\
+description & VARCHAR(500) & NULL & Collection description \\
+is\_public & BOOLEAN & DEFAULT FALSE & Public visibility flag \\
+created\_at & TIMESTAMP & NOT NULL & Creation timestamp \\
+updated\_at & TIMESTAMP & NOT NULL & Last update timestamp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE collections (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    name VARCHAR(500) NOT NULL,
+    description VARCHAR(500),
+    is_public BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+\end{lstlisting}
+
+\newpage
+\section{collection\_items Table}
+
+Individual items within collections.
+
+\begin{table}[h]
+\centering
+\small
+\caption{collection\_items Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique collection item identifier \\
+collection\_id & UUID & FK, NOT NULL & Reference to collections table \\
+content\_type & VARCHAR(50) & NOT NULL & article, repository, research\_paper, video \\
+content\_id & UUID & NOT NULL & Reference to content \\
+added\_at & TIMESTAMP & NOT NULL & Item addition timestamp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE collection_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_id UUID NOT NULL REFERENCES collections(id),
+    content_type VARCHAR(50) NOT NULL CHECK (content_type IN 
+        ('article', 'repository', 'research_paper', 'video')),
+    content_id UUID NOT NULL,
+    added_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+\end{lstlisting}
+
+\newpage
+
+\chapter{Automation and Task Management}
+
+\section{automation\_workflows Table}
+
+User-defined automation workflows and scheduled tasks.
+
+\begin{table}[h]
+\centering
+\small
+\caption{automation\_workflows Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique workflow identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+name & TEXT & NOT NULL & Workflow name \\
+description & TEXT & NULL & Workflow description \\
+trigger\_type & VARCHAR(50) & NOT NULL & schedule, event, manual \\
+cron\_expression & VARCHAR(100) & NULL & CRON schedule (if scheduled) \\
+actions & JSONB & NOT NULL & Workflow action definitions \\
+is\_active & BOOLEAN & DEFAULT TRUE & Activation status \\
+last\_run\_at & TIMESTAMP & NULL & Last execution timestamp \\
+next\_run\_at & TIMESTAMP & NULL & Next scheduled execution \\
+run\_count & INTEGER & DEFAULT 0 & Total execution count \\
+created\_at & TIMESTAMP & NOT NULL & Creation timestamp \\
+updated\_at & TIMESTAMP & NOT NULL & Last modification timestamp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE automation_workflows (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    name TEXT NOT NULL,
+    description TEXT,
+    trigger_type VARCHAR(50) NOT NULL CHECK (trigger_type IN 
+        ('schedule', 'event', 'manual')),
+    cron_expression VARCHAR(100),
+    actions JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    last_run_at TIMESTAMP,
+    next_run_at TIMESTAMP,
+    run_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+\end{lstlisting}
+
+\newpage
+\section{workflow\_runs Table}
+
+Execution history of automation workflows.
+
+\begin{table}[h]
+\centering
+\small
+\caption{workflow\_runs Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique run identifier \\
+workflow\_id & UUID & FK, NOT NULL & Reference to automation\_workflows \\
+status & VARCHAR(50) & NOT NULL & pending, running, success, failed \\
+started\_at & TIMESTAMP & NOT NULL & Execution start time \\
+completed\_at & TIMESTAMP & NULL & Execution completion time \\
+result & JSONB & NULL & Execution result data \\
+error\_message & TEXT & NULL & Error message if failed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE workflow_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    workflow_id UUID NOT NULL 
+        REFERENCES automation_workflows(id),
+    status VARCHAR(50) NOT NULL CHECK (status IN 
+        ('pending', 'running', 'success', 'failed')),
+    started_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP,
+    result JSONB,
+    error_message TEXT
+);
+\end{lstlisting}
+
+\newpage
+\section{agent\_tasks Table}
+
+AI agent task requests and execution tracking.
+
+\begin{table}[h]
+\centering
+\small
+\caption{agent\_tasks Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique task identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+task\_type & VARCHAR(200) & NOT NULL & Task classification \\
+prompt & TEXT & NOT NULL & User prompt/instruction \\
+status & VARCHAR(50) & NOT NULL & pending, processing, completed, failed \\
+result & JSONB & NULL & Task execution result \\
+created\_at & TIMESTAMP & NOT NULL & Task creation time \\
+completed\_at & TIMESTAMP & NULL & Task completion time \\
+celery\_task\_id & VARCHAR(200) & NULL & Celery task identifier \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE agent_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    task_type VARCHAR(200) NOT NULL,
+    prompt TEXT NOT NULL,
+    status VARCHAR(50) NOT NULL CHECK (status IN 
+        ('pending', 'processing', 'completed', 'failed')),
+    result JSONB,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    completed_at TIMESTAMP,
+    celery_task_id VARCHAR(200)
+);
+\end{lstlisting}
+
+\newpage
+\section{generated\_documents Table}
+
+AI-generated reports and documents created by the system.
+
+\begin{table}[h]
+\centering
+\small
+\caption{generated\_documents Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique document identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+title & VARCHAR(500) & NOT NULL & Document title \\
+doc\_type & VARCHAR(50) & NOT NULL & pdf, ppt, word, markdown \\
+file\_path & VARCHAR(1000) & NOT NULL & Local file storage path \\
+cloud\_url & VARCHAR(1000) & NULL & Cloud storage URL \\
+file\_size\_bytes & BIGINT & NULL & Document file size \\
+agent\_prompt & TEXT & NULL & Original generation prompt \\
+created\_at & TIMESTAMP & NOT NULL & Generation timestamp \\
+metadata & JSONB & DEFAULT '\{\}' & Additional document metadata \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE generated_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    title VARCHAR(500) NOT NULL,
+    doc_type VARCHAR(50) NOT NULL CHECK (doc_type IN 
+        ('pdf', 'ppt', 'word', 'markdown')),
+    file_path VARCHAR(1000) NOT NULL,
+    cloud_url VARCHAR(1000),
+    file_size_bytes BIGINT,
+    agent_prompt TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'
+);
+\end{lstlisting}
+
+\newpage
+
+\chapter{Analytics and Notifications}
+
+\section{technology\_trends Table}
+
+Aggregated technology trending metrics across platform.
+
+\begin{table}[h]
+\centering
+\small
+\caption{technology\_trends Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique trend identifier \\
+technology\_name & VARCHAR(200) & NOT NULL & Technology or framework name \\
+mention\_count & INTEGER & DEFAULT 0 & Total mentions across sources \\
+trend\_score & FLOAT & NULL & Calculated trend score (0-100) \\
+category & VARCHAR(100) & NULL & Technology category \\
+date & DATE & NOT NULL & Trend date \\
+sources & TEXT[] & NULL & Array of contributing sources \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE technology_trends (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    technology_name VARCHAR(200) NOT NULL,
+    mention_count INTEGER DEFAULT 0,
+    trend_score FLOAT,
+    category VARCHAR(100),
+    date DATE NOT NULL,
+    sources TEXT[]
+);
+\end{lstlisting}
+
+\newpage
+\section{notifications Table}
+
+User notifications for activities and alerts.
+
+\begin{table}[h]
+\centering
+\small
+\caption{notifications Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique notification identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+title & TEXT & NOT NULL & Notification title \\
+message & TEXT & NOT NULL & Notification message \\
+notif\_type & VARCHAR(100) & NOT NULL & alert, info, success, warning \\
+is\_read & BOOLEAN & DEFAULT FALSE & Read status \\
+created\_at & TIMESTAMP & NOT NULL & Creation timestamp \\
+metadata & JSONB & DEFAULT '\{\}' & Additional metadata \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    notif_type VARCHAR(100) NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'
+);
+\end{lstlisting}
+
+\newpage
+\section{user\_activity Table}
+
+User interaction tracking and analytics.
+
+\begin{table}[h]
+\centering
+\small
+\caption{user\_activity Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique activity record identifier \\
+user\_id & UUID & FK, NOT NULL & Reference to users table \\
+action\_type & VARCHAR(100) & NOT NULL & viewed, liked, bookmarked, shared \\
+content\_type & VARCHAR(100) & NULL & article, repository, etc. \\
+content\_id & VARCHAR(100) & NULL & ID of interacted content \\
+created\_at & TIMESTAMP & NOT NULL & Activity timestamp \\
+metadata & JSONB & DEFAULT '\{\}' & Additional context \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE user_activity (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    action_type VARCHAR(100) NOT NULL,
+    content_type VARCHAR(100),
+    content_id VARCHAR(100),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    metadata JSONB DEFAULT '{}'
+);
+\end{lstlisting}
+
+\newpage
+
+\chapter{Executive Summary}
+
+This document provides a comprehensive database schema design for SYNAPSE, a FAANG-style AI-powered technology intelligence platform. The platform aggregates and analyzes technology news, open-source repositories, academic research, and video content to provide actionable intelligence to users.
+
+The design follows PostgreSQL best practices with proper indexing strategies, support for vector embeddings, caching patterns, and scalability considerations. The schema accommodates multiple data sources, user management, content organization, workflow automation, and real-time notifications.
+
+\chapter{Indexing Strategy}
+
+\section{Index Categories}
+
+The SYNAPSE database employs a multi-tier indexing strategy to optimize query performance across different access patterns:
+
+\subsection{Primary Key Indexes (B-Tree)}
+
+Automatically created for all UUID primary keys. These ensure fast lookups and join operations.
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Example: Automatic index on users table
+CREATE UNIQUE INDEX idx_users_id ON users(id);
+\end{lstlisting}
+
+\subsection{Foreign Key Indexes (B-Tree)}
+
+Critical for join performance when referencing related tables.
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Foreign key relationships
+CREATE INDEX idx_articles_source_id ON articles(source_id);
+CREATE INDEX idx_user_bookmarks_user_id ON user_bookmarks(user_id);
+CREATE INDEX idx_collections_user_id ON collections(user_id);
+CREATE INDEX idx_automation_workflows_user_id 
+    ON automation_workflows(user_id);
+CREATE INDEX idx_workflow_runs_workflow_id 
+    ON workflow_runs(workflow_id);
+CREATE INDEX idx_agent_tasks_user_id ON agent_tasks(user_id);
+CREATE INDEX idx_generated_documents_user_id 
+    ON generated_documents(user_id);
+CREATE INDEX idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX idx_user_activity_user_id ON user_activity(user_id);
+\end{lstlisting}
+
+\subsection{Unique Constraints (B-Tree)}
+
+Enforce data uniqueness and serve as implicit indexes.
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Unique constraint indexes
+CREATE UNIQUE INDEX idx_users_username ON users(username);
+CREATE UNIQUE INDEX idx_users_email ON users(email);
+CREATE UNIQUE INDEX idx_articles_url ON articles(url);
+CREATE UNIQUE INDEX idx_repositories_github_id 
+    ON repositories(github_id);
+CREATE UNIQUE INDEX idx_research_papers_arxiv_id 
+    ON research_papers(arxiv_id);
+CREATE UNIQUE INDEX idx_videos_youtube_id ON videos(youtube_id);
+\end{lstlisting}
+
+\subsection{Array/JSONB Indexes (GIN - Generalized Inverted Index)}
+
+Optimized for searches within array and JSONB columns.
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- GIN indexes for array and JSONB columns
+CREATE INDEX idx_articles_tags 
+    ON articles USING GIN(tags);
+CREATE INDEX idx_articles_keywords 
+    ON articles USING GIN(keywords);
+CREATE INDEX idx_repositories_topics 
+    ON repositories USING GIN(topics);
+CREATE INDEX idx_research_papers_categories 
+    ON research_papers USING GIN(categories);
+CREATE INDEX idx_research_papers_authors 
+    ON research_papers USING GIN(authors);
+CREATE INDEX idx_videos_topics 
+    ON videos USING GIN(topics);
+CREATE INDEX idx_user_bookmarks_tags 
+    ON user_bookmarks USING GIN(tags);
+
+-- JSONB column indexes
+CREATE INDEX idx_users_preferences 
+    ON users USING GIN(preferences);
+CREATE INDEX idx_sources_config 
+    ON sources USING GIN(config);
+CREATE INDEX idx_articles_metadata 
+    ON articles USING GIN(metadata);
+CREATE INDEX idx_automation_workflows_actions 
+    ON automation_workflows USING GIN(actions);
+CREATE INDEX idx_workflow_runs_result 
+    ON workflow_runs USING GIN(result);
+CREATE INDEX idx_agent_tasks_result 
+    ON agent_tasks USING GIN(result);
+CREATE INDEX idx_generated_documents_metadata 
+    ON generated_documents USING GIN(metadata);
+CREATE INDEX idx_notifications_metadata 
+    ON notifications USING GIN(metadata);
+CREATE INDEX idx_user_activity_metadata 
+    ON user_activity USING GIN(metadata);
+\end{lstlisting}
+
+\subsection{Timestamp Indexes (B-Tree)}
+
+Essential for time-range queries and temporal filtering.
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Timestamp indexes for range queries
+CREATE INDEX idx_articles_published_at ON articles(published_at);
+CREATE INDEX idx_articles_scraped_at ON articles(scraped_at);
+CREATE INDEX idx_repositories_scraped_at ON repositories(scraped_at);
+CREATE INDEX idx_workflow_runs_started_at 
+    ON workflow_runs(started_at);
+CREATE INDEX idx_workflow_runs_completed_at 
+    ON workflow_runs(completed_at);
+CREATE INDEX idx_agent_tasks_created_at ON agent_tasks(created_at);
+CREATE INDEX idx_notifications_created_at 
+    ON notifications(created_at);
+CREATE INDEX idx_user_activity_created_at 
+    ON user_activity(created_at);
+CREATE INDEX idx_user_bookmarks_created_at 
+    ON user_bookmarks(created_at);
+\end{lstlisting}
+
+\subsection{Composite Indexes}
+
+Optimized indexes combining multiple columns for specific query patterns.
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Composite indexes for common query patterns
+CREATE INDEX idx_articles_source_published 
+    ON articles(source_id, published_at DESC);
+CREATE INDEX idx_user_bookmarks_user_content 
+    ON user_bookmarks(user_id, content_type);
+CREATE INDEX idx_collection_items_collection_content 
+    ON collection_items(collection_id, content_type);
+CREATE INDEX idx_technology_trends_date_score 
+    ON technology_trends(date DESC, trend_score DESC);
+CREATE INDEX idx_notifications_user_read 
+    ON notifications(user_id, is_read);
+CREATE INDEX idx_user_activity_user_type 
+    ON user_activity(user_id, action_type);
+\end{lstlisting}
+
+\section{Indexing Best Practices}
+
+\begin{itemize}
+    \item \textbf{B-Tree Indexes}: Used for equality and range comparisons (default)
+    \item \textbf{GIN Indexes}: Used for JSONB and array containment queries
+    \item \textbf{GIST Indexes}: Consider for geometric or full-text search extensions
+    \item \textbf{Index Maintenance}: Regular ANALYZE and VACUUM operations required
+    \item \textbf{Monitoring}: Track index usage via \texttt{pg\_stat\_user\_indexes}
+    \item \textbf{Partial Indexes}: Can index only active records to save space
+\end{itemize}
+
+\newpage
+
+\chapter{System Architecture Overview}
+
+\section{Technology Stack}
+
+\begin{itemize}
+    \item \textbf{Primary Database}: PostgreSQL 14+
+    \item \textbf{Vector Database}: Pinecone or pgvector extension
+    \item \textbf{Caching Layer}: Redis
+    \item \textbf{Task Queue}: Celery with Redis backend
+    \item \textbf{File Storage}: Cloud storage (S3-compatible)
+\end{itemize}
+
+\section{Design Principles}
+
+\begin{enumerate}
+    \item \textbf{Normalization}: Database follows 3NF for data integrity
+    \item \textbf{Scalability}: Designed for horizontal scaling with read replicas
+    \item \textbf{Performance}: Strategic indexing for query optimization
+    \item \textbf{Flexibility}: JSONB columns for semi-structured data
+    \item \textbf{Auditability}: Timestamp tracking for all entities
+    \item \textbf{Security}: Role-based access control via user roles
+\end{enumerate}
+
+\chapter{Core Tables}
+
+\section{users Table}
+
+User management and authentication for the SYNAPSE platform.
+
+\subsection{Table Definition}
+
+\begin{table}[h]
+\centering
+\small
+\caption{users Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique user identifier \\
+username & VARCHAR(150) & UNIQUE, NOT NULL & User login name \\
+email & VARCHAR(255) & UNIQUE, NOT NULL & User email address \\
+password\_hash & VARCHAR(255) & NULL & Bcrypt/Argon2 password hash \\
+first\_name & VARCHAR(100) & NULL & User first name \\
+last\_name & VARCHAR(100) & NULL & User last name \\
+role & ENUM & NOT NULL & admin, user, premium \\
+is\_active & BOOLEAN & DEFAULT TRUE & Account status \\
+created\_at & TIMESTAMP & NOT NULL & Account creation time \\
+updated\_at & TIMESTAMP & NOT NULL & Last profile update \\
+last\_login & TIMESTAMP & NULL & Last authentication timestamp \\
+preferences & JSONB & DEFAULT '\{\}' & User settings and preferences \\
+avatar\_url & VARCHAR(500) & NULL & Profile image URL \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{SQL Definition}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(150) UNIQUE NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    role VARCHAR(50) NOT NULL CHECK (role IN 
+        ('admin', 'user', 'premium')),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    last_login TIMESTAMP,
+    preferences JSONB DEFAULT '{}',
+    avatar_url VARCHAR(500)
+);
+\end{lstlisting}
+
+\newpage
+\section{sources Table}
+
+Content source configuration for automated data collection.
+
+\begin{table}[h]
+\centering
+\small
+\caption{sources Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique source identifier \\
+name & VARCHAR(200) & NOT NULL & Source display name \\
+url & VARCHAR(500) & UNIQUE, NULL & Source base URL \\
+source\_type & VARCHAR(50) & NOT NULL & news, github, arxiv, youtube, blog \\
+is\_active & BOOLEAN & NULL & Scraping enabled status \\
+scrape\_interval\_minutes & INTEGER & NULL & Interval between scrapes \\
+last\_scraped\_at & TIMESTAMP & NULL & Last successful scrape \\
+config & JSONB & DEFAULT '\{\}' & Source-specific configuration \\
+created\_at & TIMESTAMP & NOT NULL & Creation timestamp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE sources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(200) NOT NULL,
+    url VARCHAR(500) UNIQUE,
+    source_type VARCHAR(50) NOT NULL CHECK (source_type IN 
+        ('news', 'github', 'arxiv', 'youtube', 'blog')),
+    is_active BOOLEAN DEFAULT TRUE,
+    scrape_interval_minutes INTEGER,
+    last_scraped_at TIMESTAMP,
+    config JSONB DEFAULT '{}',
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+\end{lstlisting}
+
+\newpage
+\section{articles Table}
+
+News articles and blog posts aggregated from various sources.
+
+\begin{table}[h]
+\centering
+\small
+\caption{articles Table Schema}
+\begin{tabular}{|l|l|l|l|}
+\toprule
+\textbf{Column Name} & \textbf{Data Type} & \textbf{Constraints} & \textbf{Description} \\
+\midrule
+id & UUID & PK & Unique article identifier \\
+title & TEXT & NOT NULL & Article headline \\
+content & TEXT & NULL & Full article body \\
+summary & TEXT & NULL & Generated summary \\
+url & VARCHAR(1000) & UNIQUE, NULL & Original article URL \\
+source\_id & UUID & FK, NOT NULL & Reference to sources table \\
+author & VARCHAR(300) & NULL & Article author name \\
+published\_at & TIMESTAMP & NULL & Publication date \\
+scraped\_at & TIMESTAMP & NOT NULL & Data collection timestamp \\
+topic & VARCHAR(100) & NULL & Article topic classification \\
+tags & TEXT[] & NULL & Array of tags \\
+keywords & TEXT[] & NULL & Array of extracted keywords \\
+sentiment\_score & FLOAT & NULL & -1.0 to 1.0 sentiment analysis \\
+trending\_score & FLOAT & NULL & Trending metric (0-100) \\
+view\_count & INTEGER & DEFAULT 0 & Platform view count \\
+embedding\_id & VARCHAR(200) & NULL & Vector DB reference \\
+metadata & JSONB & DEFAULT '\{\}' & Additional metadata \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+CREATE TABLE articles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT,
+    summary TEXT,
+    url VARCHAR(1000) UNIQUE,
+    source_id UUID NOT NULL REFERENCES sources(id),
+    author VARCHAR(300),
+    published_at TIMESTAMP,
+    scraped_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    topic VARCHAR(100),
+    tags TEXT[],
+    keywords TEXT[],
+    sentiment_score FLOAT CHECK (sentiment_score >= -1.0 
+        AND sentiment_score <= 1.0),
+    trending_score FLOAT,
+    view_count INTEGER DEFAULT 0,
+    embedding_id VARCHAR(200),
+    metadata JSONB DEFAULT '{}'
+);
+\end{lstlisting}
+
+\newpage
+
+\chapter{Vector Database Architecture}
+
+\section{Overview}
+
+SYNAPSE leverages a dedicated vector database (Pinecone or pgvector) to store embeddings for semantic search and similarity matching across all content types.
+
+\section{Vector Collections}
+
+\subsection{Articles Embeddings}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- If using pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Add vector column to articles table
+ALTER TABLE articles ADD COLUMN embedding vector(1536);
+
+-- Create index for similarity search
+CREATE INDEX ON articles USING ivfflat 
+    (embedding vector_cosine_ops) WITH (lists = 100);
+\end{lstlisting}
+
+\subsection{Pinecone Collections}
+
+For larger deployments, Pinecone provides managed vector storage:
+
+\begin{itemize}
+    \item \textbf{articles-embeddings}: 1536-dim embeddings from text-embedding-3-small
+    \item \textbf{repositories-embeddings}: Repository README and description embeddings
+    \item \textbf{research-papers-embeddings}: Academic paper abstract embeddings
+    \item \textbf{videos-embeddings}: Video transcript and description embeddings
+\end{itemize}
+
+\section{Embedding Metadata}
+
+Vector database records maintain the following metadata for filtering:
+
+\begin{lstlisting}[language=Python]
+{
+    "content_id": "uuid-string",
+    "content_type": "article|repository|paper|video",
+    "source_id": "uuid-string",
+    "published_date": "ISO-8601",
+    "trending_score": 85.5,
+    "language": "en",
+    "tags": ["ai", "machine-learning"]
+}
+\end{lstlisting}
+
+\newpage
+
+\chapter{Redis Caching Strategy}
+
+\section{Key Patterns and TTLs}
+
+Redis provides high-speed caching for frequently accessed data:
+
+\subsection{User Session Cache}
+
+\begin{lstlisting}[language=Python,basicstyle=\ttfamily\small]
+# User session tokens
+KEY: session:{session_id}
+VALUE: {user_id, username, role, permissions}
+TTL: 7 days (604800 seconds)
+
+# User preferences cache
+KEY: user:preferences:{user_id}
+VALUE: JSON preferences object
+TTL: 24 hours (86400 seconds)
+\end{lstlisting}
+
+\subsection{Content Cache}
+
+\begin{lstlisting}[language=Python,basicstyle=\ttfamily\small]
+# Recently trending articles
+KEY: trending:articles:daily
+VALUE: List of article IDs
+TTL: 6 hours (21600 seconds)
+
+# Repository trending data
+KEY: trending:repos:weekly
+VALUE: List of repository IDs with scores
+TTL: 24 hours (86400 seconds)
+
+# Technology trends
+KEY: trends:tech:{date}
+VALUE: Technology trend scores and mentions
+TTL: 48 hours (172800 seconds)
+\end{lstlisting}
+
+\subsection{Aggregate Caches}
+
+\begin{lstlisting}[language=Python,basicstyle=\ttfamily\small]
+# User bookmark count
+KEY: user:bookmarks:count:{user_id}
+VALUE: Integer count
+TTL: 1 hour (3600 seconds)
+
+# Collection metadata
+KEY: collection:{collection_id}
+VALUE: Collection object with item count
+TTL: 2 hours (7200 seconds)
+
+# Search results cache
+KEY: search:results:{query_hash}
+VALUE: Paginated search results
+TTL: 30 minutes (1800 seconds)
+\end{lstlisting}
+
+\subsection{Task Queue Cache}
+
+\begin{lstlisting}[language=Python,basicstyle=\ttfamily\small]
+# Workflow execution tracking
+KEY: workflow:run:{run_id}
+VALUE: Execution status and progress
+TTL: Until completion + 7 days
+
+# Agent task progress
+KEY: agent:task:{task_id}:progress
+VALUE: Percentage completed, current step
+TTL: Until completion + 24 hours
+
+# Celery task results
+KEY: celery:result:{task_id}
+VALUE: Task result object
+TTL: 1 day (86400 seconds)
+\end{lstlisting}
+
+\section{Cache Invalidation Strategy}
+
+\begin{enumerate}
+    \item \textbf{Event-Driven Invalidation}: Invalidate caches on INSERT/UPDATE/DELETE
+    \item \textbf{TTL-Based Expiration}: Natural expiration for time-sensitive data
+    \item \textbf{Bulk Invalidation}: Clear category caches after scraping operations
+    \item \textbf{User-Specific}: Invalidate on profile or preference changes
+    \item \textbf{Pattern Matching}: Use Redis SCAN for wildcard invalidation
+\end{enumerate}
+
+\newpage
+
+\chapter{Entity Relationship Overview}
+
+\section{Core Relationships}
+
+\begin{itemize}
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ user\_bookmarks
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ collections
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ automation\_workflows
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ agent\_tasks
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ generated\_documents
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ notifications
+    \item \textbf{users} $\leftarrow$ One-to-Many $\rightarrow$ user\_activity
+    \item \textbf{sources} $\leftarrow$ One-to-Many $\rightarrow$ articles
+    \item \textbf{collections} $\leftarrow$ One-to-Many $\rightarrow$ collection\_items
+    \item \textbf{automation\_workflows} $\leftarrow$ One-to-Many $\rightarrow$ workflow\_runs
+\end{itemize}
+
+\section{Polymorphic Relationships}
+
+Several tables use polymorphic relationships via \texttt{content\_type} + \texttt{content\_id}:
+
+\begin{itemize}
+    \item \textbf{user\_bookmarks}: References articles, repositories, research\_papers, videos
+    \item \textbf{collection\_items}: References articles, repositories, research\_papers, videos
+\end{itemize}
+
+These relationships are maintained by application logic rather than database constraints for flexibility.
+
+\newpage
+
+\chapter{Database Performance Considerations}
+
+\section{Partitioning Strategy}
+
+For production deployments with large data volumes:
+
+\subsection{Time-Based Partitioning}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Partition articles by month
+CREATE TABLE articles_2024_01 PARTITION OF articles
+    FOR VALUES FROM ('2024-01-01') 
+    TO ('2024-02-01');
+
+CREATE TABLE articles_2024_02 PARTITION OF articles
+    FOR VALUES FROM ('2024-02-01') 
+    TO ('2024-03-01');
+\end{lstlisting}
+
+\subsection{Range-Based Partitioning}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Partition user_activity by user_id ranges
+CREATE TABLE user_activity_0_250k PARTITION OF user_activity
+    FOR VALUES FROM (0) TO (250000);
+
+CREATE TABLE user_activity_250k_500k PARTITION OF user_activity
+    FOR VALUES FROM (250000) TO (500000);
+\end{lstlisting}
+
+\section{Query Optimization Tips}
+
+\begin{enumerate}
+    \item \textbf{Use EXPLAIN ANALYZE}: Profile slow queries before optimization
+    \item \textbf{Avoid SELECT *}: Specify only required columns
+    \item \textbf{Batch Operations}: Use INSERT INTO ... SELECT for bulk operations
+    \item \textbf{Connection Pooling}: Implement PgBouncer for connection management
+    \item \textbf{Read Replicas}: Direct read-heavy queries to replicas
+    \item \textbf{Prepared Statements}: Prevent SQL injection and improve planning
+    \item \textbf{Vacuum Strategy}: Regular VACUUM ANALYZE on high-churn tables
+    \item \textbf{Statistics}: Keep table statistics current with ANALYZE
+\end{enumerate}
+
+\section{Monitoring and Maintenance}
+
+\subsection{Key Metrics to Monitor}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Monitor table sizes
+SELECT schemaname, tablename, 
+       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename))
+FROM pg_tables 
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+-- Monitor index usage
+SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read
+FROM pg_stat_user_indexes
+ORDER BY idx_scan DESC;
+
+-- Monitor slow queries
+SELECT query, calls, total_time, mean_time
+FROM pg_stat_statements
+WHERE query NOT LIKE '%pg_stat%'
+ORDER BY mean_time DESC
+LIMIT 10;
+\end{lstlisting}
+
+\subsection{Maintenance Operations}
+
+\begin{itemize}
+    \item \textbf{VACUUM}: Run daily on high-churn tables (articles, user\_activity)
+    \item \textbf{ANALYZE}: Update statistics weekly or after bulk operations
+    \item \textbf{REINDEX}: Rebuild fragmented indexes monthly
+    \item \textbf{AUTOVACUUM}: Configure aggressive settings for busy tables
+    \item \textbf{Log Archival}: Manage transaction logs with WAL archiving
+\end{itemize}
+
+\newpage
+
+\chapter{Data Migration and Backup Strategy}
+
+\section{Backup Approach}
+
+\begin{itemize}
+    \item \textbf{Full Backups}: Daily pg\_dump to cloud storage
+    \item \textbf{WAL Archiving}: Continuous WAL archiving for point-in-time recovery
+    \item \textbf{Replication}: Streaming replication to standby server
+    \item \textbf{Retention}: Keep 30 days of backups minimum
+\end{itemize}
+
+\section{Migration Path}
+
+For schema updates in production:
+
+\begin{enumerate}
+    \item Create migration scripts using Alembic or Flyway
+    \item Test migrations on staging environment
+    \item Schedule during low-traffic windows
+    \item Verify data integrity post-migration
+    \item Maintain rollback capability
+\end{enumerate}
+
+\newpage
+
+\chapter{Security and Compliance}
+
+\section{Access Control}
+
+\begin{lstlisting}[language=SQL,basicstyle=\ttfamily\small]
+-- Create read-only role for reporting
+CREATE ROLE readonly;
+GRANT CONNECT ON DATABASE synapse TO readonly;
+GRANT USAGE ON SCHEMA public TO readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly;
+
+-- Create application role with limited permissions
+CREATE ROLE app_user;
+GRANT USAGE ON SCHEMA public TO app_user;
+GRANT SELECT, INSERT, UPDATE ON articles TO app_user;
+GRANT SELECT, INSERT, UPDATE ON user_bookmarks TO app_user;
+\end{lstlisting}
+
+\section{Sensitive Data Handling}
+
+\begin{itemize}
+    \item \textbf{Password Hashes}: Use Bcrypt/Argon2, never store plaintext
+    \item \textbf{API Keys}: Encrypt and store in separate secrets management system
+    \item \textbf{PII}: Consider encryption-at-rest for sensitive user data
+    \item \textbf{Audit Logging}: Track who accesses sensitive data
+\end{itemize}
+
+\newpage
+
+\chapter{Conclusion}
+
+The SYNAPSE database schema provides a robust, scalable foundation for a FAANG-style technology intelligence platform. Key features include:
+
+\begin{enumerate}
+    \item \textbf{Comprehensive Coverage}: All content types and user interactions
+    \item \textbf{Performance Optimized}: Strategic indexing across all access patterns
+    \item \textbf{Flexible Architecture}: JSONB and array columns for extensibility
+    \item \textbf{Scalability Ready}: Partitioning, replication, and caching strategies
+    \item \textbf{Security Conscious}: Role-based access control and data protection
+    \item \textbf{Operational Maturity}: Monitoring, backup, and maintenance guidelines
+\end{enumerate}
+
+This schema supports real-time content aggregation, AI-powered analysis, user-driven workflows, and advanced analytics while maintaining data integrity and performance across millions of records.
+
+\end{document}
