@@ -19,8 +19,9 @@ name: CD — Build, Push & Deploy
 # To enable deploys:
 #   Settings → Secrets and variables → Actions
 #     Variables: DEPLOY_ENABLED = true
+#                PRODUCTION_URL  (public URL — a variable, NOT a secret)
 #                BUILD_PLATFORMS = linux/amd64,linux/arm64   (ARM hosts only)
-#     Secrets:   SSH_HOST, SSH_USER, SSH_KEY, PRODUCTION_URL
+#     Secrets:   SSH_HOST, SSH_USER, SSH_KEY
 #                SSH_PORT           (optional, defaults to 22)
 #                NEXT_PUBLIC_API_URL (baked into the frontend image at build)
 #                SLACK_WEBHOOK_URL  (optional)
@@ -162,26 +163,31 @@ jobs:
     if: vars.DEPLOY_ENABLED == 'true'
     environment:
       name: production
-      url:  ${{ secrets.PRODUCTION_URL }}
+      # Must be a variable, not a secret. GitHub does not expose the `secrets`
+      # context in `environment.url`, and using it there is a hard parse error
+      # that stops the WHOLE workflow from loading — every run fails in 0s with
+      # no jobs created. A public URL is not secret, so PRODUCTION_URL lives in
+      # repository variables.
+      url: ${{ vars.PRODUCTION_URL }}
     permissions:
       deployments: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify required secrets
+      - name: Verify deploy configuration
         run: |
           missing=""
-          [ -n "${{ secrets.SSH_HOST }}" ]    || missing="$missing SSH_HOST"
-          [ -n "${{ secrets.SSH_USER }}" ]    || missing="$missing SSH_USER"
-          [ -n "${{ secrets.SSH_KEY }}" ]     || missing="$missing SSH_KEY"
-          [ -n "${{ secrets.PRODUCTION_URL }}" ] || missing="$missing PRODUCTION_URL"
+          [ -n "${{ secrets.SSH_HOST }}" ]  || missing="$missing SSH_HOST(secret)"
+          [ -n "${{ secrets.SSH_USER }}" ]  || missing="$missing SSH_USER(secret)"
+          [ -n "${{ secrets.SSH_KEY }}" ]   || missing="$missing SSH_KEY(secret)"
+          [ -n "${{ vars.PRODUCTION_URL }}" ] || missing="$missing PRODUCTION_URL(variable)"
           if [ -n "$missing" ]; then
-            echo "DEPLOY_ENABLED is true but these secrets are unset:$missing"
+            echo "DEPLOY_ENABLED is true but these are unset:$missing"
             echo "Set them under Settings → Secrets and variables → Actions."
             exit 1
           fi
-          echo "All required deploy secrets present."
+          echo "All required deploy configuration present."
 
       - name: Create GitHub Deployment
         uses: chrnorm/deployment-action@v2
@@ -234,7 +240,7 @@ jobs:
           echo "Waiting 30s for services to stabilise..."
           sleep 30
           for i in 1 2 3 4 5; do
-            if curl -sf ${{ secrets.PRODUCTION_URL }}/api/v1/health/; then
+            if curl -sf ${{ vars.PRODUCTION_URL }}/api/v1/health/; then
               echo "Health check passed!"
               exit 0
             fi
@@ -251,7 +257,7 @@ jobs:
           token:         ${{ secrets.GITHUB_TOKEN }}
           deployment-id: ${{ steps.deployment.outputs.deployment_id }}
           state:         success
-          environment-url: ${{ secrets.PRODUCTION_URL }}
+          environment-url: ${{ vars.PRODUCTION_URL }}
 
       - name: Update deployment status (failure)
         if: failure()
@@ -267,7 +273,7 @@ jobs:
         with:
           status: success
           fields: repo,message,commit,author,took
-          text: "✅ SYNAPSE deployed to production — <${{ secrets.PRODUCTION_URL }}|view live>"
+          text: "✅ SYNAPSE deployed to production — <${{ vars.PRODUCTION_URL }}|view live>"
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
