@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import { api } from '@/utils/api';
 
 interface ActionResult {
@@ -149,8 +150,12 @@ function ActionCard({ action, index }: { action: ActionResult; index: number }) 
   );
 }
 
-export default function RunDetailPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function RunDetailPage() {
+  // Next.js 15 makes the `params` prop a Promise. This is a client component,
+  // so read the route param with useParams() — the same approach the other
+  // dynamic routes here use (see organizations/[id]/settings).
+  const routeParams = useParams();
+  const id = routeParams?.id as string;
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [liveRun, setLiveRun] = useState<WorkflowRun | null>(null);
 

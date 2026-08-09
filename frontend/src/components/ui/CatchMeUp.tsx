@@ -20,13 +20,14 @@ export function CatchMeUp() {
   const [stats,   setStats]   = useState<any>(null)
   const [error,   setError]   = useState('')
 
-  const handleFetch = async () => {
+  const handleFetch = async (daysOverride?: number) => {
+    const d = daysOverride ?? days
     setLoading(true)
     setError('')
     setBrief('')
     setStats(null)
     try {
-      const { data } = await api.get(`/ai/catch-up/?days=${days}`)
+      const { data } = await api.get(`/ai/catch-up/?days=${d}`)
       setBrief(data.brief || '')
       setStats(data.stats || null)
     } catch (e: any) {
@@ -34,6 +35,13 @@ export function CatchMeUp() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleDayChange = (d: number) => {
+    setDays(d)
+    setBrief('')
+    setStats(null)
+    handleFetch(d)
   }
 
   return (
@@ -74,8 +82,9 @@ export function CatchMeUp() {
                     {[1, 3, 7].map(d => (
                       <button
                         key={d}
-                        onClick={() => { setDays(d); setBrief(''); setStats(null) }}
-                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${days === d ? 'bg-white dark:bg-slate-600 shadow text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        onClick={() => handleDayChange(d)}
+                        disabled={loading}
+                        className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 ${days === d ? 'bg-white dark:bg-slate-600 shadow text-indigo-600 dark:text-indigo-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                       >
                         {d}d
                       </button>
@@ -107,7 +116,7 @@ export function CatchMeUp() {
                 ) : error ? (
                   <div className="text-center py-8">
                     <p className="text-red-500 text-sm">{error}</p>
-                    <button onClick={handleFetch} className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
+                    <button onClick={() => handleFetch()} className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 transition-colors">
                       Retry
                     </button>
                   </div>
@@ -115,13 +124,23 @@ export function CatchMeUp() {
                   <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-indigo-600">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{brief}</ReactMarkdown>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3">
+                    <div className="text-4xl">⚡</div>
+                    <p className="text-sm text-slate-500 text-center">
+                      Ready to generate your {days}-day brief.
+                    </p>
+                    <button onClick={() => handleFetch()} className="px-5 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors flex items-center gap-2">
+                      <Zap size={14} /> Generate Brief
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Footer */}
               {brief && (
                 <div className="flex items-center justify-between p-4 border-t border-slate-100 dark:border-slate-700 flex-shrink-0">
-                  <button onClick={() => { setBrief(''); setStats(null); handleFetch() }} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1">
+                  <button onClick={() => handleFetch()} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1">
                     <Zap size={14} /> Regenerate
                   </button>
                   <button onClick={() => setOpen(false)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
