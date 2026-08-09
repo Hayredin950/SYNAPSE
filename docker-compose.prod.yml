@@ -154,7 +154,7 @@ services:
 
   # ── Django Backend ────────────────────────────────────────────────────────────
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY:-hayrekhan750/synapse}/backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-hayredin950}/synapse-backend:${IMAGE_TAG:-latest}
     container_name: synapse_backend
     restart: always
     env_file: .env.prod
@@ -204,7 +204,7 @@ services:
 
   # ── FastAPI AI Engine ─────────────────────────────────────────────────────────
   fastapi_ai:
-    image: ghcr.io/${GITHUB_REPOSITORY:-hayrekhan750/synapse}/ai-engine:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-hayredin950}/synapse-ai-engine:${IMAGE_TAG:-latest}
     container_name: synapse_fastapi_ai
     restart: always
     env_file: .env.prod
@@ -243,7 +243,7 @@ services:
 
   # ── Next.js Frontend ──────────────────────────────────────────────────────────
   frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY:-hayrekhan750/synapse}/frontend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-hayredin950}/synapse-frontend:${IMAGE_TAG:-latest}
     container_name: synapse_frontend
     restart: always
     env_file: .env.prod
@@ -269,7 +269,7 @@ services:
 
   # ── Celery Worker ─────────────────────────────────────────────────────────────
   celery_worker:
-    image: ghcr.io/${GITHUB_REPOSITORY:-hayrekhan750/synapse}/backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-hayredin950}/synapse-backend:${IMAGE_TAG:-latest}
     container_name: synapse_celery_worker
     restart: always
     env_file: .env.prod
@@ -303,7 +303,7 @@ services:
 
   # ── Celery Beat ───────────────────────────────────────────────────────────────
   celery_beat:
-    image: ghcr.io/${GITHUB_REPOSITORY:-hayrekhan750/synapse}/backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-hayredin950}/synapse-backend:${IMAGE_TAG:-latest}
     container_name: synapse_celery_beat
     restart: always
     env_file: .env.prod
@@ -329,7 +329,7 @@ services:
 
   # ── Flower — Celery monitoring UI ────────────────────────────────────────────
   flower:
-    image: ghcr.io/${GITHUB_REPOSITORY:-hayrekhan750/synapse}/backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-hayredin950}/synapse-backend:${IMAGE_TAG:-latest}
     container_name: synapse_flower
     restart: always
     env_file: .env.prod

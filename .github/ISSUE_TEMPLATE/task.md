@@ -3,7 +3,7 @@ name: Development Task
 about: A specific development task from the TASKS.md roadmap
 title: '[TASK] '
 labels: task
-assignees: HayreKhan750
+assignees: Hayredin950
 ---
 
 ## Task Description

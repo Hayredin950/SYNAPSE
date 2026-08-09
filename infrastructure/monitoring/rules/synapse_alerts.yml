@@ -16,7 +16,7 @@ groups:
         annotations:
           summary: "High 5xx error rate ({{ $value | humanizePercentage }})"
           description: "Error rate exceeds 5% — check Django logs immediately."
-          runbook: "https://github.com/HayreKhan750/SYNAPSE/blob/main/DEPLOYMENT.md#runbook-high-error-rate"
+          runbook: "https://github.com/Hayredin950/SYNAPSE/blob/main/DEPLOYMENT.md#runbook-high-error-rate"
 
       - alert: HighLatencyP95
         expr: |

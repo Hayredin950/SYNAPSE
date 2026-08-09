@@ -3,7 +3,7 @@ name: Feature Request
 about: Suggest a new feature or improvement for SYNAPSE
 title: '[FEATURE] '
 labels: enhancement
-assignees: HayreKhan750
+assignees: Hayredin950
 ---
 
 ## Feature Summary

@@ -3,7 +3,7 @@ name: Bug Report
 about: Report a bug or unexpected behavior in SYNAPSE
 title: '[BUG] '
 labels: bug
-assignees: HayreKhan750
+assignees: Hayredin950
 ---
 
 ## Bug Description

@@ -11,7 +11,7 @@
 #   (base64-encoded or raw script mode)
 #
 # Usage (manual):
-#   curl -sSL https://raw.githubusercontent.com/HayreKhan750/SYNAPSE/main/scripts/ec2_bootstrap.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/Hayredin950/SYNAPSE/main/scripts/ec2_bootstrap.sh | sudo bash
 # ============================================================
 
 set -euo pipefail
@@ -178,7 +178,7 @@ systemctl restart docker
 
 # ── 9. Clone / update repo ────────────────────────────────────────────────────
 if [ ! -d /opt/synapse ]; then
-  git clone https://github.com/HayreKhan750/SYNAPSE.git /opt/synapse
+  git clone https://github.com/Hayredin950/SYNAPSE.git /opt/synapse
 else
   cd /opt/synapse && git pull --rebase
 fi

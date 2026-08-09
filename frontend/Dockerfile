@@ -13,6 +13,14 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# NEXT_PUBLIC_* values are inlined into the client bundle at BUILD time, not
+# read at runtime. Without this ARG the --build-arg passed by CI is silently
+# discarded and the image ships with an empty API URL, so every browser request
+# resolves against the wrong origin. It must be declared here, in the stage
+# that actually runs `next build`.
+ARG NEXT_PUBLIC_API_URL=""
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx next build
 

@@ -3,18 +3,30 @@ name: CD — Build, Push & Deploy
 # ============================================================
 # SYNAPSE Continuous Deployment Pipeline
 # ============================================================
-# Triggers: push to main (after CI passes) + manual dispatch
+# Triggers: push to main + manual dispatch
 #
 # Flow:
-#   1. Build multi-arch Docker images (linux/amd64 + linux/arm64)
+#   1. Build Docker images (amd64 by default — see PLATFORMS below)
 #   2. Push to GitHub Container Registry (GHCR) with SHA + latest tags
-#   3. SSH into EC2, pull new images, run migrations, reload services
-#   4. Health check production URL
+#   3. If a deploy target is configured: SSH to the host, pull, migrate, reload
+#   4. Health check the production URL
 #   5. Notify (Slack / GitHub deployment status)
 #
-# Required GitHub Secrets:
-#   EC2_HOST, EC2_USER, EC2_SSH_KEY
-#   SLACK_WEBHOOK_URL (optional)
+# The deploy job is SKIPPED unless the repository variable
+# DEPLOY_ENABLED is set to "true". Until then this workflow only builds and
+# publishes images, which is safe to run with no infrastructure.
+#
+# To enable deploys:
+#   Settings → Secrets and variables → Actions
+#     Variables: DEPLOY_ENABLED = true
+#                BUILD_PLATFORMS = linux/amd64,linux/arm64   (ARM hosts only)
+#     Secrets:   SSH_HOST, SSH_USER, SSH_KEY, PRODUCTION_URL
+#                SSH_PORT           (optional, defaults to 22)
+#                NEXT_PUBLIC_API_URL (baked into the frontend image at build)
+#                SLACK_WEBHOOK_URL  (optional)
+#
+# The host must have /opt/synapse containing docker-compose.prod.yml,
+# infrastructure/, and a populated .env.prod.
 # ============================================================
 
 on:
@@ -34,8 +46,13 @@ concurrency:
   cancel-in-progress: false   # never cancel in-flight deploys
 
 env:
-  REGISTRY:   ghcr.io
-  IMAGE_BASE: ghcr.io/${{ github.repository_owner }}
+  REGISTRY: ghcr.io
+  # Building arm64 on an amd64 runner goes through QEMU emulation. For this
+  # image set (torch, scientific wheels) that can run for hours and hit the
+  # 6-hour job ceiling, so amd64 is the default. Set the repository variable
+  # BUILD_PLATFORMS to "linux/amd64,linux/arm64" only when deploying to an
+  # ARM host such as an Oracle Ampere instance.
+  PLATFORMS: ${{ vars.BUILD_PLATFORMS || 'linux/amd64' }}
 
 jobs:
   # ── Build & push images ───────────────────────────────────────────────────
@@ -50,9 +67,18 @@ jobs:
 
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
+      owner_lc:  ${{ steps.owner.outputs.lowercase }}
 
     steps:
       - uses: actions/checkout@v4
+
+      # Docker image references must be lowercase, but a GitHub owner may
+      # contain capitals (this one does: Hayredin950). Using
+      # github.repository_owner verbatim fails the push with
+      # "invalid reference format".
+      - name: Lowercase image owner
+        id: owner
+        run: echo "lowercase=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU (multi-arch)
         uses: docker/setup-qemu-action@v3
@@ -73,9 +99,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-backend
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-frontend
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-ai-engine
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-backend
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-frontend
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-ai-engine
           tags: |
             type=sha,prefix=,format=short
             type=ref,event=branch
@@ -88,11 +114,11 @@ jobs:
           context: .
           file:    backend/Dockerfile
           target:  production
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push:    true
-          tags:    ${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-backend:${{ github.sha }},${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-backend:latest
-          cache-from: type=gha,scope=backend-prod
-          cache-to:   type=gha,scope=backend-prod,mode=max
+          tags:    ${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-backend:${{ github.sha }},${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to:   type=gha,scope=backend,mode=max
           labels:  ${{ steps.meta.outputs.labels }}
 
       # ── Frontend ─────────────────────────────────────────────────────────
@@ -102,11 +128,11 @@ jobs:
           context: frontend
           file:    frontend/Dockerfile
           target:  production
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push:    true
-          tags:    ${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-frontend:${{ github.sha }},${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-frontend:latest
-          cache-from: type=gha,scope=frontend-prod
-          cache-to:   type=gha,scope=frontend-prod,mode=max
+          tags:    ${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-frontend:${{ github.sha }},${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to:   type=gha,scope=frontend,mode=max
           labels:  ${{ steps.meta.outputs.labels }}
           build-args: |
             NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
@@ -117,18 +143,23 @@ jobs:
         with:
           context: .
           file:    ai_engine/Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ env.PLATFORMS }}
           push:    true
-          tags:    ${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-ai-engine:${{ github.sha }},${{ env.REGISTRY }}/${{ github.repository_owner }}/synapse-ai-engine:latest
-          cache-from: type=gha,scope=ai-engine-prod
-          cache-to:   type=gha,scope=ai-engine-prod,mode=max
+          tags:    ${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-ai-engine:${{ github.sha }},${{ env.REGISTRY }}/${{ steps.owner.outputs.lowercase }}/synapse-ai-engine:latest
+          cache-from: type=gha,scope=ai-engine
+          cache-to:   type=gha,scope=ai-engine,mode=max
           labels:  ${{ steps.meta.outputs.labels }}
 
-  # ── Deploy to EC2 ─────────────────────────────────────────────────────────
+  # ── Deploy to a host over SSH ─────────────────────────────────────────────
   deploy:
-    name: Deploy to Production (EC2)
+    name: Deploy to Production
     runs-on: ubuntu-latest
     needs: build-push
+    # Skipped unless a deploy target is configured. Without this the job fails
+    # on every push for anyone who has not set up a host, and a permanently red
+    # pipeline is one nobody reads. Images are still built and pushed above, so
+    # a manual `docker compose pull` on the host remains possible.
+    if: vars.DEPLOY_ENABLED == 'true'
     environment:
       name: production
       url:  ${{ secrets.PRODUCTION_URL }}
@@ -137,6 +168,20 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Verify required secrets
+        run: |
+          missing=""
+          [ -n "${{ secrets.SSH_HOST }}" ]    || missing="$missing SSH_HOST"
+          [ -n "${{ secrets.SSH_USER }}" ]    || missing="$missing SSH_USER"
+          [ -n "${{ secrets.SSH_KEY }}" ]     || missing="$missing SSH_KEY"
+          [ -n "${{ secrets.PRODUCTION_URL }}" ] || missing="$missing PRODUCTION_URL"
+          if [ -n "$missing" ]; then
+            echo "DEPLOY_ENABLED is true but these secrets are unset:$missing"
+            echo "Set them under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "All required deploy secrets present."
 
       - name: Create GitHub Deployment
         uses: chrnorm/deployment-action@v2
@@ -148,10 +193,10 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host:     ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key:      ${{ secrets.EC2_SSH_KEY }}
-          port:     22
+          host:     ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key:      ${{ secrets.SSH_KEY }}
+          port:     ${{ secrets.SSH_PORT || 22 }}
           timeout:  300s
           script: |
             set -e
@@ -159,7 +204,10 @@ jobs:
 
             echo "=== Pulling latest images ==="
             export IMAGE_TAG=${{ github.sha }}
-            export GITHUB_REPOSITORY=${{ github.repository }}
+            # docker-compose.prod.yml builds image names as
+            #   ghcr.io/$IMAGE_OWNER/synapse-<component>:$IMAGE_TAG
+            # which must match exactly what build-push published above.
+            export IMAGE_OWNER=${{ needs.build-push.outputs.owner_lc }}
             docker compose -f docker-compose.prod.yml pull
 
             echo "=== Running database migrations ==="

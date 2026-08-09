@@ -1,96 +1,160 @@
 # render.yaml — SYNAPSE Infrastructure Blueprint
-# Docs: https://render.com/docs/blueprint-syntax
-# Usage: render blueprint apply
+# Docs: https://render.com/docs/blueprint-spec
+# Apply: connect the repo in the Render dashboard, or `render blueprint launch`
+#
+# Schema note: Blueprints require a top-level `services:` LIST and a top-level
+# `databases:` LIST. An earlier version of this file used singular mapping keys
+# (`web:`, `worker:`, `database:`, `redis:`), which is not valid Blueprint
+# syntax — it parses as YAML but Render will not accept it.
+#
+# Sizing warning: the backend image includes torch, transformers,
+# sentence-transformers and spaCy. That needs roughly 2GB RAM to boot, so the
+# `starter` plan will OOM. `standard` is the realistic minimum; see DEPLOYMENT.md.
 
-# ── PostgreSQL Database ──────────────────────────────────────
-# Primary relational database for SYNAPSE
-database:
-  name: synapse-db
-  plan: starter
-  databaseName: synapse_db
-  ipAllowList: []
+databases:
+  - name: synapse-db
+    databaseName: synapse_db
+    user: synapse_user
+    plan: basic-256mb
+    postgresMajorVersion: "16"
+    ipAllowList: []          # private network only
 
-# ── Redis ───────────────────────────────────────────────────
-# Used for Celery task queue and caching
-redis:
-  name: synapse-redis
-  plan: starter
-  ipAllowList: []
+services:
+  # ── Redis (Celery broker, cache, Channels layer) ────────────────────────────
+  - type: keyvalue
+    name: synapse-redis
+    plan: starter
+    region: oregon
+    ipAllowList: []          # private network only
+    maxmemoryPolicy: allkeys-lru
 
-# ── Web Service (Django + Daphne ASGI) ───────────────────────
-# Main backend API — serves DRF API + WebSockets
-web:
-  name: synapse-backend
-  runtime: docker
-  dockerfilePath: ./backend/Dockerfile
-  plan: starter
-  region: oregon
-  branch: main
-  rootDirectory: /
-  healthCheckPath: /api/v1/health/
-  envVars:
-    - key: DATABASE_URL
-      sync: false
-    - key: REDIS_URL
-      sync: false
-    - key: DJANGO_SETTINGS_MODULE
-      value: config.settings.production
-    - key: SECRET_KEY
-      generateValue: true
-    - key: GITHUB_CLIENT_ID
-      sync: false
-    - key: GITHUB_CLIENT_SECRET
-      sync: false
-    - key: GITHUB_REDIRECT_URI
-      fromDatabase:
-        name: synapse-db
-        property: GITHUB_REDIRECT_URI
-    - key: OPENROUTER_API_KEY
-      sync: false
-    - key: GEMINI_API_KEY
-      sync: false
-    - key: TAVILY_API_KEY
-      sync: false
-    - key: GITHUB_TOKEN
-      sync: false
-    - key: STRIPE_SECRET_KEY
-      sync: false
-    - key: ALLOWED_HOSTS
-      value: "synapse-backend.onrender.com,srv-d7iv5h3bc2fs739bbpt0.render.com,synapse-app-six.vercel.app"
-    - key: CORS_ALLOWED_ORIGINS
-      value: "http://localhost:3000,https://synapse-app-six.vercel.app"
-    - key: CELERY_WORKERS
-      value: "2"
-    - key: ENABLE_AGENTS
-      value: "true"
-    - key: ENABLE_SCRAPING
-      value: "true"
+  # ── Django backend (Daphne ASGI — HTTP + WebSockets) ────────────────────────
+  - type: web
+    name: synapse-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .         # build context is the repo root, not ./backend
+    plan: standard           # 2GB — `starter` (512MB) cannot load the ML stack
+    region: oregon
+    branch: main
+    healthCheckPath: /api/v1/health/
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: synapse-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: synapse-redis
+          property: connectionString
+      # Hostnames this backend answers to — never the frontend's hostname.
+      - key: ALLOWED_HOSTS
+        value: synapse-backend.onrender.com
+      # Origins allowed to call it — this IS where the frontend belongs.
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      # AI providers — the fallback chain tries them in this order.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      # OAuth
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_REDIRECT_URI
+        sync: false          # a URL, not a database property
+      - key: GITHUB_TOKEN
+        sync: false
+      # Email — without this, signup verification silently no-ops.
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
 
-# ── Background Worker (Celery) ────────────────────────────────
-# Celery worker + beat scheduler for async tasks
-worker:
-  name: synapse-worker
-  runtime: docker
-  dockerfilePath: ./backend/Dockerfile
-  plan: starter
-  region: oregon
-  branch: main
-  rootDirectory: /
-  numInstances: 1
-  envVars:
-    - key: DATABASE_URL
-      sync: false
-    - key: REDIS_URL
-      sync: false
-    - key: DJANGO_SETTINGS_MODULE
-      value: config.settings.production
-    - key: SECRET_KEY
-      generateValue: true
-    - key: OPENROUTER_API_KEY
-      sync: false
-    - key: GEMINI_API_KEY
-      sync: false
-    - key: TAVILY_API_KEY
-      sync: false
-    - key: CELERY_WORKERS
-      value: "2"
+  # ── Celery worker ───────────────────────────────────────────────────────────
+  - type: worker
+    name: synapse-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    dockerCommand: /app/start-worker.sh
+    plan: standard
+    region: oregon
+    branch: main
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: synapse-backend
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: synapse-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: synapse-redis
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: CELERY_CONCURRENCY
+        value: "2"
+
+  # ── Celery beat (scheduler) ─────────────────────────────────────────────────
+  # Must stay at exactly one instance: two schedulers fire every periodic task
+  # twice.
+  - type: worker
+    name: synapse-beat
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    dockerCommand: /app/start-beat.sh
+    plan: starter            # beat only schedules; it does not load models
+    region: oregon
+    branch: main
+    numInstances: 1
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: synapse-backend
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: synapse-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: synapse-redis
+          property: connectionString
