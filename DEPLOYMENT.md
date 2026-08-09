@@ -112,8 +112,80 @@ Production checklist:
 6. `python manage.py collectstatic` (WhiteNoise serves them)
 
 **Untested:** `docker-compose.yml` and `docker-compose.prod.yml` build the
-application images. Those builds have not been run here — the heavy ML layer
-takes a long time to compile. Verify locally before relying on them.
+application images. Those builds have not been run to completion here — the ML
+layer takes a long time to compile. Verify locally before relying on them.
+
+---
+
+## 3a. CI/CD
+
+Three workflows run on `main`:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `ci.yml` | push, PR | lint, pytest against pgvector + Redis, Jest, build all 3 images |
+| `security.yml` | PR, weekly | SAST, dependency scan, secret scan, Trivy, ZAP (scheduled) |
+| `cd.yml` | push to `main` | build + push images to GHCR, then deploy **if enabled** |
+
+### Deploys are off by default
+
+`cd.yml`'s deploy job is skipped unless the repository variable
+`DEPLOY_ENABLED` is `true`. Until you set it, every push still builds and
+publishes images to GHCR — it just doesn't try to SSH anywhere. This is
+deliberate: the job previously ran unconditionally and would fail on every push
+without a host, and a permanently red pipeline is one nobody reads.
+
+To turn deploys on — **Settings → Secrets and variables → Actions**:
+
+*Variables*
+| Name | Value |
+|---|---|
+| `DEPLOY_ENABLED` | `true` |
+| `BUILD_PLATFORMS` | `linux/amd64,linux/arm64` — only for an ARM host |
+
+*Secrets*
+| Name | Notes |
+|---|---|
+| `SSH_HOST`, `SSH_USER`, `SSH_KEY` | target host; `SSH_PORT` optional (22) |
+| `PRODUCTION_URL` | health check target, e.g. `https://your-domain.com` |
+| `NEXT_PUBLIC_API_URL` | **baked into the frontend image at build time** |
+| `SLACK_WEBHOOK_URL` | optional |
+
+The job verifies these are set before doing anything, so a missing secret gives
+a clear message rather than a failure deep inside the SSH step.
+
+The host needs `/opt/synapse` containing `docker-compose.prod.yml`,
+`infrastructure/`, and a populated `.env.prod`.
+
+> Leave `BUILD_PLATFORMS` unset unless you need ARM. Building arm64 on an amd64
+> runner goes through QEMU emulation, and for a torch image that can exceed the
+> 6-hour job limit.
+
+### Image naming
+
+CD publishes to `ghcr.io/<owner-lowercase>/synapse-{backend,frontend,ai-engine}`
+and `docker-compose.prod.yml` reads `IMAGE_OWNER` and `IMAGE_TAG` to construct
+exactly those names. **The two must stay in sync** — they previously did not,
+which would have failed every `docker compose pull` with "image not found".
+
+To pull manually on the host:
+
+```bash
+export IMAGE_OWNER=hayredin950
+export IMAGE_TAG=latest        # or a specific commit SHA
+docker compose -f docker-compose.prod.yml pull
+```
+
+### Render
+
+`render.yaml` is a valid Blueprint (top-level `services:` and `databases:`
+lists — an earlier version used singular keys that Render silently would not
+accept). It provisions Postgres, Redis, the Daphne web service, a Celery
+worker, and a single beat scheduler.
+
+The backend is on the `standard` plan, not `starter`: 512MB cannot load torch +
+transformers + spaCy. Keep beat at exactly one instance or every periodic task
+fires twice.
 
 ---
 
