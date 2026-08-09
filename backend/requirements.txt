@@ -44,7 +44,7 @@ langchain-openai==0.2.14
 langchain-google-genai==2.1.12
 langchain-core==0.3.83
 langgraph>=0.1,<0.3
-langsmith>=0.1,<0.3
+langsmith>=0.3.45,<1.0  # langchain-core 0.3.83 needs >=0.3.45
 spacy>=3.7,<4.0
 transformers>=4.40,<5.0
 accelerate>=0.30,<1.0
