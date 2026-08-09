@@ -388,13 +388,33 @@ class TestAgentToolRegistry(TestCase):
     @patch("ai_engine.agents.tools.make_analyze_trends_tool")
     @patch("ai_engine.agents.tools.make_search_github_tool")
     @patch("ai_engine.agents.tools.make_fetch_arxiv_papers_tool")
+    @patch("ai_engine.agents.tools.make_web_search_tool")
+    @patch("ai_engine.agents.tools.make_run_python_tool")
+    @patch("ai_engine.agents.tools.make_read_document_tool")
+    @patch("ai_engine.agents.tools.make_generate_chart_tool")
     @patch("ai_engine.agents.doc_tools.make_generate_pdf_tool")
     @patch("ai_engine.agents.doc_tools.make_generate_ppt_tool")
     @patch("ai_engine.agents.doc_tools.make_generate_word_doc_tool")
     @patch("ai_engine.agents.doc_tools.make_generate_markdown_tool")
     @patch("ai_engine.agents.project_tools.make_create_project_tool")
-    def test_build_registers_all_10_tools(self, mp, m9, m8, m7, m6, m1, m2, m3, m4, m5):
-        """Registry now has 10 tools: 5 research (5.1) + 4 doc (5.2) + 1 project (5.3)."""
+    def test_build_registers_all_14_tools(
+        self,
+        mp,
+        m13,
+        m12,
+        m11,
+        m10,
+        m9,
+        m8,
+        m7,
+        m6,
+        m1,
+        m2,
+        m3,
+        m4,
+        m5,
+    ):
+        """Registry has 14 tools: 9 research/utility (5.1 + TASK-303) + 4 doc (5.2) + 1 project (5.3)."""
         from ai_engine.agents.registry import AgentToolRegistry
 
         # Create fresh registry
@@ -406,13 +426,17 @@ class TestAgentToolRegistry(TestCase):
             "analyze_trends",
             "search_github",
             "fetch_arxiv_papers",
+            "web_search",
+            "run_python_code",
+            "read_document",
+            "generate_chart",
             "generate_pdf",
             "generate_ppt",
             "generate_word_doc",
             "generate_markdown",
             "create_project",
         ]
-        mocks = [m5, m4, m3, m2, m1, m6, m7, m8, m9, mp]
+        mocks = [m5, m4, m3, m2, m1, m6, m7, m8, m9, m10, m11, m12, m13, mp]
         for mock, name in zip(mocks, tool_names):
             fake_tool = MagicMock()
             fake_tool.name = name
@@ -420,7 +444,7 @@ class TestAgentToolRegistry(TestCase):
 
         registry.build()
 
-        self.assertEqual(len(registry), 10)
+        self.assertEqual(len(registry), 14)
         for name in tool_names:
             self.assertIn(name, registry.list_tool_names())
 
@@ -506,7 +530,7 @@ class TestSynapseAgentBase(TestCase):
     def test_max_iterations_default(self):
         from ai_engine.agents.base import SynapseAgent
 
-        self.assertEqual(SynapseAgent.MAX_ITERATIONS, 10)
+        self.assertEqual(SynapseAgent.MAX_ITERATIONS, 5)
 
     def test_max_execution_time_default(self):
         from ai_engine.agents.base import SynapseAgent

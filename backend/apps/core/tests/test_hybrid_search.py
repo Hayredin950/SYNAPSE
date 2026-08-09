@@ -72,8 +72,8 @@ def _make_repo(**kwargs):
     return Repository.objects.create(**defaults)
 
 
-# Use 384 dims to match the test DB schema (the 1024 migration runs in prod only)
-FAKE_VECTOR_1024 = [0.1] * 384
+# Use 1024 dims to match the test DB schema (BAAI/bge-large-en-v1.5)
+FAKE_VECTOR_1024 = [0.1] * 1024
 
 
 # ── SearchResult & RRF unit tests ─────────────────────────────────────────────

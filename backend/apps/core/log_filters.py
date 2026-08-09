@@ -56,12 +56,19 @@ class PiiRedactionFilter(logging.Filter):
             record.msg = self._redact_pii(str(record.msg))
 
         if record.args:
+            # Redact only string args. Numeric args (int/float) must keep their
+            # types or %d / %f conversions in the format string fail at emit
+            # time (e.g. "tokens=%d" with an int arg must not become a str).
             if isinstance(record.args, dict):
                 record.args = {
-                    k: self._redact_pii(str(v)) for k, v in record.args.items()
+                    k: self._redact_pii(v) if isinstance(v, str) else v
+                    for k, v in record.args.items()
                 }
             elif isinstance(record.args, tuple):
-                record.args = tuple(self._redact_pii(str(arg)) for arg in record.args)
+                record.args = tuple(
+                    self._redact_pii(arg) if isinstance(arg, str) else arg
+                    for arg in record.args
+                )
 
         return True
 

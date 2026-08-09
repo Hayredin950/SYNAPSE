@@ -175,8 +175,9 @@ class TestGeneratePPT(DocToolTestCase):
                 {"title": "S2", "bullets": ["b"], "notes": ""},
             ]
         )
-        # 2 content slides + 1 title = 3
-        self.assertIn("Slides: 3", result)
+        # The deck auto-adds title/agenda/stats/chart/closing slides around
+        # the content: 2 content + 5 framework slides = 7.
+        self.assertIn("Slides: 7", result)
 
     def test_result_contains_title(self):
         result = self._run(title="AI Trends 2025")
@@ -245,11 +246,38 @@ class TestGenerateWordDoc(DocToolTestCase):
         )
         self.assertIn("Sections: 3", result)
 
-    def test_toc_flag_reported(self):
-        result_with = self._run(add_toc=True)
-        self.assertIn("TOC: yes", result_with)
-        result_without = self._run(add_toc=False)
-        self.assertIn("TOC: no", result_without)
+    def test_toc_flag_renders_toc_page(self):
+        """add_toc=True embeds a TABLE OF CONTENTS page in the docx; add_toc=False omits it."""
+
+        def _extract_text(p):
+            import zipfile
+
+            from lxml import etree
+
+            with zipfile.ZipFile(p) as z:
+                xml = z.read("word/document.xml")
+            return " ".join(
+                t.text or ""
+                for t in etree.fromstring(xml).iter(
+                    "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"
+                )
+            )
+
+        with_toc = self._run(add_toc=True)
+        with_toc_path = next(
+            Path(line.replace("Path:", "").strip())
+            for line in with_toc.splitlines()
+            if line.startswith("Path:")
+        )
+        self.assertIn("TABLE OF CONTENTS", _extract_text(with_toc_path))
+
+        without_toc = self._run(add_toc=False)
+        without_toc_path = next(
+            Path(line.replace("Path:", "").strip())
+            for line in without_toc.splitlines()
+            if line.startswith("Path:")
+        )
+        self.assertNotIn("TABLE OF CONTENTS", _extract_text(without_toc_path))
 
     def test_tool_metadata(self):
         from ai_engine.agents.doc_tools import make_generate_word_doc_tool
@@ -287,7 +315,7 @@ class TestGenerateMarkdown(DocToolTestCase):
 
     def test_generates_md_file(self):
         result = self._run()
-        self.assertIn("Markdown document generated successfully", result)
+        self.assertIn("Markdown generated successfully", result)
         self.assertIn(".md", result)
         for line in result.splitlines():
             if line.startswith("Path:"):
@@ -295,8 +323,9 @@ class TestGenerateMarkdown(DocToolTestCase):
                 self.assertTrue(path.exists())
                 content = path.read_text(encoding="utf-8")
                 self.assertIn("# Test Markdown", content)
-                self.assertIn("## Introduction", content)
-                self.assertIn("## Table of Contents", content)
+                self.assertIn("## ", content)  # section headings (emoji-prefixed)
+                self.assertIn("Introduction", content)
+                self.assertIn("Table of Contents", content)
                 break
 
     def test_toc_links_generated(self):

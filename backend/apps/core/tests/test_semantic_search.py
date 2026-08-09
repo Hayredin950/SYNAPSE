@@ -17,8 +17,8 @@ from rest_framework.test import APIClient
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-FAKE_VECTOR = [0.1] * 384  # legacy 384-dim vector (all-MiniLM-L6-v2)
-FAKE_VECTOR_1024 = [0.1] * 1024  # new 1024-dim vector (BAAI/bge-large-en-v1.5)
+FAKE_VECTOR = [0.1] * 1024  # 1024-dim vector (BAAI/bge-large-en-v1.5)
+FAKE_VECTOR_1024 = [0.1] * 1024  # 1024-dim vector (BAAI/bge-large-en-v1.5)
 
 
 def _make_fake_embedder():
@@ -26,7 +26,7 @@ def _make_fake_embedder():
     embedder = MagicMock()
     embedder.embed.return_value = FAKE_VECTOR
     embedder.embed_batch.return_value = [FAKE_VECTOR]
-    embedder.dimensions = 384
+    embedder.dimensions = 1024
     return embedder
 
 
@@ -188,11 +188,11 @@ class ArticleEmbeddingTaskTests(TestCase):
         result = generate_article_embedding(str(self.article.id))
 
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["dimensions"], 384)
+        self.assertEqual(result["dimensions"], 1024)
 
         self.article.refresh_from_db()
         self.assertIsNotNone(self.article.embedding)
-        self.assertEqual(len(self.article.embedding), 384)
+        self.assertEqual(len(self.article.embedding), 1024)
 
     @patch("apps.articles.embedding_tasks._get_embedder")
     def test_embed_missing_article_returns_error(self, mock_get_embedder):
@@ -274,7 +274,7 @@ class EmbedderModuleTests(TestCase):
         import numpy as np
 
         mock_model = MagicMock()
-        mock_model.get_sentence_embedding_dimension.return_value = 384
+        mock_model.get_sentence_embedding_dimension.return_value = 1024
         mock_model.encode.return_value = np.array([FAKE_VECTOR])
         MockST.return_value = mock_model
 
@@ -290,7 +290,7 @@ class EmbedderModuleTests(TestCase):
             result = embedder.embed("test sentence")
 
         self.assertIsInstance(result, list)
-        self.assertEqual(len(result), 384)
+        self.assertEqual(len(result), 1024)
         self.assertIsInstance(result[0], float)
 
     def test_embed_empty_string_returns_zeros(self):
@@ -298,14 +298,14 @@ class EmbedderModuleTests(TestCase):
         import ai_engine.embeddings.embedder as emb_mod
 
         embedder = MagicMock(spec=emb_mod.SynapseEmbedder)
-        embedder.dimensions = 384
+        embedder.dimensions = 1024
         # Call the real embed logic for empty string
         embedder.embed.side_effect = lambda t: (
-            [0.0] * 384 if not t.strip() else FAKE_VECTOR
+            [0.0] * 1024 if not t.strip() else FAKE_VECTOR
         )
 
         result = embedder.embed("")
-        self.assertEqual(result, [0.0] * 384)
+        self.assertEqual(result, [0.0] * 1024)
 
     def test_truncate_text(self):
         """_truncate_text should clip text longer than max_chars."""
@@ -428,8 +428,8 @@ class SearchQualityRegressionTests(TestCase):
             embedding=FAKE_VECTOR,  # identical to query → distance=0 → score=1.0
         )
         # Article B: orthogonal vector → should rank lower
-        ortho = [0.0] * 384
-        ortho[0] = 1.0  # completely different from [0.1]*384
+        ortho = [0.0] * 1024
+        ortho[0] = 1.0  # completely different from [0.1]*1024
         Article.objects.create(
             title="Unrelated Article",
             content="Totally unrelated content.",
@@ -556,9 +556,9 @@ class SearchQualityRegressionTests(TestCase):
             url="https://scorerange.example.com",
             source_type="news",
         )
-        # Create articles with varied 384-dim embeddings
+        # Create articles with varied 1024-dim embeddings
         for i in range(3):
-            vec = [float(i + 1) / 10] * 384
+            vec = [float(i + 1) / 10] * 1024
             Article.objects.create(
                 title=f"Score Test Article {i}",
                 content=f"Article {i} about machine learning and AI.",
@@ -607,16 +607,16 @@ class SearchQualityRegressionTests(TestCase):
             source_type="news",
         )
 
-        # Build two clearly-separated 384-dim embedding vectors matching the
-        # Article.embedding column (vector(384)).
-        # "ML article": high values in first 192 dims (simulates ML topic cluster)
-        ml_vec = [0.9 / (192**0.5)] * 192 + [0.0] * 192
+        # Build two clearly-separated 1024-dim embedding vectors matching the
+        # Article.embedding column (vector(1024)).
+        # "ML article": high values in first 512 dims (simulates ML topic cluster)
+        ml_vec = [0.9 / (512**0.5)] * 512 + [0.0] * 512
 
-        # "Cake article": high values in last 192 dims (completely different cluster)
-        cake_vec = [0.0] * 192 + [0.9 / (192**0.5)] * 192
+        # "Cake article": high values in last 512 dims (completely different cluster)
+        cake_vec = [0.0] * 512 + [0.9 / (512**0.5)] * 512
 
         # Query vector resembles the ML article (same cluster)
-        query_vec = [0.85 / (192**0.5)] * 192 + [0.05 / (192**0.5)] * 192
+        query_vec = [0.85 / (512**0.5)] * 512 + [0.05 / (512**0.5)] * 512
 
         Article.objects.create(
             title="Introduction to Machine Learning and Neural Networks",

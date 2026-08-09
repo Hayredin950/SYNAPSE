@@ -8,6 +8,7 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 from apps.core.models import Conversation
+from apps.users.models import User
 
 from django.test import TestCase
 from rest_framework import status
@@ -211,10 +212,16 @@ class ConversationHistoryViewTests(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_user(
+            username=f"hist_{uuid.uuid4().hex[:6]}",
+            email=f"hist_{uuid.uuid4().hex[:6]}@test.com",
+            password="pass12345",
+        )
+        self.client.force_authenticate(user=self.user)
 
     def test_history_existing_conversation(self):
         conv_id = str(uuid.uuid4())
-        conv = Conversation.objects.create(conversation_id=conv_id)
+        conv = Conversation.objects.create(conversation_id=conv_id, user=self.user)
         conv.add_message("human", "Hello?")
         conv.add_message("ai", "Hi there!")
 
@@ -256,12 +263,18 @@ class ConversationDeleteViewTests(TestCase):
 
     def setUp(self):
         self.client = APIClient()
+        self.user = User.objects.create_user(
+            username=f"del_{uuid.uuid4().hex[:6]}",
+            email=f"del_{uuid.uuid4().hex[:6]}@test.com",
+            password="pass12345",
+        )
+        self.client.force_authenticate(user=self.user)
 
     @patch("apps.core.views_chat._get_pipeline")
     def test_delete_existing_conversation(self, mock_get_pipeline):
         mock_get_pipeline.return_value = _make_mock_pipeline()
         conv_id = str(uuid.uuid4())
-        Conversation.objects.create(conversation_id=conv_id)
+        Conversation.objects.create(conversation_id=conv_id, user=self.user)
 
         url = f"/api/v1/ai/chat/{conv_id}/"
         response = self.client.delete(url)
@@ -352,12 +365,24 @@ class ConversationMemoryManagerTests(TestCase):
         mock_mem_cls.return_value = mock_mem_instance
         sys.modules["langchain.memory"].ConversationBufferWindowMemory = mock_mem_cls
 
-        # Now import (fresh)
+        # Force a genuinely fresh import. Deleting only the sys.modules entry is
+        # not enough: Python also caches the submodule as an attribute on the
+        # parent package (ai_engine.rag.memory), which survives the deletion and
+        # makes a later `from ai_engine.rag import memory` return the OLD module
+        # while patch("ai_engine.rag.memory._get_redis_client") patches a NEW
+        # one. Drop the stale attribute too, and return the module so tests can
+        # patch.object() the exact object the class lives in.
+        import ai_engine.rag as rag_pkg
+
         if "ai_engine.rag.memory" in sys.modules:
             del sys.modules["ai_engine.rag.memory"]
+        try:
+            delattr(rag_pkg, "memory")
+        except AttributeError:
+            pass
         from ai_engine.rag import memory as mem_module
 
-        return mem_module.ConversationMemoryManager, stubs
+        return mem_module.ConversationMemoryManager, mem_module
 
     def test_new_conversation_id_is_unique(self):
         Mgr, _ = self._make_mgr()
@@ -371,8 +396,8 @@ class ConversationMemoryManagerTests(TestCase):
         self.assertTrue(cid.startswith("user-42:"))
 
     def test_memory_manager_without_redis(self):
-        Mgr, _ = self._make_mgr()
-        with patch("ai_engine.rag.memory._get_redis_client", return_value=None):
+        Mgr, mem_module = self._make_mgr()
+        with patch.object(mem_module, "_get_redis_client", return_value=None):
             mgr = Mgr()
             cid = str(uuid.uuid4())
             memory = mgr.get_or_create(cid)
@@ -383,8 +408,8 @@ class ConversationMemoryManagerTests(TestCase):
             self.assertEqual(history, [])  # no Redis, no persistence
 
     def test_get_or_create_returns_same_instance(self):
-        Mgr, _ = self._make_mgr()
-        with patch("ai_engine.rag.memory._get_redis_client", return_value=None):
+        Mgr, mem_module = self._make_mgr()
+        with patch.object(mem_module, "_get_redis_client", return_value=None):
             mgr = Mgr()
             cid = str(uuid.uuid4())
             m1 = mgr.get_or_create(cid)

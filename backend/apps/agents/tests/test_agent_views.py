@@ -204,6 +204,6 @@ class TestSynapseAgentBase:
     def test_agent_constants(self):
         from ai_engine.agents.base import SynapseAgent
 
-        assert SynapseAgent.MAX_ITERATIONS == 10
+        assert SynapseAgent.MAX_ITERATIONS == 5
         assert SynapseAgent.MAX_EXECUTION_TIME == 300
         assert SynapseAgent.MAX_TOKENS_PER_TASK == 10_000

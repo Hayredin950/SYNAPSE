@@ -166,8 +166,12 @@ class WorkflowAPITestCase(APITestCase):
 
     # ── Trigger ───────────────────────────────────────────────────────────────
 
+    @patch("config.celery.app.control.inspect")
     @patch("apps.automation.tasks.execute_workflow")
-    def test_trigger_workflow(self, mock_task):
+    def test_trigger_workflow(self, mock_task, mock_inspect):
+        # Simulate a live Celery worker so the view takes the apply_async path
+        # instead of falling back to the background-thread execution.
+        mock_inspect.return_value.ping.return_value = {"celery@host": "pong"}
         mock_task.apply_async.return_value.id = "mock-task-id"
         url = reverse("workflow-trigger", kwargs={"pk": self.workflow.id})
         response = self.client.post(url)
@@ -371,8 +375,10 @@ class RunStatusViewTests(WorkflowAPITestCase):
 
     # ── run_id returned by trigger is immediately pollable ────────────────────
 
+    @patch("config.celery.app.control.inspect")
     @patch("apps.automation.tasks.execute_workflow")
-    def test_trigger_run_id_is_immediately_pollable(self, mock_task):
+    def test_trigger_run_id_is_immediately_pollable(self, mock_task, mock_inspect):
+        mock_inspect.return_value.ping.return_value = {"celery@host": "pong"}
         """
         The run_id returned in the trigger 202 response must already exist in
         the DB so the frontend can call /runs/<run_id>/status/ straight away —
@@ -392,8 +398,10 @@ class RunStatusViewTests(WorkflowAPITestCase):
         self.assertEqual(status_resp.status_code, status.HTTP_200_OK)
         self.assertEqual(str(status_resp.data["id"]), run_id)
 
+    @patch("config.celery.app.control.inspect")
     @patch("apps.automation.tasks.execute_workflow")
-    def test_trigger_creates_pending_run_before_celery(self, mock_task):
+    def test_trigger_creates_pending_run_before_celery(self, mock_task, mock_inspect):
+        mock_inspect.return_value.ping.return_value = {"celery@host": "pong"}
         """
         The pre-created WorkflowRun must start in PENDING status so the frontend
         can distinguish 'not started yet' from 'running' while waiting for the
@@ -407,9 +415,11 @@ class RunStatusViewTests(WorkflowAPITestCase):
         run = WorkflowRun.objects.get(id=run_id)
         self.assertEqual(run.status, WorkflowRun.RunStatus.PENDING)
 
+    @patch("config.celery.app.control.inspect")
     @patch("apps.automation.tasks.execute_workflow")
-    def test_trigger_stores_celery_task_id_on_run(self, mock_task):
+    def test_trigger_stores_celery_task_id_on_run(self, mock_task, mock_inspect):
         """celery_task_id must be persisted on the pre-created run."""
+        mock_inspect.return_value.ping.return_value = {"celery@host": "pong"}
         mock_task.apply_async.return_value.id = "celery-task-999"
         trigger_url = reverse("workflow-trigger", kwargs={"pk": self.workflow.id})
         trigger_resp = self.client.post(trigger_url)

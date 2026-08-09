@@ -178,11 +178,11 @@ class ActionHandlerTests(TestCase):
 
     def test_collect_news_queues_hackernews_task(self):
         with patch("apps.core.tasks.scrape_hackernews") as mock_task:
-            mock_task.delay.return_value = MagicMock(id="task-123")
+            mock_task.apply_async.return_value = MagicMock(id="task-123")
             result = _action_collect_news({"sources": ["hackernews"]})
         self.assertEqual(result["action"], "collect_news")
         self.assertEqual(result["status"], "queued")
-        mock_task.delay.assert_called_once()
+        mock_task.apply_async.assert_called_once()
 
     def test_collect_news_empty_sources_queues_all(self):
         with (
@@ -192,7 +192,7 @@ class ActionHandlerTests(TestCase):
             patch("apps.core.tasks.scrape_youtube") as m4,
         ):
             for m in (m1, m2, m3, m4):
-                m.delay.return_value = MagicMock(id="t")
+                m.apply_async.return_value = MagicMock(id="t")
             result = _action_collect_news({})  # no sources = all
         self.assertIn("hackernews", result["task_ids"])
         self.assertIn("github", result["task_ids"])

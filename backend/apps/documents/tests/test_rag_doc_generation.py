@@ -257,13 +257,6 @@ class TestRetrieveRagContextVectorSearch(TestCase):
         mock_retriever = MagicMock()
         mock_retriever.invoke.return_value = mock_docs
 
-        with patch(
-            "apps.documents.views.SynapseRetriever", return_value=mock_retriever
-        ) as MockRetriever:
-            # Import is inside the function so we patch at the right level
-            with patch.dict("sys.modules", {}):
-                pass
-
         # Patch at the import location within the function
         with patch(
             "ai_engine.rag.retriever.SynapseRetriever", return_value=mock_retriever
@@ -751,7 +744,7 @@ class TestDocumentGenerateViewRAG(TestCase):
                 {
                     "doc_type": "markdown",
                     "title": "Filter Test",
-                    "prompt": "test",
+                    "prompt": "Write a summary of machine learning topics",
                     "content_types": ["papers", "repositories"],
                 },
                 format="json",
@@ -792,7 +785,7 @@ class TestDocumentGenerateViewRAG(TestCase):
                 {
                     "doc_type": "markdown",
                     "title": "Source IDs Test",
-                    "prompt": "test",
+                    "prompt": "Write a summary of machine learning topics",
                     "source_item_ids": [{"id": item_id, "type": "paper"}],
                 },
                 format="json",
