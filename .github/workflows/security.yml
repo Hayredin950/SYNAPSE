@@ -15,7 +15,7 @@ name: Security Scanning
 
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
   schedule:
     # Run daily at 2am UTC
     - cron: '0 2 * * *'

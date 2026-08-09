@@ -19,7 +19,7 @@ name: CD — Build, Push & Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
     inputs:
       environment:

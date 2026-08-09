@@ -25,7 +25,7 @@ web:
   dockerfilePath: ./backend/Dockerfile
   plan: starter
   region: oregon
-  branch: main
+  branch: master
   rootDirectory: /
   healthCheckPath: /api/v1/health/
   envVars:
@@ -74,7 +74,7 @@ worker:
   dockerfilePath: ./backend/Dockerfile
   plan: starter
   region: oregon
-  branch: main
+  branch: master
   rootDirectory: /
   numInstances: 1
   envVars:
