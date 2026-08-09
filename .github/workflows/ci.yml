@@ -46,7 +46,10 @@ jobs:
           cache: pip
 
       - name: Install lint tools
-        run: pip install black isort flake8 bandit safety
+        # Pinned so the check is deterministic — an unpinned `pip install black`
+        # drifts with each release and reformats files that passed with the
+        # version used to format the tree.
+        run: pip install black==25.9.0 isort==6.1.0 flake8==7.1.1 bandit==1.9.4 safety==3.8.1
 
       - name: black
         run: black --check backend/ ai_engine/ scraper/
