@@ -161,3 +161,28 @@ applied migration history.
 
 **There is no billing.** The app is free. `apps/growth` holds referrals and
 feedback; quotas live in `apps/core/quotas.py`.
+
+### The `main` branch — do not merge from it
+
+`master` is the branch to work on. A second branch, `main`, holds the same
+application nested under `src/engine/` with a pnpm-workspace wrapper. **Do not
+treat it as a newer or cleaner source.**
+
+It was produced by stripping the **last line of every file** in a corrupted
+snapshot of `master`. Where the corruption was a duplicated closing delimiter,
+that accidentally fixed the file. Everywhere else it **deleted a real line of
+code** — `connect_signals()`, `ph.flush()`, a `fields = [...]` declaration, and
+so on across roughly 51 files.
+
+The dangerous part is that those files still parse. No syntax check, linter, or
+type checker will flag them; the behaviour just silently goes missing.
+
+Everything worth keeping has already been merged into `master`:
+`infrastructure/` (nginx, Prometheus/Grafana/Loki, pgbouncer, OpenTelemetry),
+personalized briefings in `views_ai.py`, the background-thread workflow
+fallback, real analytics data, and two UI components. The audit is recorded in
+commit `186a6aa`.
+
+`main` is kept only as a historical record. If you need something from it,
+diff the single file and take the specific hunk — never copy a whole file, and
+never merge the branch.
