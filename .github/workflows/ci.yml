@@ -167,14 +167,14 @@ jobs:
       - name: Run tests
         working-directory: backend
         run: |
+          # Coverage gate: the suite (1000+ tests) sits at ~69% total. The old
+          # 70% bar was aspirational in the initial commit and every run failed
+          # on it, hiding real test failures. 65% keeps a genuine regression
+          # guard with a green pipeline. Raise it as coverage grows.
           pytest \
             --cov=. \
             --cov-report=xml \
             --cov-report=term-missing \
-            # The suite (1000+ tests) sits at ~69% total. 70% was aspirational
-            # in the initial commit and every run failed on it, hiding real
-            # test failures. 65% keeps a genuine regression guard without a
-            # permanently red pipeline. Raise it as coverage grows.
             --cov-fail-under=65 \
             -v \
             --tb=short \
