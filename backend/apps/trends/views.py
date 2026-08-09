@@ -4,9 +4,17 @@ Trends app views — Technology Trend Radar (Phase 2 / dashboard widget).
 
 from datetime import timedelta
 
+from apps.core.auth import APIKeyAuthentication
+from rest_framework_simplejwt.authentication import JWTAuthentication
+
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -15,8 +23,22 @@ from .serializers import TechnologyTrendSerializer
 
 
 @api_view(["GET"])
+@authentication_classes(
+    [APIKeyAuthentication, JWTAuthentication, SessionAuthentication]
+)
 @permission_classes([AllowAny])
 def trend_list(request):
+    """
+    GET /api/v1/trends/
+    Returns top technology trends, optionally filtered by category or date range.
+    Query params:
+      - category: filter by category string
+      - days: number of days back to look (default 30)
+      - limit: max results (default 20)
+
+    Public API keys (Bearer sk-syn-...) are accepted alongside JWT/session
+    auth — the documented public API serves trending content from this URL.
+    """
     """
     GET /api/v1/trends/
     Returns top technology trends, optionally filtered by category or date range.

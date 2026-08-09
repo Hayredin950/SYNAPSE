@@ -7,8 +7,12 @@ Mounted at /api/v1/ai/ by config/urls.py.
 from django.urls import path
 
 from . import views_ai, views_chat, views_nlp
+from .public_api_views import PublicAIQueryView
 
 urlpatterns = [
+    # TASK-605-B3: Public API — ask AI with RAG (API key auth)
+    # Documented at POST /api/v1/ai/query/ in the developer portal.
+    path("query/", PublicAIQueryView.as_view(), name="public-ai-query"),
     # Phase 2.1 — NLP
     path("summarize/", views_nlp.summarize_text, name="ai-summarize"),
     path("nlp/", views_nlp.analyze_text, name="ai-nlp-analyze"),

@@ -168,11 +168,13 @@ class TestTodayBriefingView:
         resp = client.get(url)
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_returns_404_when_no_briefing(self, auth_client):
+    def test_returns_202_when_no_briefing(self, auth_client):
+        """Missing briefing → 202 Accepted; the view auto-queues generation."""
         url = reverse("briefing-today")
         resp = auth_client.get(url)
-        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.status_code == status.HTTP_202_ACCEPTED
         assert "error" in resp.data
+        assert "generat" in resp.data["error"]["message"].lower()
 
     def test_returns_today_briefing(self, auth_client, briefing):
         url = reverse("briefing-today")
@@ -198,7 +200,7 @@ class TestTodayBriefingView:
             assert field in data, f"Missing field: {field}"
 
     def test_other_user_cannot_see_briefing(self, client, briefing):
-        """Another authenticated user gets 404 for their own (non-existent) briefing."""
+        """Another authenticated user gets 202 (own briefing auto-queued), never the owner's."""
         other = User.objects.create_user(
             username="other_user", email="other@x.com", password="pass"
         )
@@ -208,7 +210,8 @@ class TestTodayBriefingView:
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
         url = reverse("briefing-today")
         resp = client.get(url)
-        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        assert resp.status_code == status.HTTP_202_ACCEPTED
+        assert "briefing" not in resp.data.get("data", {})
 
 
 @pytest.mark.django_db

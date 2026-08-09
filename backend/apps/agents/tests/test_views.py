@@ -17,6 +17,7 @@ import pytest
 from apps.agents.models import AgentTask
 from apps.users.models import User
 
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -193,6 +194,7 @@ class TestAgentTaskCreateView:
         )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=False)
     def test_create_stores_celery_task_id(self):
         user = make_user("celery_id@test.com")
         mock_result = MagicMock()
@@ -213,6 +215,7 @@ class TestAgentTaskCreateView:
         task = AgentTask.objects.get(user=user)
         assert task.celery_task_id == "celery-xyz-789"
 
+    @override_settings(CELERY_TASK_ALWAYS_EAGER=False)
     def test_create_all_valid_task_types(self):
         """All documented task_type values must be accepted."""
         user = make_user("alltypes@test.com")
