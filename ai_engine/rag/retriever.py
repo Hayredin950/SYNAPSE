@@ -7,7 +7,7 @@ OpenAI / langchain_openai is NOT used anywhere in this file.
 
 import logging
 import os
-from typing import List, Optional
+from typing import List
 
 from langchain_community.vectorstores import PGVector
 from langchain_core.callbacks import CallbackManagerForRetrieverRun

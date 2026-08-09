@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Dict, List, Optional
 
-from langchain_core.tools import BaseTool, StructuredTool
+from langchain_core.tools import BaseTool
 
 logger = logging.getLogger(__name__)
 

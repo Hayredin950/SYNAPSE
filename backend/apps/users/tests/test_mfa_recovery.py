@@ -6,10 +6,8 @@ TASK-002-T3 — Integration tests for recovery code login via /mfa/verify-backup
 from __future__ import annotations
 
 import hashlib
-from unittest.mock import MagicMock, PropertyMock, patch
 
 from django.test import TestCase
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 

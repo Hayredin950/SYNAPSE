@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_stream, views_social
+from . import views, views_social, views_stream
 
 urlpatterns = [
     path("health/", views.health_check, name="health-check"),
@@ -67,16 +67,35 @@ urlpatterns = [
     path("api-status/", views.APIStatusView.as_view(), name="api-status"),
     # ── SSE real-time content stream ──────────────────────────────────────────
     path("stream/", views_stream.content_stream, name="content-stream"),
-
     # ── 40-Feature Pack: Social & Community ──────────────────────────────────
-    path("social/upvote/",                        views_social.upvote,           name="social-upvote"),
-    path("social/upvotes/",                       views_social.upvote_counts,    name="social-upvote-counts"),
-    path("social/comments/",                      views_social.comments,         name="social-comments"),
-    path("social/comments/<str:comment_id>/",     views_social.delete_comment,   name="social-comment-delete"),
-    path("social/watchlist/",                     views_social.watchlist,        name="social-watchlist"),
-    path("social/watchlist/<str:watch_id>/",      views_social.delete_watchlist, name="social-watchlist-delete"),
-    path("social/digest/share/",                  views_social.share_digest,     name="social-share-digest"),
-    path("social/digest/<str:share_id>/",         views_social.view_digest,      name="social-view-digest"),
-    path("social/network-reading/",               views_social.network_reading,  name="social-network-reading"),
-    path("social/source-quality/<str:domain>/",   views_social.source_quality,   name="social-source-quality"),
+    path("social/upvote/", views_social.upvote, name="social-upvote"),
+    path("social/upvotes/", views_social.upvote_counts, name="social-upvote-counts"),
+    path("social/comments/", views_social.comments, name="social-comments"),
+    path(
+        "social/comments/<str:comment_id>/",
+        views_social.delete_comment,
+        name="social-comment-delete",
+    ),
+    path("social/watchlist/", views_social.watchlist, name="social-watchlist"),
+    path(
+        "social/watchlist/<str:watch_id>/",
+        views_social.delete_watchlist,
+        name="social-watchlist-delete",
+    ),
+    path("social/digest/share/", views_social.share_digest, name="social-share-digest"),
+    path(
+        "social/digest/<str:share_id>/",
+        views_social.view_digest,
+        name="social-view-digest",
+    ),
+    path(
+        "social/network-reading/",
+        views_social.network_reading,
+        name="social-network-reading",
+    ),
+    path(
+        "social/source-quality/<str:domain>/",
+        views_social.source_quality,
+        name="social-source-quality",
+    ),
 ]

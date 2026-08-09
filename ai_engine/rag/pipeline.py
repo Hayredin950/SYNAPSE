@@ -175,7 +175,7 @@ class RAGPipeline:
         try:
             from .retriever import _build_connection_string
 
-            conn = _build_connection_string()
+            _build_connection_string()
             status["components"]["database"] = "connection_string_built"
         except Exception as exc:
             status["components"]["database"] = f"error: {exc}"

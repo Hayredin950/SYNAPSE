@@ -34,9 +34,9 @@ class Command(BaseCommand):
         self.stdout.write(f"Running scrapers: {sources}")
 
         from apps.core.tasks import (
-            scrape_hackernews,
-            scrape_github,
             scrape_arxiv,
+            scrape_github,
+            scrape_hackernews,
         )
 
         if "hn" in sources:
@@ -67,19 +67,27 @@ class Command(BaseCommand):
             self.stdout.write("  → YouTube videos...")
             try:
                 from apps.core.tasks import scrape_youtube
+
                 result = scrape_youtube(30, 20)
                 self.stdout.write(self.style.SUCCESS(f"     YouTube: {result}"))
             except Exception as e:
-                self.stdout.write(self.style.WARNING(f"     YouTube failed (needs API key): {e}"))
+                self.stdout.write(
+                    self.style.WARNING(f"     YouTube failed (needs API key): {e}")
+                )
 
         if "twitter" in sources:
             self.stdout.write("  → Twitter/X...")
             try:
                 from apps.core.tasks import scrape_twitter
-                result = scrape_twitter(max_results=30, query="AI machine learning LLM", use_nitter=False)
+
+                result = scrape_twitter(
+                    max_results=30, query="AI machine learning LLM", use_nitter=False
+                )
                 self.stdout.write(self.style.SUCCESS(f"     Twitter: {result}"))
             except Exception as e:
-                self.stdout.write(self.style.WARNING(f"     Twitter failed (needs bearer token): {e}"))
+                self.stdout.write(
+                    self.style.WARNING(f"     Twitter failed (needs bearer token): {e}")
+                )
 
         self.stdout.write(self.style.SUCCESS("All scrapers done."))
         self.stdout.write(self.style.SUCCESS("All scrapers done."))

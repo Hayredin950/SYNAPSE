@@ -5,12 +5,10 @@ Falls back to Google Gemini if GEMINI_API_KEY is set and OPENROUTER_API_KEY is n
 """
 
 import logging
-import os
 from typing import Any, Dict, Iterator, List, Optional
 
 from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
 
 from .memory import ConversationMemoryManager
 from .retriever import SynapseRetriever

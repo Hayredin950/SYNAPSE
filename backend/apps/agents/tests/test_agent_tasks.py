@@ -15,7 +15,6 @@ Covers:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from apps.agents.models import AgentTask
@@ -23,7 +22,6 @@ from apps.agents.tasks import _notify_user, cancel_agent_task, execute_agent_tas
 from apps.users.models import User
 
 from django.test import TestCase
-from django.utils import timezone as dj_tz
 
 
 def _make_user(suffix=""):

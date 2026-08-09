@@ -9,7 +9,6 @@ Covers:
 """
 
 import uuid
-from unittest.mock import MagicMock, patch
 
 from apps.articles.models import Article
 from apps.core.models import UserActivity
@@ -130,7 +129,7 @@ class GetTrendingTests(TestCase):
             self.assertEqual(v, [])
 
     def test_returns_articles_when_bookmarked(self):
-        from django.utils import timezone
+        pass
 
         user = _make_user()
         article = _make_article("Trending Article")

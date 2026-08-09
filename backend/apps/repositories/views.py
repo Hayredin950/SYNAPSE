@@ -36,7 +36,7 @@ class RepositoryListView(generics.ListAPIView):
     ordering = ["-stars"]
 
     def get_queryset(self):
-        from django.db.models import Q
+        pass
 
         qs = Repository.objects.all()
         # ── Saved feed: only filter to bookmarked repos when ?saved=1 ──

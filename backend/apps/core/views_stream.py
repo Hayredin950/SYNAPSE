@@ -4,34 +4,35 @@ SSE (Server-Sent Events) streaming endpoint for real-time content updates.
 Async-compatible with Daphne/ASGI — uses asyncio.sleep instead of time.sleep
 so it doesn't block the event loop.
 """
+
 from __future__ import annotations
 
 import asyncio
 import json
-import time
 import logging
+import time
+
+from asgiref.sync import sync_to_async
 
 from django.http import StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET
-from asgiref.sync import sync_to_async
 
 logger = logging.getLogger(__name__)
 
-HEARTBEAT_INTERVAL = 20   # seconds between keepalive pings
-CHECK_INTERVAL = 30       # seconds between content-count checks
-MAX_DURATION = 5 * 60     # close connection after 5 min; client auto-reconnects
+HEARTBEAT_INTERVAL = 20  # seconds between keepalive pings
+CHECK_INTERVAL = 30  # seconds between content-count checks
+MAX_DURATION = 5 * 60  # close connection after 5 min; client auto-reconnects
 
 
 def _get_content_counts_sync() -> dict:
     """Return current content counts (synchronous DB calls)."""
     try:
         from apps.articles.models import Article
-        from apps.repositories.models import Repository
         from apps.papers.models import ResearchPaper
-        from apps.videos.models import Video
-        from apps.tweets.models import Tweet
+        from apps.repositories.models import Repository
         from apps.trends.models import TechnologyTrend
+        from apps.tweets.models import Tweet
+        from apps.videos.models import Video
 
         return {
             "articles": Article.objects.count(),
@@ -55,6 +56,7 @@ def _validate_token(token: str) -> bool:
         return True
     try:
         from rest_framework_simplejwt.tokens import AccessToken
+
         AccessToken(token)
         return True
     except Exception:
@@ -81,7 +83,7 @@ async def _async_event_stream():
         yield f"event: init\ndata: {payload}\n\n"
     except Exception as exc:
         logger.warning("SSE: init snapshot failed: %s", exc)
-        yield f"event: init\ndata: {{}}\n\n"
+        yield "event: init\ndata: {{}}\n\n"
 
     while True:
         # Close connection after max duration so client reconnects cleanly
@@ -105,10 +107,16 @@ async def _async_event_stream():
                 for key, val in counts.items():
                     old = last_counts.get(key, 0)
                     if val != old:
-                        changed[key] = {"current": val, "previous": old, "new": val - old}
+                        changed[key] = {
+                            "current": val,
+                            "previous": old,
+                            "new": val - old,
+                        }
 
                 if changed:
-                    payload = json.dumps({"counts": counts, "changed": changed, "ts": int(now)})
+                    payload = json.dumps(
+                        {"counts": counts, "changed": changed, "ts": int(now)}
+                    )
                     yield f"event: content_update\ndata: {payload}\n\n"
                     last_counts = counts
             except Exception as exc:
@@ -127,11 +135,13 @@ async def content_stream(request):
     """
     if request.method != "GET":
         from django.http import HttpResponse
+
         return HttpResponse("Method not allowed", status=405)
 
     token = request.GET.get("token", "")
     if not _validate_token(token):
         from django.http import HttpResponse
+
         return HttpResponse("Unauthorized", status=401)
 
     response = StreamingHttpResponse(

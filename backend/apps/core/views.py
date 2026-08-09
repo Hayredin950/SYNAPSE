@@ -1,3 +1,4 @@
+import logging
 import os
 
 import redis
@@ -34,6 +35,8 @@ from .serializers import (
     CollectionSerializer,
 )
 from .trending import get_trending
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["GET"])
@@ -1094,7 +1097,7 @@ class ResearchReportPDFView(APIView):
                 spaceAfter=20,
                 textColor=colors.HexColor("#1e293b"),
             )
-            story.append(Paragraph(f"Research Report", title_style))
+            story.append(Paragraph("Research Report", title_style))
             story.append(Paragraph(session.query[:200], styles["Heading2"]))
             story.append(Spacer(1, 0.2 * inch))
 
@@ -1269,9 +1272,9 @@ class KnowledgeGraphView(APIView):
             all_nodes = list(qs[:limit])
             ids = [n.id for n in all_nodes]
             all_edges = list(
-                KnowledgeEdge.objects.filter(
-                    source_id__in=ids, target_id__in=ids
-                ).select_related("source", "target").order_by("-weight")[: limit * 2]
+                KnowledgeEdge.objects.filter(source_id__in=ids, target_id__in=ids)
+                .select_related("source", "target")
+                .order_by("-weight")[: limit * 2]
             )
 
         return Response(

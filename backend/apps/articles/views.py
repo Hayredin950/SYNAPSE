@@ -9,7 +9,7 @@ from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import AllowAny, IsAdminUser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .models import Article
@@ -60,7 +60,9 @@ class ArticleListView(ListAPIView):
                 prefs = OnboardingPreferences.objects.get(
                     user=self.request.user, completed=True
                 )
-                interests = prefs.interests  # list of topic strings e.g. ["AI", "Python"]
+                interests = (
+                    prefs.interests
+                )  # list of topic strings e.g. ["AI", "Python"]
                 if interests:
                     # Match by title, summary, topic, or tags — since HN articles
                     # all have generic topic="tech", title-matching is most effective.

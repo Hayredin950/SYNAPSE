@@ -1,0 +1,41 @@
+[flake8]
+# Line length is black's job. Black wraps what it safely can; the remainder are
+# long string literals, URLs and comments that black deliberately leaves alone.
+# Enforcing E501 on top of black means fighting the formatter, so the check is
+# set to black's limit plus headroom rather than reformatting by hand.
+max-line-length = 120
+
+# E203  whitespace before ':'   — black formats slices this way, PEP 8 agrees with black
+# W503  line break before binary operator — black's preferred style
+# E501  handled by black (see above)
+extend-ignore = E203, W503, E501
+
+exclude =
+    .git,
+    __pycache__,
+    node_modules,
+    venv,
+    .venv,
+    migrations,
+    build,
+    dist
+
+per-file-ignores =
+    # Package markers re-export names for convenience.
+    __init__.py: F401
+    # Django settings compose via star-imports from base.
+    backend/config/settings/*.py: F403, F405
+    # Tests bind values purely to assert on them.
+    */tests/*.py: F841
+    */test_*.py: F841
+    # Imports after code are deliberate here: sys.path bootstrapping (agents),
+    # django.setup() ordering required by ASGI, and section-grouped imports
+    # that avoid circular imports.
+    backend/config/asgi.py: E402
+    backend/apps/core/security.py: E402
+    backend/apps/core/views_chat.py: E402
+    backend/apps/users/github_views.py: E402
+    backend/apps/users/mfa_views.py: E402
+    backend/apps/users/views.py: E402
+    backend/apps/agents/views.py: E402
+    backend/apps/agents/tests/test_agent_views.py: E402

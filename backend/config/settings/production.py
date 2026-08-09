@@ -178,7 +178,7 @@ PASSWORD_HASHERS = [
 # ── Database — parse DATABASE_URL for managed providers (Neon, Supabase, etc.) ─
 _database_url = os.environ.get("DATABASE_URL", "")
 if _database_url:
-    from urllib.parse import urlparse, parse_qs
+    from urllib.parse import parse_qs, urlparse
 
     _parsed = urlparse(_database_url)
     DATABASES = {

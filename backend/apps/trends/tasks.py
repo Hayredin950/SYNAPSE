@@ -16,8 +16,7 @@ from datetime import date, timedelta
 from typing import Dict, List
 
 from celery import shared_task
-from django.db.models import Avg, Count, Q
-from django.utils import timezone
+from django.db.models import Avg, Q
 
 logger = logging.getLogger(__name__)
 

@@ -48,7 +48,7 @@ class PaperListView(generics.ListAPIView):
     ordering = ["-fetched_at"]
 
     def get_queryset(self):
-        from django.db.models import Q
+        pass
 
         qs = ResearchPaper.objects.all()
         # ── Saved feed: only filter to bookmarked papers when ?saved=1 ──

@@ -108,8 +108,6 @@ def _scrapy_env(user_id: Optional[str] = None) -> dict:
         try:
             from apps.users.models import User  # noqa: PLC0415
 
-            import django  # noqa: PLC0415
-
             user = User.objects.filter(pk=user_id).first()
             if user:
                 prefs = getattr(user, "preferences", {}) or {}
@@ -185,7 +183,9 @@ def _link_items_to_user(user_id: str, source: str, item_ids: list) -> int:
             for repo_id in item_ids:
                 try:
                     repo = Repository.objects.get(pk=repo_id)
-                    _, c = UserRepository.objects.get_or_create(user=user, repository=repo)
+                    _, c = UserRepository.objects.get_or_create(
+                        user=user, repository=repo
+                    )
                     created_count += int(c)
                 except Repository.DoesNotExist:
                     continue
@@ -234,7 +234,7 @@ def _link_items_to_user(user_id: str, source: str, item_ids: list) -> int:
 def _backfill_user_links(user_id: str, source: str, limit: int = 50) -> int:
     """
     DEPRECATED: Use _link_items_to_user with specific item IDs instead.
-    
+
     This fallback links the most recent unlinked items to the user.
     Only used when specific item IDs aren't available.
     """
@@ -257,7 +257,9 @@ def _backfill_user_links(user_id: str, source: str, limit: int = 50) -> int:
             from apps.articles.models import Article, UserArticle
 
             already_linked = set(
-                UserArticle.objects.filter(user=user).values_list("article_id", flat=True)
+                UserArticle.objects.filter(user=user).values_list(
+                    "article_id", flat=True
+                )
             )
             unlinked = Article.objects.exclude(id__in=already_linked).order_by(
                 "-scraped_at"
@@ -270,7 +272,9 @@ def _backfill_user_links(user_id: str, source: str, limit: int = 50) -> int:
             from apps.repositories.models import Repository, UserRepository
 
             already_linked = set(
-                UserRepository.objects.filter(user=user).values_list("repository_id", flat=True)
+                UserRepository.objects.filter(user=user).values_list(
+                    "repository_id", flat=True
+                )
             )
             unlinked = Repository.objects.exclude(id__in=already_linked).order_by(
                 "-stars"
@@ -398,8 +402,14 @@ def scrape_hackernews(
                 # Skip non-tech content
                 title_lower = title.lower()
                 NON_TECH = [
-                    "politics", "opinion", "election", "trump", "biden",
-                    "sports", "entertainment", "celebrity",
+                    "politics",
+                    "opinion",
+                    "election",
+                    "trump",
+                    "biden",
+                    "sports",
+                    "entertainment",
+                    "celebrity",
                 ]
                 if any(kw in title_lower for kw in NON_TECH):
                     continue
@@ -411,9 +421,13 @@ def scrape_hackernews(
                         "content": (item.get("text") or "")[:5000],
                         "author": item.get("by", "")[:300],
                         "source": hn_source,
-                        "published_at": timezone.datetime.fromtimestamp(
-                            item.get("time", 0), tz=dt_timezone.utc
-                        ) if item.get("time") else None,
+                        "published_at": (
+                            timezone.datetime.fromtimestamp(
+                                item.get("time", 0), tz=dt_timezone.utc
+                            )
+                            if item.get("time")
+                            else None
+                        ),
                         "topic": "tech",
                         "tags": ["hackernews", story_type],
                         "metadata": {
@@ -476,6 +490,7 @@ def scrape_github(
         Dictionary with keys: {'spider': 'github', 'status': 'success'/'failed', 'count': int}
     """
     from datetime import timedelta
+
     import requests as _requests_lib
 
     task_id = self.request.id
@@ -493,7 +508,8 @@ def scrape_github(
         since_date = (timezone.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
         queries = [
             f"created:>{since_date}" + (f" language:{language}" if language else ""),
-            f"pushed:>{since_date} stars:>10" + (f" language:{language}" if language else ""),
+            f"pushed:>{since_date} stars:>10"
+            + (f" language:{language}" if language else ""),
         ]
 
         headers = {
@@ -540,7 +556,9 @@ def scrape_github(
                             defaults={
                                 "name": repo_data.get("name", ""),
                                 "full_name": repo_data.get("full_name", ""),
-                                "description": (repo_data.get("description") or "")[:5000],
+                                "description": (repo_data.get("description") or "")[
+                                    :5000
+                                ],
                                 "url": repo_data.get("html_url", ""),
                                 "clone_url": repo_data.get("clone_url", ""),
                                 "stars": repo_data.get("stargazers_count", 0),
@@ -549,11 +567,18 @@ def scrape_github(
                                 "open_issues": repo_data.get("open_issues_count", 0),
                                 "language": repo_data.get("language", "") or "",
                                 "topics": repo_data.get("topics", []),
-                                "owner": (repo_data.get("owner") or {}).get("login", ""),
-                                "is_trending": repo_data.get("stargazers_count", 0) > 100,
-                                "repo_created_at": timezone.datetime.strptime(
-                                    repo_data.get("created_at", "")[:10], "%Y-%m-%d"
-                                ).replace(tzinfo=dt_timezone.utc) if repo_data.get("created_at") else None,
+                                "owner": (repo_data.get("owner") or {}).get(
+                                    "login", ""
+                                ),
+                                "is_trending": repo_data.get("stargazers_count", 0)
+                                > 100,
+                                "repo_created_at": (
+                                    timezone.datetime.strptime(
+                                        repo_data.get("created_at", "")[:10], "%Y-%m-%d"
+                                    ).replace(tzinfo=dt_timezone.utc)
+                                    if repo_data.get("created_at")
+                                    else None
+                                ),
                                 "metadata": {
                                     "scraped_via": "github_api",
                                     "query": query,
@@ -568,7 +593,6 @@ def scrape_github(
                         logger.warning(
                             f"[{task_id}] Failed to save repo {gh_repo_id}: {exc}"
                         )
-
 
             except _requests_lib.RequestException as exc:
                 logger.warning(f"[{task_id}] GitHub API request failed: {exc}")
@@ -618,6 +642,7 @@ def scrape_arxiv(
     """
     import xml.etree.ElementTree as ET
     from datetime import timedelta
+
     import requests as _requests_lib
 
     task_id = self.request.id
@@ -638,7 +663,6 @@ def scrape_arxiv(
 
         # arXiv API namespace
         ATOM_NS = "{http://www.w3.org/2005/Atom}"
-        ARXIV_NS = "{http://arxiv.org/schemas/atom}"
 
         for cat in search_cats:
             if total_saved >= max_papers:
@@ -648,8 +672,12 @@ def scrape_arxiv(
                 # Build search query
                 search_query = f"cat:{cat}"
                 if days_back:
-                    since = (timezone.now() - timedelta(days=days_back)).strftime("%Y%m%d")
-                    search_query += f" AND submittedDate:[{since}000000 TO 99991231235959]"
+                    since = (timezone.now() - timedelta(days=days_back)).strftime(
+                        "%Y%m%d"
+                    )
+                    search_query += (
+                        f" AND submittedDate:[{since}000000 TO 99991231235959]"
+                    )
 
                 resp = _requests_lib.get(
                     "http://export.arxiv.org/api/query",
@@ -665,7 +693,8 @@ def scrape_arxiv(
                 )
                 resp.raise_for_status()
 
-                root = ET.fromstring(resp.text)
+                # Atom feed from the fixed arXiv API endpoint — trusted source
+                root = ET.fromstring(resp.text)  # nosec B314
                 entries = root.findall(f"{ATOM_NS}entry")
                 logger.info(
                     f"[{task_id}] arXiv {cat}: API returned {len(entries)} entries "
@@ -681,7 +710,9 @@ def scrape_arxiv(
                     if entry_id is None:
                         continue
                     arxiv_url = entry_id.text or ""
-                    arxiv_id = arxiv_url.split("/abs/")[-1] if "/abs/" in arxiv_url else ""
+                    arxiv_id = (
+                        arxiv_url.split("/abs/")[-1] if "/abs/" in arxiv_url else ""
+                    )
                     if not arxiv_id:
                         continue
 
@@ -695,7 +726,11 @@ def scrape_arxiv(
 
                     # Abstract
                     summary_el = entry.find(f"{ATOM_NS}summary")
-                    abstract = "".join(summary_el.itertext()).strip().replace("\n", " ") if summary_el is not None else ""
+                    abstract = (
+                        "".join(summary_el.itertext()).strip().replace("\n", " ")
+                        if summary_el is not None
+                        else ""
+                    )
 
                     # Authors
                     authors = []
@@ -751,7 +786,6 @@ def scrape_arxiv(
                         logger.warning(
                             f"[{task_id}] Failed to save paper {arxiv_id}: {exc}"
                         )
-
 
             except _requests_lib.RequestException as exc:
                 logger.warning(f"[{task_id}] arXiv API request failed for {cat}: {exc}")
@@ -827,13 +861,47 @@ def scrape_youtube(
     ]
 
     NON_TECH_KEYWORDS = [
-        "workout", "fitness", "gym", "yoga", "diet", "recipe", "cooking",
-        "makeup", "beauty", "skincare", "fashion", "vlog", "travel", "prank",
-        "challenge", "dance", "music video", "reaction", "unboxing", "asmr",
-        "meditation", "relationship", "dating", "romance", "funny", "comedy",
-        "sport", "football", "basketball", "soccer", "cricket",
-        "movie review", "anime", "manga", "gaming highlights", "minecraft",
-        "fortnite", "roblox", "weight loss", "bodybuilding", "real estate",
+        "workout",
+        "fitness",
+        "gym",
+        "yoga",
+        "diet",
+        "recipe",
+        "cooking",
+        "makeup",
+        "beauty",
+        "skincare",
+        "fashion",
+        "vlog",
+        "travel",
+        "prank",
+        "challenge",
+        "dance",
+        "music video",
+        "reaction",
+        "unboxing",
+        "asmr",
+        "meditation",
+        "relationship",
+        "dating",
+        "romance",
+        "funny",
+        "comedy",
+        "sport",
+        "football",
+        "basketball",
+        "soccer",
+        "cricket",
+        "movie review",
+        "anime",
+        "manga",
+        "gaming highlights",
+        "minecraft",
+        "fortnite",
+        "roblox",
+        "weight loss",
+        "bodybuilding",
+        "real estate",
         "stock market tips",
     ]
 
@@ -908,7 +976,7 @@ def scrape_youtube(
 
                 entries = playlist.get("entries") or []
                 logger.info(
-                    f'[{task_id}] yt-dlp returned {len(entries)} entries for '
+                    f"[{task_id}] yt-dlp returned {len(entries)} entries for "
                     f'query "{query}"'
                 )
 
@@ -926,9 +994,7 @@ def scrape_youtube(
                     desc_lower = (entry.get("description") or "").lower()
                     combined = title_lower + " " + desc_lower[:200]
                     if any(kw in combined for kw in NON_TECH_KEYWORDS):
-                        logger.debug(
-                            f'[{task_id}] Skipping non-tech: "{title[:60]}"'
-                        )
+                        logger.debug(f'[{task_id}] Skipping non-tech: "{title[:60]}"')
                         continue
 
                     # ── Parse upload date ──────────────────────────────
@@ -960,13 +1026,9 @@ def scrape_youtube(
                             youtube_id=video_id,
                             defaults={
                                 "title": title[:500],
-                                "description": (entry.get("description") or "")[
-                                    :2000
-                                ],
+                                "description": (entry.get("description") or "")[:2000],
                                 "channel_name": (
-                                    entry.get("channel")
-                                    or entry.get("uploader")
-                                    or ""
+                                    entry.get("channel") or entry.get("uploader") or ""
                                 )[:200],
                                 "channel_id": (
                                     entry.get("channel_id")
@@ -975,9 +1037,7 @@ def scrape_youtube(
                                 )[:100],
                                 "url": f"https://www.youtube.com/watch?v={video_id}",
                                 "thumbnail_url": thumbnail_url,
-                                "duration_seconds": int(
-                                    entry.get("duration") or 0
-                                ),
+                                "duration_seconds": int(entry.get("duration") or 0),
                                 "view_count": int(entry.get("view_count") or 0),
                                 "like_count": int(entry.get("like_count") or 0),
                                 "published_at": published_at,
@@ -988,27 +1048,19 @@ def scrape_youtube(
                         found_video_ids.append(str(video.id))
                         if created:
                             total_saved += 1
-                            logger.info(
-                                f'[{task_id}] Saved new video: "{title[:60]}"'
-                            )
+                            logger.info(f'[{task_id}] Saved new video: "{title[:60]}"')
                     except Exception as exc:
                         logger.warning(
-                            f'[{task_id}] Failed to save video {video_id}: {exc}'
+                            f"[{task_id}] Failed to save video {video_id}: {exc}"
                         )
 
             except subprocess.TimeoutExpired:
-                logger.warning(
-                    f'[{task_id}] yt-dlp timed out for query: "{query}"'
-                )
+                logger.warning(f'[{task_id}] yt-dlp timed out for query: "{query}"')
             except FileNotFoundError:
-                logger.error(
-                    f"[{task_id}] yt-dlp binary not found at {ytdlp_bin}"
-                )
+                logger.error(f"[{task_id}] yt-dlp binary not found at {ytdlp_bin}")
                 break
             except Exception as exc:
-                logger.error(
-                    f'[{task_id}] yt-dlp error for query "{query}": {exc}'
-                )
+                logger.error(f'[{task_id}] yt-dlp error for query "{query}": {exc}')
 
         logger.info(
             f"[{task_id}] YouTube scraper completed: {total_saved} new, "
@@ -1037,8 +1089,9 @@ def _scrape_twitter_syndication(
     This endpoint is used for embedded tweets and doesn't require authentication.
     It's more limited than Nitter but works when Nitter instances are down.
     """
-    import requests as _requests_lib
     from datetime import datetime as _dt
+
+    import requests as _requests_lib
     from apps.tweets.models import Tweet
 
     logger.info(f"[{task_id}] Using Twitter Syndication API fallback")
@@ -1048,7 +1101,9 @@ def _scrape_twitter_syndication(
 
     # Syndication API works best with specific tweet IDs or user timelines
     # We'll scrape timelines of tech influencers since search isn't available
-    SYNDICATION_BASE = "https://syndication.twitter.com/srv/timeline-profile/screen-name"
+    SYNDICATION_BASE = (
+        "https://syndication.twitter.com/srv/timeline-profile/screen-name"
+    )
 
     for username in tech_accounts[:8]:  # Limit to avoid rate limits
         try:
@@ -1064,18 +1119,23 @@ def _scrape_twitter_syndication(
             )
 
             if resp.status_code != 200:
-                logger.debug(f"[{task_id}] Syndication API returned {resp.status_code} for @{username}")
+                logger.debug(
+                    f"[{task_id}] Syndication API returned {resp.status_code} for @{username}"
+                )
                 continue
 
             # Parse the HTML response
             from bs4 import BeautifulSoup
+
             soup = BeautifulSoup(resp.text, "html.parser")
 
             # Find tweet containers in the syndication response
             for article in soup.select("article, div.timeline-Tweet"):
                 try:
                     # Extract tweet text
-                    text_el = article.select_one("p.timeline-Tweet-text, div.tweet-text, p")
+                    text_el = article.select_one(
+                        "p.timeline-Tweet-text, div.tweet-text, p"
+                    )
                     if not text_el:
                         continue
                     text = text_el.get_text(strip=True)
@@ -1119,7 +1179,13 @@ def _scrape_twitter_syndication(
                     TOPIC_KEYWORDS = {
                         "AI": ["ai", "ml", "llm", "gpt", "chatgpt", "openai", "deep"],
                         "Programming": ["python", "rust", "golang", "coding", "github"],
-                        "Web Dev": ["react", "nextjs", "typescript", "javascript", "css"],
+                        "Web Dev": [
+                            "react",
+                            "nextjs",
+                            "typescript",
+                            "javascript",
+                            "css",
+                        ],
                         "Security": ["security", "hacking", "vulnerability", "exploit"],
                         "Cloud": ["aws", "azure", "kubernetes", "docker", "devops"],
                     }
@@ -1153,12 +1219,13 @@ def _scrape_twitter_syndication(
                     found_tweet_ids.append(str(tweet.id))
                     if created:
                         total_saved += 1
-                        logger.info(f"[{task_id}] Saved tweet via syndication: @{username}")
+                        logger.info(
+                            f"[{task_id}] Saved tweet via syndication: @{username}"
+                        )
 
                 except Exception as e:
                     logger.debug(f"[{task_id}] Error parsing syndication tweet: {e}")
                     continue
-
 
         except Exception as e:
             logger.warning(f"[{task_id}] Syndication API error for @{username}: {e}")
@@ -1206,8 +1273,8 @@ def scrape_twitter(
     Returns:
         Dictionary with keys: {'spider': 'twitter', 'status': 'success'/'failed', 'count': int}
     """
-    import re as _re
     import json as _json
+    import re as _re
     from datetime import datetime as _dt
 
     import requests as _requests_lib
@@ -1220,9 +1287,21 @@ def scrape_twitter(
 
     # ── Default tech hashtags (maps to Mastodon tag timeline) ─────────────
     DEFAULT_HASHTAGS = [
-        "ai", "machinelearning", "llm", "python", "programming",
-        "opensource", "rag", "typescript", "deeplearning", "rustlang",
-        "webdev", "devops", "kubernetes", "security", "github",
+        "ai",
+        "machinelearning",
+        "llm",
+        "python",
+        "programming",
+        "opensource",
+        "rag",
+        "typescript",
+        "deeplearning",
+        "rustlang",
+        "webdev",
+        "devops",
+        "kubernetes",
+        "security",
+        "github",
     ]
 
     # ── Resolve hashtags from query/queries args ──────────────────────────
@@ -1245,10 +1324,33 @@ def scrape_twitter(
     ]
 
     TOPIC_KEYWORDS = {
-        "AI": ["ai", "ml", "llm", "gpt", "chatgpt", "openai", "deeplearning", "machinelearning"],
-        "Programming": ["python", "rust", "rustlang", "golang", "coding", "github", "programming"],
+        "AI": [
+            "ai",
+            "ml",
+            "llm",
+            "gpt",
+            "chatgpt",
+            "openai",
+            "deeplearning",
+            "machinelearning",
+        ],
+        "Programming": [
+            "python",
+            "rust",
+            "rustlang",
+            "golang",
+            "coding",
+            "github",
+            "programming",
+        ],
         "Web Dev": ["react", "nextjs", "typescript", "javascript", "css", "webdev"],
-        "Security": ["security", "hacking", "vulnerability", "exploit", "cybersecurity"],
+        "Security": [
+            "security",
+            "hacking",
+            "vulnerability",
+            "exploit",
+            "cybersecurity",
+        ],
         "Cloud": ["aws", "azure", "kubernetes", "docker", "devops", "k8s"],
     }
 
@@ -1267,16 +1369,22 @@ def scrape_twitter(
             for instance in MASTODON_INSTANCES:
                 try:
                     api_url = f"{instance}/api/v1/timelines/tag/{hashtag}?limit={min(per_tag, 40)}"
-                    resp = _requests_lib.get(api_url, timeout=10, headers={"Accept": "application/json"})
+                    resp = _requests_lib.get(
+                        api_url, timeout=10, headers={"Accept": "application/json"}
+                    )
                     if resp.status_code != 200:
-                        logger.debug(f"[{task_id}] {instance} returned {resp.status_code} for #{hashtag}")
+                        logger.debug(
+                            f"[{task_id}] {instance} returned {resp.status_code} for #{hashtag}"
+                        )
                         continue
 
                     posts = resp.json()
                     if not isinstance(posts, list):
                         continue
 
-                    logger.info(f"[{task_id}] #{hashtag} via {instance}: {len(posts)} posts")
+                    logger.info(
+                        f"[{task_id}] #{hashtag} via {instance}: {len(posts)} posts"
+                    )
 
                     for post in posts:
                         if total_saved >= max_results:
@@ -1296,7 +1404,9 @@ def scrape_twitter(
 
                             acct = post.get("account", {})
                             author_username = acct.get("acct", "unknown")[:200]
-                            author_display_name = acct.get("display_name", author_username)[:300]
+                            author_display_name = acct.get(
+                                "display_name", author_username
+                            )[:300]
 
                             created_at_str = post.get("created_at", "")
                             posted_at = None
@@ -1308,10 +1418,15 @@ def scrape_twitter(
                                 except ValueError:
                                     pass
 
-                            post_tags = [t.get("name", "") for t in post.get("tags", [])]
+                            post_tags = [
+                                t.get("name", "") for t in post.get("tags", [])
+                            ]
                             like_count = post.get("favourites_count", 0) or 0
                             retweet_count = post.get("reblogs_count", 0) or 0
-                            post_url = post.get("url") or f"{instance}/@{author_username}/{post_id}"
+                            post_url = (
+                                post.get("url")
+                                or f"{instance}/@{author_username}/{post_id}"
+                            )
 
                             # Topic inference
                             combined = " ".join(post_tags).lower() + " " + text.lower()
@@ -1325,7 +1440,9 @@ def scrape_twitter(
                             tweet_id = f"masto_{post_id}"
 
                             # Extract avatar URL
-                            avatar_url = acct.get("avatar") or acct.get("avatar_static") or ""
+                            avatar_url = (
+                                acct.get("avatar") or acct.get("avatar_static") or ""
+                            )
 
                             # Extract media attachments (images/videos)
                             media_attachments = post.get("media_attachments") or []
@@ -1363,7 +1480,7 @@ def scrape_twitter(
                             if created:
                                 total_saved += 1
                                 logger.info(
-                                    f'[{task_id}] Saved Mastodon post: @{author_username}: '
+                                    f"[{task_id}] Saved Mastodon post: @{author_username}: "
                                     f'"{text[:60]}"'
                                 )
                         except Exception as exc:
@@ -1447,15 +1564,13 @@ def generate_user_briefing(self, user_id: str) -> Dict:
     """
     from datetime import date
 
-    from apps.articles.models import Article, UserArticle
+    from apps.articles.models import Article
     from apps.core.models import DailyBriefing
-    from apps.papers.models import ResearchPaper, UserPaper
-    from apps.repositories.models import Repository, UserRepository
-    from apps.tweets.models import Tweet, UserTweet
+    from apps.papers.models import ResearchPaper
+    from apps.repositories.models import Repository
+    from apps.tweets.models import Tweet
     from apps.users.models import User
-    from apps.videos.models import UserVideo, Video
-
-    from django.utils import timezone as tz
+    from apps.videos.models import Video
 
     try:
         user = User.objects.get(id=user_id)
@@ -1477,9 +1592,9 @@ def generate_user_briefing(self, user_id: str) -> Dict:
         "-fetched_at"
     )[:5]
 
-    repos = Repository.objects.filter(user_repositories__user=user).order_by(
-        "-stars"
-    )[:5]
+    repos = Repository.objects.filter(user_repositories__user=user).order_by("-stars")[
+        :5
+    ]
 
     videos = Video.objects.filter(user_videos__user=user).order_by("-fetched_at")[:5]
 
@@ -1616,7 +1731,6 @@ def generate_daily_briefings(self) -> Dict:
       2. Call the AI engine to write a 3-paragraph briefing with source attribution.
       3. Upsert a DailyBriefing row (unique per user/date).
     """
-    import json as _json
     from datetime import timedelta
 
     from apps.articles.models import Article
@@ -2086,7 +2200,6 @@ def backup_database(self) -> Dict:
     import subprocess
     import tempfile
     from datetime import timedelta
-    from urllib.parse import urlparse
 
     from django.conf import settings as django_settings
     from django.core.mail import send_mail
@@ -2220,7 +2333,8 @@ def backup_database(self) -> Dict:
                     data=payload,
                     headers={"Content-Type": "application/json"},
                 )
-                urllib.request.urlopen(req, timeout=5)
+                # Slack webhook URL comes from settings, never user input
+                urllib.request.urlopen(req, timeout=5)  # nosec B310
             except Exception as slack_exc:
                 logger.error("TASK-502: Slack alert failed: %s", slack_exc)
 

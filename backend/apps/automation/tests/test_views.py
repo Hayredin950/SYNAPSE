@@ -328,8 +328,6 @@ class RunStatusViewTests(WorkflowAPITestCase):
     def test_duration_seconds_computed_for_completed_run(self):
         from datetime import timedelta
 
-        from django.utils import timezone as tz
-
         run = self._create_run(run_status=WorkflowRun.RunStatus.SUCCESS)
         # Manually set completed_at so duration is exactly 10 s
         WorkflowRun.objects.filter(id=run.id).update(

@@ -6,7 +6,6 @@ These tests mock external API calls so they run without real credentials.
 
 from __future__ import annotations
 
-import uuid
 from unittest.mock import MagicMock, patch
 
 from apps.integrations.models import GoogleDriveToken

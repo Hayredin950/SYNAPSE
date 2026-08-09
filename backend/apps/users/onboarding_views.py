@@ -48,6 +48,7 @@ def _map_interests_to_arxiv_categories(interests):
     result = list(categories)[:3]
     return result if result else ["cs.AI", "cs.LG", "cs.CL"]
 
+
 STEP_CONFIG = {
     1: {
         "title": "Welcome to SYNAPSE",
@@ -205,6 +206,7 @@ def onboarding_finish(request):
     # Queue workflow creation and welcome email as background tasks (non-blocking)
     # This returns immediately instead of waiting for scraping/email to complete
     from apps.users.tasks import create_initial_workflows_task, send_welcome_email_task
+
     create_initial_workflows_task.delay(user_id=str(user.id), prefs_id=str(prefs.id))
     send_welcome_email_task.delay(user_id=str(user.id))
 
@@ -224,7 +226,6 @@ def _create_initial_workflows(user: User, prefs: OnboardingPreferences) -> None:
     Create initial automation workflows for new user based on their interests.
     Triggers immediate scraping to populate their feed with 5 items each.
     """
-    import json
 
     from apps.automation.models import AutomationWorkflow, WorkflowRun
     from apps.core.tasks import (
@@ -339,7 +340,7 @@ def _create_initial_workflows(user: User, prefs: OnboardingPreferences) -> None:
     yt_workflow = AutomationWorkflow.objects.create(
         user=user,
         name="Tech & Tutorial Videos",
-        description=f"Educational videos based on your learning interests",
+        description="Educational videos based on your learning interests",
         trigger_type="schedule",
         cron_expression="0 8 * * *",
         actions=[
@@ -364,7 +365,7 @@ def _create_initial_workflows(user: User, prefs: OnboardingPreferences) -> None:
     tw_workflow = AutomationWorkflow.objects.create(
         user=user,
         name="Tech Twitter Highlights",
-        description=f"Curated tweets from the tech community",
+        description="Curated tweets from the tech community",
         trigger_type="schedule",
         cron_expression="30 8 * * *",
         actions=[
@@ -394,25 +395,20 @@ def _create_initial_workflows(user: User, prefs: OnboardingPreferences) -> None:
 
     # Use apply_async with explicit queues to ensure tasks are routed correctly
     hn_task = scrape_hackernews.apply_async(
-        kwargs={"story_type": "top", "limit": 5, "user_id": user_id},
-        queue="scraping"
+        kwargs={"story_type": "top", "limit": 5, "user_id": user_id}, queue="scraping"
     )
     gh_task = scrape_github.apply_async(
-        kwargs={"days_back": 7, "limit": 5, "user_id": user_id},
-        queue="scraping"
+        kwargs={"days_back": 7, "limit": 5, "user_id": user_id}, queue="scraping"
     )
     # arXiv and YouTube use slow_scraping queue due to rate limits
     arxiv_task = scrape_arxiv.apply_async(
-        kwargs={"max_papers": 5, "user_id": user_id},
-        queue="slow_scraping"
+        kwargs={"max_papers": 5, "user_id": user_id}, queue="slow_scraping"
     )
     yt_task = scrape_youtube.apply_async(
-        kwargs={"max_results": 5, "user_id": user_id},
-        queue="slow_scraping"
+        kwargs={"max_results": 5, "user_id": user_id}, queue="slow_scraping"
     )
     tw_task = scrape_twitter.apply_async(
-        kwargs={"max_results": 5, "user_id": user_id},
-        queue="scraping"
+        kwargs={"max_results": 5, "user_id": user_id}, queue="scraping"
     )
 
     # Queue briefing 90 s after scrapers — gives subprocess-based spiders

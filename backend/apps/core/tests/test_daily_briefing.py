@@ -7,9 +7,7 @@ Covers:
   B3 — GET /api/briefing/today/ and GET /api/briefing/history/ endpoints
 """
 
-import uuid
 from datetime import date, timedelta
-from unittest.mock import MagicMock, patch
 
 import pytest
 from apps.core.models import DailyBriefing

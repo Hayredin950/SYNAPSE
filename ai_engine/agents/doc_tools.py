@@ -31,7 +31,7 @@ import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -136,7 +136,7 @@ def _rel(abs_path: Path) -> str:
     )
     try:
         return str(abs_path.relative_to(root))
-    except:
+    except Exception:
         return str(abs_path)
 
 
@@ -156,9 +156,7 @@ def _chart_bytes(
     import matplotlib
 
     matplotlib.use("Agg")
-    import matplotlib.patches as mpatches
     import matplotlib.pyplot as plt
-    from matplotlib.patches import FancyBboxPatch
 
     colors = [_Brand.CHART[i % len(_Brand.CHART)] for i in range(len(labels))]
 
@@ -526,11 +524,11 @@ def _generate_pdf(
     user_id: str = "anonymous",
 ) -> str:
     try:
-        from reportlab.lib.colors import Color, HexColor, black, white
-        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT, TA_RIGHT
+        from reportlab.lib.colors import Color, HexColor
+        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_RIGHT
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-        from reportlab.lib.units import cm, mm
+        from reportlab.lib.units import cm
         from reportlab.platypus import (
             BaseDocTemplate,
             Frame,
@@ -685,7 +683,7 @@ def _generate_pdf(
         def _chart_image(
             chart_type, labels, values, title="", w_cm=12, h_cm=7, dark=False
         ):
-            from reportlab.lib.utils import ImageReader
+            pass
 
             png = _chart_bytes(
                 chart_type,
@@ -726,7 +724,7 @@ def _generate_pdf(
             "CM", "Normal", fontSize=9, textColor=hc(_Brand.INDIGO_LIGHT), leading=14
         )
 
-        sH1 = ps(
+        ps(
             "H1",
             "Normal",
             fontSize=20,
@@ -1269,10 +1267,9 @@ def _generate_ppt(
     try:
         from lxml import etree
         from pptx import Presentation
-        from pptx.dml.color import RGBColor
         from pptx.enum.text import PP_ALIGN
         from pptx.oxml.ns import qn
-        from pptx.util import Emu, Inches, Pt
+        from pptx.util import Inches, Pt
 
         file_path = _doc_dir(user_id) / f"{uuid.uuid4().hex}.pptx"
         prs = Presentation()
@@ -1314,8 +1311,8 @@ def _generate_ppt(
             bg.fill.fore_color.rgb = rgb(h)
 
         # ── Shape helpers ──────────────────────────────────────────
-        def _rect(slide, l, t, w, h, fill, radius=0, line=False):
-            s = slide.shapes.add_shape(1 if radius == 0 else 5, l, t, w, h)
+        def _rect(slide, left, t, w, h, fill, radius=0, line=False):
+            s = slide.shapes.add_shape(1 if radius == 0 else 5, left, t, w, h)
             s.fill.solid()
             s.fill.fore_color.rgb = rgb(fill)
             if not line:
@@ -1423,10 +1420,10 @@ def _generate_ppt(
                 align=PP_ALIGN.RIGHT,
             )
 
-        def _embed_chart_png(slide, png_bytes, l, t, w, h):
+        def _embed_chart_png(slide, png_bytes, left, t, w, h):
             """Embed a PNG chart image on a slide from bytes."""
             buf = io.BytesIO(png_bytes)
-            slide.shapes.add_picture(buf, l, t, w, h)
+            slide.shapes.add_picture(buf, left, t, w, h)
 
         total = len(slides) + 3
 
@@ -1994,7 +1991,7 @@ def _generate_word_doc(
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.oxml import OxmlElement
         from docx.oxml.ns import qn
-        from docx.shared import Cm, Inches, Pt, RGBColor
+        from docx.shared import Cm, Pt, RGBColor
 
         def rgb(h):
             h = h.lstrip("#")
@@ -2240,11 +2237,11 @@ def _generate_word_doc(
             if isinstance(section_data, dict):
                 heading = section_data.get("heading", "Section")
                 content = section_data.get("content", "")
-                level = int(section_data.get("level", 1))
+                int(section_data.get("level", 1))
             else:
                 heading = getattr(section_data, "heading", "Section")
                 content = getattr(section_data, "content", "")
-                level = int(getattr(section_data, "level", 1))
+                int(getattr(section_data, "level", 1))
 
             # Section badge header
             badge = doc.add_paragraph()
@@ -2414,10 +2411,10 @@ def _generate_markdown(
             f'generated: "{now_str}"',
             f"sections: {len(sections)}",
             f"total_words: {total_words}",
-            f"tags: [synapse-ai, report, analysis, research]",
-            f'version: "2.0"',
-            f'classification: "Confidential"',
-            f'status: "final"',
+            "tags: [synapse-ai, report, analysis, research]",
+            'version: "2.0"',
+            'classification: "Confidential"',
+            'status: "final"',
             "---",
             "",
         ]
@@ -2455,7 +2452,7 @@ def _generate_markdown(
             "",
             "```",
             "┌─────────────────┬─────────────────┬─────────────────┬─────────────────┐",
-            f"│   📚 SECTIONS   │   📝 WORDS      │   📅 DATE       │   🤖 ENGINE     │",
+            "│   📚 SECTIONS   │   📝 WORDS      │   📅 DATE       │   🤖 ENGINE     │",
             "├─────────────────┼─────────────────┼─────────────────┼─────────────────┤",
             f"│  {str(len(sections)).center(15)}│  {str(f'{total_words:,}').center(15)}│  {now_human[:10].center(15)}│  {'SYNAPSE AI'.center(15)}│",
             "├─────────────────┼─────────────────┼─────────────────┼─────────────────┤",
@@ -2544,9 +2541,9 @@ def _generate_markdown(
             filled = round((i / len(sections)) * 20)
             bar = "█" * filled + "░" * (20 - filled)
             L += [
-                f"```",
+                "```",
                 f"Progress: [{bar}] {i}/{len(sections)} sections",
-                f"```",
+                "```",
                 "",
             ]
 
@@ -2584,9 +2581,9 @@ def _generate_markdown(
             f"| **Total Sections** | {len(sections)} |",
             f"| **Total Words** | {total_words:,} |",
             f"| **Avg Words/Section** | {avg_words:,} |",
-            f"| **Format** | Extended Markdown v2.0 |",
-            f"| **Classification** | Confidential |",
-            f"| **Status** | Final |",
+            "| **Format** | Extended Markdown v2.0 |",
+            "| **Classification** | Confidential |",
+            "| **Status** | Final |",
             "",
             "---",
             "",
@@ -2646,7 +2643,6 @@ def _generate_html(
     user_id: str = "anonymous",
 ) -> str:
     try:
-        import base64
         import html as html_lib
 
         file_path = _doc_dir(user_id) / f"{uuid.uuid4().hex}.html"

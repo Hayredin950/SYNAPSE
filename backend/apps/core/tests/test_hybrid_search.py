@@ -266,7 +266,7 @@ class BM25SearchTest(TestCase):
 class SemanticSearchResultsTest(TestCase):
 
     def setUp(self):
-        import numpy as np
+        pass
 
         self.art = _make_article(
             title="Deep Learning", summary="Neural network research."

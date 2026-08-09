@@ -19,10 +19,9 @@ from __future__ import annotations
 
 import hashlib
 import io
-import os
 import secrets
 import string
-from typing import List, Optional
+from typing import List
 
 import structlog
 
@@ -57,8 +56,7 @@ def setup_totp_device(user) -> dict:
         )
 
         # Build otpauth:// URL
-        issuer = "SYNAPSE"
-        account = user.email
+        user.email
         otp_url = device.config_url
 
         # Generate QR code PNG → base64

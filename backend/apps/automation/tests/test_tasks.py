@@ -10,7 +10,7 @@ Covers:
 
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from apps.automation.models import AutomationWorkflow, WorkflowRun
 from apps.automation.tasks import (
@@ -209,7 +209,6 @@ class ActionHandlerTests(TestCase):
 
     def test_send_email_creates_notification(self):
         """send_email action creates an in-app notification for the workflow owner."""
-        from apps.notifications.models import Notification
 
         uid = uuid.uuid4().hex[:6]
         user = User.objects.create_user(

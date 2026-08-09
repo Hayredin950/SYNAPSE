@@ -24,7 +24,6 @@ import time
 from typing import Dict, Optional
 
 from celery import shared_task
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,9 @@ def _resolve_summarizer_provider(
 
     # 0. Replit AI — built-in, no user key required
     replit_base = (os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL") or "").strip()
-    replit_key = (os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") or "sk-replit").strip()
+    replit_key = (
+        os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY") or "sk-replit"
+    ).strip()
     if replit_base:
         return (replit_key, replit_base, "gpt-4o-mini")
 

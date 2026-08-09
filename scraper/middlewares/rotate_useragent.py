@@ -8,9 +8,6 @@ to avoid bot detection.
 import logging
 import random
 
-from scrapy import signals
-from scrapy.exceptions import IgnoreRequest
-
 logger = logging.getLogger(__name__)
 
 

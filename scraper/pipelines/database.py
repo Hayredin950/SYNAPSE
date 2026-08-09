@@ -86,7 +86,7 @@ class DatabasePipeline:
         )
         logger.debug(f"[_resolve_user] user_id={user_id}")
         if not user_id:
-            logger.debug(f"[_resolve_user] No user_id found")
+            logger.debug("[_resolve_user] No user_id found")
             return None
         if user_id in self._user_cache:
             return self._user_cache[user_id]

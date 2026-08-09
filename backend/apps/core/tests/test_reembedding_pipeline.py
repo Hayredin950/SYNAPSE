@@ -117,7 +117,6 @@ class TestReembedArticlesPipeline(TestCase):
     def test_reembed_saves_embeddings_to_db(self):
         """After re-embedding, articles should have the returned embedding stored."""
         import apps.articles.reembed_tasks as rt
-        from apps.articles.models import Article
         from apps.articles.reembed_tasks import reembed_all_articles
 
         fake_embedding = [float(i) / 1024 for i in range(1024)]
@@ -125,7 +124,7 @@ class TestReembedArticlesPipeline(TestCase):
         mock_resp.raise_for_status.return_value = None
         mock_resp.json.return_value = {"embeddings": [fake_embedding] * 3}
 
-        articles = self._make_articles(3)
+        self._make_articles(3)
 
         with patch.object(rt.httpx, "post", return_value=mock_resp) as mock_post:
             result = reembed_all_articles.run(batch_size=10)

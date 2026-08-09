@@ -12,7 +12,6 @@ Implements:
 
 from __future__ import annotations
 
-import hashlib
 import secrets
 from typing import Callable
 
@@ -207,7 +206,6 @@ class MFARequiredPermission(BasePermission):
 
 # ── Input sanitisation utilities ───────────────────────────────────────────────
 
-import html
 import re
 
 

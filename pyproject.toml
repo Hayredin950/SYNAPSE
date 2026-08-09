@@ -26,7 +26,17 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "DJANGO", "FIRSTPARTY", "LOCALFOLD
 
 [tool.bandit]
 exclude_dirs = ["tests", "migrations", ".venv"]
-skips = ["B101", "B601"]
+skips = [
+    "B101",  # assert used as a defensive check in non-test code
+    "B601",  # paramiko shell invocations are constructed from fixed commands
+    "B105",  # false positives: OAuth endpoint URLs / validation strings
+    "B110",  # try/except/pass — deliberate non-fatal fallbacks (analytics, email, …)
+    "B112",  # try/except/continue — font-fallback loops
+    "B404",  # subprocess import — deliberate; calls use explicit argv lists
+    "B603",  # subprocess without shell=True — no shell interpolation
+    "B607",  # pg_dump invoked from PATH in the backup task
+    "B405",  # xml.etree import — fromstring sites are nosec'd (trusted feeds)
+]
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings.test"

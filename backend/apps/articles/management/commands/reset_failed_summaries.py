@@ -68,9 +68,7 @@ class Command(BaseCommand):
             return
 
         updated = qs.update(summary="")
-        self.stdout.write(
-            self.style.SUCCESS(f"Cleared {updated} failure sentinel(s).")
-        )
+        self.stdout.write(self.style.SUCCESS(f"Cleared {updated} failure sentinel(s)."))
 
         if options["requeue"]:
             batch = options["batch_size"]

@@ -8,7 +8,7 @@ Respects X API rate limits (450 requests/15-min window for App-only auth).
 import logging
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import scrapy
 

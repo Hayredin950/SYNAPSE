@@ -32,28 +32,6 @@ class CustomRetryMiddleware(RetryMiddleware):
         """Create middleware instance from crawler object."""
         return cls(crawler.settings)
 
-    def process_response(self, request, response, spider):
-        """
-        Process response and handle retries with backoff.
-
-        Implements exponential backoff for most errors and a fixed 60s delay
-        for 429 (Too Many Requests) responses.
-
-        Args:
-            request: Scrapy Request object
-            response: Scrapy Response object
-            spider: Scrapy Spider instance
-
-        Returns:
-            Request (retried) or Response (passed through)
-        """
-        if response.status == 429:
-            # Rate limited - use fixed 60s backoff
-            return self._handle_rate_limit(request, response, spider)
-
-        # Use parent class logic for other status codes
-        return super().process_response(request, response, spider)
-
     def _handle_rate_limit(self, request, response, spider):
         """
         Handle 429 (Too Many Requests) responses with 60s backoff.

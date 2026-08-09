@@ -6,7 +6,7 @@ Mounted at /api/v1/ai/ by config/urls.py.
 
 from django.urls import path
 
-from . import views_chat, views_nlp, views_ai
+from . import views_ai, views_chat, views_nlp
 
 urlpatterns = [
     # Phase 2.1 — NLP
@@ -64,16 +64,15 @@ urlpatterns = [
         views_chat.ConversationDeleteView.as_view(),
         name="ai-conversation-delete",
     ),
-
     # ── 40-Feature Pack: AI Features ─────────────────────────────────────────
-    path("debate/",        views_ai.debate_mode,       name="ai-debate"),
-    path("translate/",     views_ai.translate_article,  name="ai-translate"),
-    path("paper-to-blog/", views_ai.paper_to_blog,      name="ai-paper-to-blog"),
-    path("catch-up/",      views_ai.catch_me_up,        name="ai-catch-up"),
-    path("research/",      views_ai.research_brief,     name="ai-research"),
-    path("tts/",           views_ai.text_to_speech,     name="ai-tts"),
-    path("podcast/",       views_ai.generate_podcast,   name="ai-podcast"),
-    path("code-extract/",  views_ai.code_extract,       name="ai-code-extract"),
-    path("related/",       views_ai.related_articles,   name="ai-related"),
-    path("deep-dive/",     views_ai.deep_dive,           name="ai-deep-dive"),
+    path("debate/", views_ai.debate_mode, name="ai-debate"),
+    path("translate/", views_ai.translate_article, name="ai-translate"),
+    path("paper-to-blog/", views_ai.paper_to_blog, name="ai-paper-to-blog"),
+    path("catch-up/", views_ai.catch_me_up, name="ai-catch-up"),
+    path("research/", views_ai.research_brief, name="ai-research"),
+    path("tts/", views_ai.text_to_speech, name="ai-tts"),
+    path("podcast/", views_ai.generate_podcast, name="ai-podcast"),
+    path("code-extract/", views_ai.code_extract, name="ai-code-extract"),
+    path("related/", views_ai.related_articles, name="ai-related"),
+    path("deep-dive/", views_ai.deep_dive, name="ai-deep-dive"),
 ]

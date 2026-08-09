@@ -10,6 +10,7 @@ the real table name — and stays correct if the table is ever renamed.
 """
 
 import pgvector.django.vector
+
 from django.db import migrations
 
 

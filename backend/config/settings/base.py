@@ -21,9 +21,11 @@ if not SECRET_KEY:
     _render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "")
     if _render_host:
         import hashlib
+
         SECRET_KEY = hashlib.sha256(f"synapse-{_render_host}".encode()).hexdigest()[:50]
     else:
         from django.core.exceptions import ImproperlyConfigured
+
         raise ImproperlyConfigured(
             "The SECRET_KEY environment variable is not set. "
             'Generate one with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())" '

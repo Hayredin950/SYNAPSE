@@ -24,8 +24,6 @@ import sys
 import time
 from pathlib import Path
 
-from apps.core.throttles import AgentRateThrottle
-
 from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -112,11 +110,13 @@ class AgentTaskListCreateView(APIView):
         # and run the task in a daemon thread so the response returns immediately
         # while the agent executes in the background.
         try:
-            from .tasks import execute_agent_task
             from django.conf import settings as _dj_settings
 
-            _eager = getattr(_dj_settings, "CELERY_TASK_ALWAYS_EAGER", False) or \
-                     getattr(_dj_settings, "CELERY_ALWAYS_EAGER", False)
+            from .tasks import execute_agent_task
+
+            _eager = getattr(
+                _dj_settings, "CELERY_TASK_ALWAYS_EAGER", False
+            ) or getattr(_dj_settings, "CELERY_ALWAYS_EAGER", False)
 
             if _eager:
                 import threading
@@ -130,16 +130,26 @@ class AgentTaskListCreateView(APIView):
                     try:
                         execute_agent_task(str(task_obj.id))
                     except Exception as _exc:
-                        logger.error("Background AgentTask %s failed: %s", task_obj.id, _exc)
+                        logger.error(
+                            "Background AgentTask %s failed: %s", task_obj.id, _exc
+                        )
 
-                t = threading.Thread(target=_run, daemon=True, name=f"agent-{task_obj.id}")
+                t = threading.Thread(
+                    target=_run, daemon=True, name=f"agent-{task_obj.id}"
+                )
                 t.start()
-                logger.info("Dispatched AgentTask %s in background thread %s", task_obj.id, fake_task_id)
+                logger.info(
+                    "Dispatched AgentTask %s in background thread %s",
+                    task_obj.id,
+                    fake_task_id,
+                )
             else:
                 celery_result = execute_agent_task.delay(str(task_obj.id))
                 task_obj.celery_task_id = celery_result.id
                 task_obj.save(update_fields=["celery_task_id"])
-                logger.info("Queued AgentTask %s → Celery %s", task_obj.id, celery_result.id)
+                logger.info(
+                    "Queued AgentTask %s → Celery %s", task_obj.id, celery_result.id
+                )
         except Exception as exc:
             logger.error("Failed to queue AgentTask %s: %s", task_obj.id, exc)
             task_obj.status = AgentTask.TaskStatus.FAILED
@@ -271,7 +281,7 @@ def agent_task_stream(request, task_id: str) -> StreamingHttpResponse:
           "cost_usd": "0.000000", "execution_time_s": null,
           "intermediate_steps": [], "error_message": "" }
     """
-    from django.http import HttpResponse, JsonResponse
+    from django.http import JsonResponse
 
     # ── Authenticate: JWT Bearer token (header or ?token= query param) ────────
     user = None
@@ -286,8 +296,6 @@ def agent_task_stream(request, task_id: str) -> StreamingHttpResponse:
     if token_str:
         try:
             from rest_framework_simplejwt.authentication import JWTAuthentication
-            from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-            from rest_framework_simplejwt.tokens import UntypedToken
 
             jwt_auth = JWTAuthentication()
             validated = jwt_auth.get_validated_token(token_str.encode())

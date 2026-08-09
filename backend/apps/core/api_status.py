@@ -1,7 +1,7 @@
 """API configuration status checker for user-facing warnings."""
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from django.conf import settings
 

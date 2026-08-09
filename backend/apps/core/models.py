@@ -1,11 +1,12 @@
 import time
 import uuid
 
+from pgvector.django import VectorField
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
-from pgvector.django import VectorField
 from django.utils import timezone
 
 

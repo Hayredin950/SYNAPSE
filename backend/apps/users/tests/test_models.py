@@ -1,4 +1,3 @@
-import pytest
 from apps.users.models import User
 
 from django.test import TestCase

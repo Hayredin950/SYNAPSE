@@ -57,17 +57,20 @@ def summarize_text(request):
     # Accept both 'text' (legacy) and 'content' (ContentReaderModal)
     text = (request.data.get("text") or request.data.get("content") or "").strip()
     title = request.data.get("title", "").strip()
-    url   = request.data.get("url", "").strip()
-    mode  = request.data.get("mode", "").strip()
+    url = request.data.get("url", "").strip()
+    mode = request.data.get("mode", "").strip()
 
     # 'extended' mode — use the Replit AI LLM for a richer deep-dive analysis
     if mode == "extended":
         combined = f"Article: {title}\n\n{text}" if title else text
         if not combined:
-            return Response({"success": False, "error": {"message": "No content to analyse."}},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"success": False, "error": {"message": "No content to analyse."}},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             from apps.core.views_chat import _get_replit_openai_pipeline
+
             pipeline = _get_replit_openai_pipeline()
             prompt = (
                 f"You are a senior tech analyst. Provide a detailed analysis of the following article.\n\n"
@@ -83,18 +86,23 @@ def summarize_text(request):
             )
             result = pipeline(prompt)
             summary_text = result if isinstance(result, str) else str(result)
-            return Response({
-                "success": True,
-                "summary": summary_text,
-                "data": {"summary": summary_text},
-            })
+            return Response(
+                {
+                    "success": True,
+                    "summary": summary_text,
+                    "data": {"summary": summary_text},
+                }
+            )
         except Exception as exc:
             logger.warning("Extended summarize via LLM failed (%s) — falling back", exc)
             # Fall through to BART below
 
     if not text:
         return Response(
-            {"success": False, "error": {"message": "Field 'text' or 'content' is required."}},
+            {
+                "success": False,
+                "error": {"message": "Field 'text' or 'content' is required."},
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 

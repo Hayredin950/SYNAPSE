@@ -9,7 +9,6 @@ from apps.core.models import UserActivity
 from apps.papers.models import ResearchPaper
 from apps.repositories.models import Repository
 
-from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
 WEIGHTS = {

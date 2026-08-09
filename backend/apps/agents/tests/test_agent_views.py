@@ -15,9 +15,8 @@ _repo_root = os.path.dirname(
 if _repo_root not in sys.path:
     sys.path.insert(0, _repo_root)
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
-import pytest
 from langchain_core.tools import StructuredTool
 
 # ---------------------------------------------------------------------------

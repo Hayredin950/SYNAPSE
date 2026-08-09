@@ -104,7 +104,6 @@ def exchange_code_for_credentials(code: str) -> dict:
 def get_user_email(credentials_dict: dict) -> str:
     """Fetch the authenticated Google user's email address."""
     try:
-        from google.oauth2.credentials import Credentials
         from googleapiclient.discovery import build
 
         creds = _build_credentials(credentials_dict)

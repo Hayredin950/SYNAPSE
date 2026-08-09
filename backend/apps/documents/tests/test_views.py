@@ -9,18 +9,16 @@ Covers:
   - DocumentDownloadView  (GET /api/v1/documents/<id>/download/)
 """
 
-import os
 import shutil
 import tempfile
 import uuid
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from apps.documents.models import GeneratedDocument
 from apps.users.models import User
 
 from django.test import TestCase, override_settings
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 

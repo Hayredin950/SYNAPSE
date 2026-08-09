@@ -176,12 +176,8 @@ def build_llm(
     # Default model is small/fast Anthropic via Gateway; override via AI_GATEWAY_MODEL
     # or by passing `model="..."` (e.g. "openai/gpt-5-mini", "google/gemini-3-flash").
     gw_key = ai_gateway_api_key or os.environ.get("AI_GATEWAY_API_KEY", "")
-    gw_base = os.environ.get(
-        "AI_GATEWAY_BASE_URL", "https://ai-gateway.vercel.sh/v1"
-    )
-    gw_model = model or os.environ.get(
-        "AI_GATEWAY_MODEL", "anthropic/claude-haiku-4.5"
-    )
+    gw_base = os.environ.get("AI_GATEWAY_BASE_URL", "https://ai-gateway.vercel.sh/v1")
+    gw_model = model or os.environ.get("AI_GATEWAY_MODEL", "anthropic/claude-haiku-4.5")
 
     if provider == "ai_gateway":
         if not gw_key:
@@ -239,9 +235,7 @@ def build_llm(
     # what the ReAct agent loop needs.
     nv_key = nvidia_api_key or os.environ.get("NVIDIA_API_KEY", "")
     nv_base = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
-    nv_model = model or os.environ.get(
-        "NVIDIA_MODEL", "mistralai/mistral-nemotron"
-    )
+    nv_model = model or os.environ.get("NVIDIA_MODEL", "mistralai/mistral-nemotron")
 
     if provider == "nvidia":
         if not nv_key:

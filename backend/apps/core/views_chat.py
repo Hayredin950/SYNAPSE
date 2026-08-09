@@ -6,10 +6,9 @@ Endpoints for conversational Q&A powered by LangChain + pgvector.
 import json
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from typing import Dict
 
 from apps.core.models import Conversation
-from apps.core.throttles import ChatRateThrottle
 
 from django.http import StreamingHttpResponse
 from rest_framework import status
@@ -335,8 +334,14 @@ def _get_replit_openai_pipeline(model: str = None):
     # Strip provider prefixes (google/, meta-llama/, anthropic/, deepseek/, qwen/, etc.)
     # and map everything to the closest supported model.
     _OPENAI_MODELS = {
-        "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
-        "o1", "o1-mini", "o3-mini",
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4-turbo",
+        "gpt-4",
+        "gpt-3.5-turbo",
+        "o1",
+        "o1-mini",
+        "o3-mini",
     }
     if model:
         # Strip provider prefix if present (e.g. "openai/gpt-4o-mini" → "gpt-4o-mini")
@@ -402,9 +407,7 @@ def _get_pipeline(model: str = None, user=None):
         and not groq_key
         and not replit_base_url
     ):
-        logger.error(
-            "No LLM API key configured — chat unavailable."
-        )
+        logger.error("No LLM API key configured — chat unavailable.")
         return None
 
     logger.info(
@@ -457,7 +460,10 @@ def _get_pipeline(model: str = None, user=None):
     if replit_base_url:
         replit_pipeline = _get_replit_openai_pipeline(model=model)
         if replit_pipeline:
-            logger.info("_get_pipeline: using Replit built-in OpenAI (model=%s)", model or "gpt-4o-mini")
+            logger.info(
+                "_get_pipeline: using Replit built-in OpenAI (model=%s)",
+                model or "gpt-4o-mini",
+            )
             return replit_pipeline
 
     # Server-wide providers — preferred order
@@ -905,9 +911,7 @@ class ChatView(APIView):  # TASK-501-B2: ChatRateThrottle applied
                 or "timed out" in exc_low
                 or "connection" in exc_low
             ):
-                user_msg = (
-                    "AI provider didn't respond in time. Try again in a moment."
-                )
+                user_msg = "AI provider didn't respond in time. Try again in a moment."
                 http_status = status.HTTP_504_GATEWAY_TIMEOUT
             else:
                 user_msg = "Failed to process question. Please try again."

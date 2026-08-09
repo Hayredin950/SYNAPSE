@@ -70,7 +70,7 @@ def mfa_setup(request: Request) -> Response:
             {"success": False, "error": str(exc)},
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
-    except Exception as exc:
+    except Exception:
         return Response(
             {"success": False, "error": "MFA setup failed."},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,

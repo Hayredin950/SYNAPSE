@@ -22,11 +22,10 @@ import logging
 import uuid
 from datetime import timedelta
 
-from django.db import models
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -34,23 +33,27 @@ logger = logging.getLogger(__name__)
 
 # ── Inline lightweight models (no migration needed — use Django cache layer) ───
 
-_UPVOTES   = {}   # {article_id: {user_id: timestamp}}
-_COMMENTS  = {}   # {article_id: [{id, user_id, username, text, created_at}]}
-_WATCHLIST = {}   # {user_id: [{id, keyword, created_at}]}
-_DIGESTS   = {}   # {share_id: {user_id, articles, created_at}}
+_UPVOTES = {}  # {article_id: {user_id: timestamp}}
+_COMMENTS = {}  # {article_id: [{id, user_id, username, text, created_at}]}
+_WATCHLIST = {}  # {user_id: [{id, keyword, created_at}]}
+_DIGESTS = {}  # {share_id: {user_id, articles, created_at}}
+
 
 # Try to use Redis-backed cache if available
 def _cache_get(key, default=None):
     try:
         from django.core.cache import cache
+
         val = cache.get(f"synapse_social:{key}")
         return val if val is not None else default
     except Exception:
         return default
 
+
 def _cache_set(key, value, timeout=86400 * 30):
     try:
         from django.core.cache import cache
+
         cache.set(f"synapse_social:{key}", value, timeout)
     except Exception:
         pass
@@ -58,17 +61,20 @@ def _cache_set(key, value, timeout=86400 * 30):
 
 # ── Feature 20: Community Upvotes ─────────────────────────────────────────────
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def upvote(request):
     """Toggle upvote for an article. Body: { article_id, content_type? }"""
-    article_id   = str(request.data.get("article_id", "")).strip()
-    content_type = request.data.get("content_type", "article")
-    user_id      = str(request.user.id)
+    article_id = str(request.data.get("article_id", "")).strip()
+    request.data.get("content_type", "article")
+    user_id = str(request.user.id)
 
     if not article_id:
-        return Response({"success": False, "error": "article_id required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "article_id required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     cache_key = f"upvotes:{article_id}"
     votes = _cache_get(cache_key, {})
@@ -81,12 +87,14 @@ def upvote(request):
         action = "added"
 
     _cache_set(cache_key, votes)
-    return Response({
-        "success": True,
-        "action": action,
-        "upvote_count": len(votes),
-        "user_upvoted": action == "added",
-    })
+    return Response(
+        {
+            "success": True,
+            "action": action,
+            "upvote_count": len(votes),
+            "user_upvoted": action == "added",
+        }
+    )
 
 
 @api_view(["GET"])
@@ -109,6 +117,7 @@ def upvote_counts(request):
 
 # ── Feature 34: Discussion Threads ────────────────────────────────────────────
 
+
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def comments(request):
@@ -119,27 +128,31 @@ def comments(request):
     if request.method == "GET":
         article_id = request.query_params.get("article_id", "")
         if not article_id:
-            return Response({"success": False, "error": "article_id required"},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"success": False, "error": "article_id required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         key = f"comments:{article_id}"
         thread = _cache_get(key, [])
         return Response({"success": True, "comments": thread, "count": len(thread)})
 
     # POST
     article_id = str(request.data.get("article_id", "")).strip()
-    text       = str(request.data.get("text", "")).strip()[:2000]
+    text = str(request.data.get("text", "")).strip()[:2000]
 
     if not article_id or not text:
-        return Response({"success": False, "error": "article_id and text required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "article_id and text required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     comment = {
-        "id":         str(uuid.uuid4()),
-        "user_id":    str(request.user.id),
-        "username":   request.user.email.split("@")[0] if request.user.email else "user",
-        "text":       text,
+        "id": str(uuid.uuid4()),
+        "user_id": str(request.user.id),
+        "username": request.user.email.split("@")[0] if request.user.email else "user",
+        "text": text,
         "created_at": timezone.now().isoformat(),
-        "upvotes":    0,
+        "upvotes": 0,
     }
 
     key = f"comments:{article_id}"
@@ -147,7 +160,9 @@ def comments(request):
     thread.insert(0, comment)
     _cache_set(key, thread[:200])  # Keep last 200 comments
 
-    return Response({"success": True, "comment": comment}, status=status.HTTP_201_CREATED)
+    return Response(
+        {"success": True, "comment": comment}, status=status.HTTP_201_CREATED
+    )
 
 
 @api_view(["DELETE"])
@@ -157,23 +172,30 @@ def delete_comment(request, comment_id):
     # Find the comment across all articles (not efficient but works for demo)
     article_id = request.query_params.get("article_id", "")
     if not article_id:
-        return Response({"success": False, "error": "article_id required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "article_id required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     key = f"comments:{article_id}"
     thread = _cache_get(key, [])
     user_id = str(request.user.id)
 
-    new_thread = [c for c in thread if not (c["id"] == comment_id and c["user_id"] == user_id)]
+    new_thread = [
+        c for c in thread if not (c["id"] == comment_id and c["user_id"] == user_id)
+    ]
     if len(new_thread) == len(thread):
-        return Response({"success": False, "error": "Comment not found or not authorized"},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"success": False, "error": "Comment not found or not authorized"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
 
     _cache_set(key, new_thread)
     return Response({"success": True})
 
 
 # ── Feature 2: Topic Watchlist ────────────────────────────────────────────────
+
 
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
@@ -183,7 +205,7 @@ def watchlist(request):
     POST { keyword, notify_frequency? } — Add keyword
     """
     user_id = str(request.user.id)
-    key     = f"watchlist:{user_id}"
+    key = f"watchlist:{user_id}"
 
     if request.method == "GET":
         items = _cache_get(key, [])
@@ -193,7 +215,9 @@ def watchlist(request):
             kw = item.get("keyword", "")
             try:
                 from apps.articles.models import Article
+
                 from django.db.models import Q
+
                 cutoff = timezone.now() - timedelta(hours=24)
                 count = Article.objects.filter(
                     Q(title__icontains=kw) | Q(summary__icontains=kw),
@@ -207,23 +231,27 @@ def watchlist(request):
 
     # POST
     keyword = str(request.data.get("keyword", "")).strip()[:100]
-    notify  = request.data.get("notify_frequency", "daily")
+    notify = request.data.get("notify_frequency", "daily")
 
     if not keyword:
-        return Response({"success": False, "error": "keyword required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "keyword required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     items = _cache_get(key, [])
     # Check for duplicates
     if any(i["keyword"].lower() == keyword.lower() for i in items):
-        return Response({"success": False, "error": "Already watching this keyword"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "Already watching this keyword"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     entry = {
-        "id":               str(uuid.uuid4()),
-        "keyword":          keyword,
+        "id": str(uuid.uuid4()),
+        "keyword": keyword,
         "notify_frequency": notify,
-        "created_at":       timezone.now().isoformat(),
+        "created_at": timezone.now().isoformat(),
     }
     items.insert(0, entry)
     _cache_set(key, items[:50])
@@ -234,14 +262,15 @@ def watchlist(request):
 @permission_classes([IsAuthenticated])
 def delete_watchlist(request, watch_id):
     user_id = str(request.user.id)
-    key     = f"watchlist:{user_id}"
-    items   = _cache_get(key, [])
-    new     = [i for i in items if i["id"] != watch_id]
+    key = f"watchlist:{user_id}"
+    items = _cache_get(key, [])
+    new = [i for i in items if i["id"] != watch_id]
     _cache_set(key, new)
     return Response({"success": True})
 
 
 # ── Feature 32: Share Digest ──────────────────────────────────────────────────
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -251,15 +280,19 @@ def share_digest(request):
     Body: { articles: [{id, title, url, summary}], title? }
     """
     articles = request.data.get("articles", [])[:20]
-    title    = request.data.get("title", f"SYNAPSE Digest — {timezone.now().strftime('%b %d, %Y')}")
-    user_id  = str(request.user.id)
+    title = request.data.get(
+        "title", f"SYNAPSE Digest — {timezone.now().strftime('%b %d, %Y')}"
+    )
+    user_id = str(request.user.id)
 
-    share_id = hashlib.sha256(f"{user_id}:{title}:{json.dumps(articles)[:100]}".encode()).hexdigest()[:12]
-    digest   = {
-        "id":         share_id,
-        "title":      title,
-        "user_id":    user_id,
-        "articles":   articles,
+    share_id = hashlib.sha256(
+        f"{user_id}:{title}:{json.dumps(articles)[:100]}".encode()
+    ).hexdigest()[:12]
+    digest = {
+        "id": share_id,
+        "title": title,
+        "user_id": user_id,
+        "articles": articles,
         "created_at": timezone.now().isoformat(),
     }
     _cache_set(f"digest:{share_id}", digest, timeout=86400 * 7)  # 7 days
@@ -272,12 +305,15 @@ def view_digest(request, share_id):
     """View a shared digest by ID."""
     digest = _cache_get(f"digest:{share_id}")
     if not digest:
-        return Response({"success": False, "error": "Digest not found or expired"},
-                        status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            {"success": False, "error": "Digest not found or expired"},
+            status=status.HTTP_404_NOT_FOUND,
+        )
     return Response({"success": True, "digest": digest})
 
 
 # ── Feature 33: What My Network Is Reading ────────────────────────────────────
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -288,21 +324,26 @@ def network_reading(request):
     """
     try:
         from apps.articles.models import Article
+
         # Get most recently scraped articles (proxy for "popular")
         qs = Article.objects.order_by("-scraped_at")[:30]
         articles = []
         for a in qs:
             upvotes = _cache_get(f"upvotes:{a.id}", {})
             if len(upvotes) > 0 or True:  # show all for now
-                articles.append({
-                    "id":        str(a.id),
-                    "title":     a.title,
-                    "url":       a.url,
-                    "summary":   (a.summary or "")[:200],
-                    "upvotes":   len(upvotes),
-                    "source_type": getattr(a, 'source_type', 'article'),
-                    "scraped_at": a.scraped_at.isoformat() if a.scraped_at else None,
-                })
+                articles.append(
+                    {
+                        "id": str(a.id),
+                        "title": a.title,
+                        "url": a.url,
+                        "summary": (a.summary or "")[:200],
+                        "upvotes": len(upvotes),
+                        "source_type": getattr(a, "source_type", "article"),
+                        "scraped_at": (
+                            a.scraped_at.isoformat() if a.scraped_at else None
+                        ),
+                    }
+                )
         # Sort by upvotes desc
         articles.sort(key=lambda x: x["upvotes"], reverse=True)
         return Response({"success": True, "articles": articles[:15]})
@@ -313,37 +354,61 @@ def network_reading(request):
 
 # ── Feature 35: Source Quality / Credibility ──────────────────────────────────
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def source_quality(request, domain):
     """Return credibility / quality metadata for a domain."""
     import re
+
     # Known credible sources
     HIGH_CREDIBILITY = {
-        'arxiv.org', 'github.com', 'nature.com', 'science.org',
-        'mit.edu', 'stanford.edu', 'acm.org', 'ieee.org', 'dl.acm.org',
-        'openai.com', 'deepmind.com', 'research.google', 'ai.meta.com',
-        'microsoft.com', 'aws.amazon.com', 'cloud.google.com',
+        "arxiv.org",
+        "github.com",
+        "nature.com",
+        "science.org",
+        "mit.edu",
+        "stanford.edu",
+        "acm.org",
+        "ieee.org",
+        "dl.acm.org",
+        "openai.com",
+        "deepmind.com",
+        "research.google",
+        "ai.meta.com",
+        "microsoft.com",
+        "aws.amazon.com",
+        "cloud.google.com",
     }
     MEDIUM_CREDIBILITY = {
-        'medium.com', 'substack.com', 'dev.to', 'hackernoon.com',
-        'towardsdatascience.com', 'thenewstack.io', 'infoq.com',
-        'techcrunch.com', 'wired.com', 'theverge.com', 'arstechnica.com',
+        "medium.com",
+        "substack.com",
+        "dev.to",
+        "hackernoon.com",
+        "towardsdatascience.com",
+        "thenewstack.io",
+        "infoq.com",
+        "techcrunch.com",
+        "wired.com",
+        "theverge.com",
+        "arstechnica.com",
     }
 
-    clean = re.sub(r'^www\.', '', domain.lower().strip())
+    clean = re.sub(r"^www\.", "", domain.lower().strip())
     if clean in HIGH_CREDIBILITY:
-        score, label, colour = 95, 'Highly Credible', 'green'
+        score, label, colour = 95, "Highly Credible", "green"
     elif clean in MEDIUM_CREDIBILITY:
-        score, label, colour = 75, 'Generally Reliable', 'yellow'
+        score, label, colour = 75, "Generally Reliable", "yellow"
     else:
-        score, label, colour = 55, 'Unverified', 'slate'
+        score, label, colour = 55, "Unverified", "slate"
 
-    return Response({
-        "success": True,
-        "domain":  clean,
-        "score":   score,
-        "label":   label,
-        "colour":  colour,
-        "last_checked": timezone.now().isoformat(),
-    })
+    return Response(
+        {
+            "success": True,
+            "domain": clean,
+            "score": score,
+            "label": label,
+            "colour": colour,
+            "last_checked": timezone.now().isoformat(),
+        }
+    )

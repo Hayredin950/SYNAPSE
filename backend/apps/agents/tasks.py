@@ -182,7 +182,7 @@ def _build_user_context(user) -> dict:
 
         # ── Remaining quota ───────────────────────────────────────
         try:
-            from apps.core.quotas import get_quota, _count_usage
+            from apps.core.quotas import _count_usage, get_quota
 
             used = _count_usage(user, "agent_runs", "daily")
             allowed = get_quota(user, "agent_runs", "daily")

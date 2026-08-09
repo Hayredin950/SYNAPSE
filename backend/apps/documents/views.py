@@ -18,8 +18,6 @@ Phase 5.3 — Project Builder (Week 15)
 from __future__ import annotations
 
 import logging
-import mimetypes
-import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,7 +27,6 @@ from apps.core.pagination import StandardPagination
 from django.conf import settings
 from django.http import FileResponse, Http404
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -38,7 +35,6 @@ from rest_framework.views import APIView
 from .models import GeneratedDocument
 from .serializers import (
     DocumentGenerateSerializer,
-    GeneratedDocumentListSerializer,
     GeneratedDocumentSerializer,
 )
 
@@ -489,7 +485,7 @@ class DocumentGenerateView(APIView):
                         ).COLLECTION_NAMES.keys()
                     ),
                 )
-                docs = retriever.invoke(f"{prompt} {title}")
+                docs = retriever.invoke(prompt)
                 for doc in docs[:8]:  # cap at 8 sources
                     meta = doc.metadata or {}
                     title_v = meta.get("title", "")
@@ -1390,7 +1386,6 @@ class DocumentPreviewView(APIView):
 
         from PIL import Image, ImageDraw, ImageFont
         from pptx import Presentation
-        from pptx.util import Pt
 
         prs = Presentation(path)
         slide = prs.slides[0]  # Title slide
@@ -1453,13 +1448,13 @@ class DocumentPreviewView(APIView):
                 if _os.path.exists(fp):
                     try:
                         return ImageFont.truetype(fp, size)
-                    except:
+                    except Exception:
                         continue
             return ImageFont.load_default()
 
-        f_title = _font(FONT_BOLD, 52)
-        f_sub = _font(FONT_REG, 22)
-        f_meta = _font(FONT_REG, 14)
+        _font(FONT_BOLD, 52)
+        _font(FONT_REG, 22)
+        _font(FONT_REG, 14)
 
         # Slide dimensions (EMU)
         slide_w = prs.slide_width
@@ -1479,7 +1474,7 @@ class DocumentPreviewView(APIView):
             try:
                 sz_pt = shape.text_frame.paragraphs[0].runs[0].font.size
                 sz_pt = int(sz_pt.pt) if sz_pt else 18
-            except:
+            except Exception:
                 sz_pt = 18
             font = _font(
                 FONT_BOLD if sz_pt > 20 else FONT_REG,
@@ -1489,7 +1484,7 @@ class DocumentPreviewView(APIView):
             try:
                 rgb = shape.text_frame.paragraphs[0].runs[0].font.color.rgb
                 color = (rgb.r, rgb.g, rgb.b)
-            except:
+            except Exception:
                 pass
             # Wrap text
             words = text.split()
@@ -1562,7 +1557,7 @@ class DocumentPreviewView(APIView):
                 if _os.path.exists(fp):
                     try:
                         return ImageFont.truetype(fp, size)
-                    except:
+                    except Exception:
                         continue
             return ImageFont.load_default()
 
@@ -1636,7 +1631,6 @@ class DocumentPreviewView(APIView):
         from PIL import Image, ImageDraw, ImageFont
 
         # Read and parse key content from the HTML
-        html_content = Path(path).read_text(encoding="utf-8")
 
         W, H = 1200, 630
         img = Image.new("RGB", (W, H), (15, 12, 46))  # dark background
@@ -1656,7 +1650,7 @@ class DocumentPreviewView(APIView):
                 if _os.path.exists(fp):
                     try:
                         return ImageFont.truetype(fp, size)
-                    except:
+                    except Exception:
                         continue
             return ImageFont.load_default()
 
@@ -1832,10 +1826,6 @@ class DocumentPreviewView(APIView):
             "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         ]
-        FONT_MONO = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-        ]
         FONT_REG = [
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -1846,7 +1836,7 @@ class DocumentPreviewView(APIView):
                 if _os.path.exists(fp):
                     try:
                         return ImageFont.truetype(fp, size)
-                    except:
+                    except Exception:
                         continue
             return ImageFont.load_default()
 
@@ -2397,7 +2387,7 @@ class DocumentGenerateStreamView(APIView):
                         )
                         yield from emit(
                             "sections_ready",
-                            f'Generated {len(sections_list)} sections ({sum(len(s.get("content","").split()) for s in sections_list):,} words)',
+                            f'Generated {len(sections_list)} sections ({sum(len(s.get("content", "").split()) for s in sections_list):,} words)',
                             50,
                         )
                     else:
@@ -2470,7 +2460,6 @@ class DocumentGenerateStreamView(APIView):
                 )
 
                 # Step 6: Done
-                from rest_framework.request import Request as DRFRequest
 
                 doc_data = GeneratedDocumentSerializer(
                     doc, context={"request": request}
@@ -3094,7 +3083,6 @@ window.addEventListener('scroll',()=>{{
         import html as _html_mod
 
         from pptx import Presentation
-        from pptx.util import Pt
 
         prs = Presentation(str(abs_path))
         slides_html = []
@@ -3114,9 +3102,9 @@ window.addEventListener('scroll',()=>{{
                 except Exception:
                     sz_pt = 18
                 try:
-                    bold = shape.text_frame.paragraphs[0].runs[0].font.bold
+                    shape.text_frame.paragraphs[0].runs[0].font.bold
                 except Exception:
-                    bold = False
+                    pass
                 try:
                     rgb = shape.text_frame.paragraphs[0].runs[0].font.color.rgb
                     color = f"#{rgb}"

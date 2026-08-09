@@ -9,10 +9,8 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta
-from urllib.parse import urljoin
 
 import scrapy
-from scrapy import signals
 
 logger = logging.getLogger(__name__)
 

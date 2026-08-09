@@ -12,7 +12,7 @@ Daily task that:
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from celery import shared_task
 

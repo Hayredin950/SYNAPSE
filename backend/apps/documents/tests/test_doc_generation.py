@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import os
 import tempfile
-import uuid
 from pathlib import Path
 from unittest.mock import patch
 
@@ -346,7 +345,7 @@ class TestGenerateMarkdown(DocToolTestCase):
 
 class TestRegistryIncludesDocTools(TestCase):
     def test_registry_has_9_tools(self):
-        from unittest.mock import MagicMock
+        pass
 
         from ai_engine.agents.registry import AgentToolRegistry
 

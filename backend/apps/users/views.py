@@ -1,12 +1,11 @@
 import logging
 import os
-import uuid
 
 import requests as http_requests
-from rest_framework_simplejwt.exceptions import TokenError
+from apps.core.throttles import RegistrationThrottle
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
@@ -17,8 +16,6 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from apps.core.throttles import APIRateThrottle, RegistrationThrottle
-
 from .firebase_email import send_password_reset_email, send_verification_email
 from .models import User
 from .serializers import (
@@ -28,6 +25,8 @@ from .serializers import (
     UserProfileSerializer,
     UserRegistrationSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -277,7 +276,6 @@ def ai_keys_view(request):
         x_api_ok = bool(prefs.get("x_api_key"))
 
         # Check .env fallback keys (server-wide defaults)
-        from django.conf import settings
 
         env_gemini = bool(os.environ.get("GEMINI_API_KEY"))
         env_openrouter = bool(os.environ.get("OPENROUTER_API_KEY"))
@@ -315,11 +313,7 @@ def ai_keys_view(request):
         # Scitely, OpenRouter, Gemini).
         any_ai_user_key = gemini_ok or openrouter_ok or scitely_ok
         any_ai_env_key = (
-            env_ai_gateway
-            or env_groq
-            or env_scitely
-            or env_openrouter
-            or env_gemini
+            env_ai_gateway or env_groq or env_scitely or env_openrouter or env_gemini
         )
 
         if not any_ai_user_key and not any_ai_env_key:
@@ -511,7 +505,6 @@ def verify_email(request):
     GET /api/v1/auth/verify-email/?token=<token>
     Verifies an email verification token and activates the account.
     """
-    from django.utils import timezone
 
     token = request.query_params.get("token")
     if not token:
@@ -565,8 +558,6 @@ def resend_verification_email(request):
     Resends the verification email.
     """
     import uuid as _uuid
-
-    from django.conf import settings as django_settings
 
     email = request.data.get("email", "").strip().lower()
     if not email:
@@ -717,14 +708,16 @@ def google_auth(request):
 
 # ── Feature: User Activity Heatmap API ────────────────────────────────────────
 
+from datetime import timedelta
+
+from apps.core.models import UserActivity
+
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response as DRFResponse
-from apps.core.models import UserActivity
-from django.db.models.functions import TruncDate
-from django.db.models import Count
-from datetime import timedelta
-from django.utils import timezone
 
 
 @api_view(["GET"])
@@ -744,8 +737,7 @@ def user_activity_heatmap(request):
     since = timezone.now() - timedelta(days=days)
 
     qs = (
-        UserActivity.objects
-        .filter(user=request.user, timestamp__gte=since)
+        UserActivity.objects.filter(user=request.user, timestamp__gte=since)
         .annotate(date=TruncDate("timestamp"))
         .values("date", "interaction_type")
         .annotate(count=Count("id"))

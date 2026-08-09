@@ -27,9 +27,7 @@ from rest_framework.views import APIView
 
 from .models import GoogleDriveToken
 from .serializers import (
-    DriveListSerializer,
     DriveUploadSerializer,
-    GoogleDriveStatusSerializer,
     S3PresignedUrlSerializer,
     S3UploadSerializer,
 )

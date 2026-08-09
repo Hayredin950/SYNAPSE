@@ -31,7 +31,6 @@ from datetime import datetime
 from datetime import timezone as dt_timezone
 from typing import Optional
 
-from rest_framework.exceptions import Throttled
 from rest_framework.throttling import SimpleRateThrottle
 
 # ── Rate limit tables ─────────────────────────────────────────────────────────
@@ -197,6 +196,7 @@ class RegistrationThrottle(SimpleRateThrottle):
 
     def get_rate(self) -> str:
         from django.conf import settings
+
         return getattr(settings, "REGISTRATION_THROTTLE_RATE", "5/hour")
 
     def allow_request(self, request, view):

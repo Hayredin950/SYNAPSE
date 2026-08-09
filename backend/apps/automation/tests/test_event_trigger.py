@@ -11,10 +11,10 @@ Tests:
 
 import uuid
 from datetime import timedelta
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-from apps.automation.models import AutomationWorkflow, WorkflowRun
-from apps.automation.signals import _fire_event, trending_spike_signal
+from apps.automation.models import AutomationWorkflow
+from apps.automation.signals import _fire_event
 from apps.automation.tasks import dispatch_event_trigger
 from apps.users.models import User
 

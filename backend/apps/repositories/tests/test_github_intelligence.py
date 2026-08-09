@@ -8,7 +8,7 @@ Covers:
 """
 
 import uuid as _uuid
-from datetime import date, timedelta
+from datetime import timedelta
 
 import pytest
 from apps.repositories.models import Repository
@@ -18,7 +18,6 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-
 
 
 def make_repo(**kwargs):

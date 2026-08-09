@@ -15,7 +15,6 @@ from unittest.mock import MagicMock, patch
 from apps.automation.models import AutomationWorkflow, WorkflowRun
 from apps.users.models import User
 
-from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 

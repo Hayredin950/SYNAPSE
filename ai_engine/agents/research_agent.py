@@ -19,7 +19,6 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Generator
 
 import requests
 

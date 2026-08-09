@@ -57,6 +57,7 @@ def _get_cache():
     except Exception:
         return None
 
+
 # BGE query prefix (required for best retrieval performance with BGE models)
 # Only applied when embed_query() is called, NOT when embed() / embed_batch() are called.
 _BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "

@@ -17,10 +17,9 @@ import json
 import logging
 import os
 
-from django.http import StreamingHttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -30,8 +29,11 @@ def _get_ai_client():
     """Return an OpenAI-compatible client pointed at the Replit AI proxy."""
     try:
         import openai as _openai
+
         base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL", "").strip()
-        api_key  = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY", "").strip() or "sk-replit"
+        api_key = (
+            os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY", "").strip() or "sk-replit"
+        )
         if not base_url:
             return None
         # Replit proxy: base_url = http://localhost:1106/modelfarm/openai
@@ -51,7 +53,7 @@ def _chat(system: str, user: str, max_tokens: int = 1200) -> str:
         model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": system},
-            {"role": "user",   "content": user},
+            {"role": "user", "content": user},
         ],
         max_tokens=max_tokens,
     )
@@ -60,6 +62,7 @@ def _chat(system: str, user: str, max_tokens: int = 1200) -> str:
 
 # ── Feature 12: Debate Mode ───────────────────────────────────────────────────
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def debate_mode(request):
@@ -67,11 +70,13 @@ def debate_mode(request):
     Generate balanced pro/con arguments + alternative perspectives for an article.
     Body: { title, content/summary, url? }
     """
-    title   = request.data.get("title", "").strip()
+    title = request.data.get("title", "").strip()
     content = (request.data.get("content") or request.data.get("summary") or "").strip()
     if not title and not content:
-        return Response({"success": False, "error": "title or content required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "title or content required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     system = (
         "You are an expert debate analyst and critical thinker. "
@@ -91,11 +96,14 @@ def debate_mode(request):
         return Response({"success": True, "debate": result})
     except Exception as exc:
         logger.error("debate_mode error: %s", exc)
-        return Response({"success": False, "error": str(exc)},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 # ── Feature 14: Translation ───────────────────────────────────────────────────
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -104,12 +112,14 @@ def translate_article(request):
     Translate article text to the requested language.
     Body: { text, title?, target_language }
     """
-    text     = (request.data.get("text") or request.data.get("content") or "").strip()
-    title    = request.data.get("title", "").strip()
-    lang     = request.data.get("target_language", "Spanish").strip()
+    text = (request.data.get("text") or request.data.get("content") or "").strip()
+    title = request.data.get("title", "").strip()
+    lang = request.data.get("target_language", "Spanish").strip()
     if not text:
-        return Response({"success": False, "error": "text is required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "text is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     system = (
         f"You are a professional technical translator specializing in technology content. "
@@ -122,11 +132,14 @@ def translate_article(request):
         return Response({"success": True, "translated": result, "language": lang})
     except Exception as exc:
         logger.error("translate_article error: %s", exc)
-        return Response({"success": False, "error": str(exc)},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 # ── Feature 19: Paper-to-Blog ─────────────────────────────────────────────────
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -135,13 +148,17 @@ def paper_to_blog(request):
     Convert a dense academic/arXiv paper summary into a readable blog post.
     Body: { title, abstract/content, authors? }
     """
-    title   = request.data.get("title", "").strip()
-    content = (request.data.get("abstract") or request.data.get("content") or "").strip()
+    title = request.data.get("title", "").strip()
+    content = (
+        request.data.get("abstract") or request.data.get("content") or ""
+    ).strip()
     authors = request.data.get("authors", "").strip()
 
     if not content:
-        return Response({"success": False, "error": "abstract or content required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "abstract or content required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     system = (
         "You are a senior tech journalist who specializes in making complex research "
@@ -167,11 +184,14 @@ def paper_to_blog(request):
         return Response({"success": True, "blog_post": result})
     except Exception as exc:
         logger.error("paper_to_blog error: %s", exc)
-        return Response({"success": False, "error": str(exc)},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 # ── Feature 23: Catch Me Up ───────────────────────────────────────────────────
+
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -187,69 +207,96 @@ def catch_me_up(request):
         days = 3
 
     # Gather recent high-signal content
-    from django.utils import timezone
     from datetime import timedelta
+
+    from django.utils import timezone
 
     cutoff = timezone.now() - timedelta(days=days)
     articles, papers, repos = [], [], []
     user = request.user
-    is_personalized = False
 
     try:
         from apps.articles.models import Article, UserArticle
+
         # Try user-specific content first (linked via UserArticle)
-        user_article_ids = UserArticle.objects.filter(user=user).values_list("article_id", flat=True)
-        qs = Article.objects.filter(id__in=user_article_ids, scraped_at__gte=cutoff).order_by("-scraped_at")[:20]
+        user_article_ids = UserArticle.objects.filter(user=user).values_list(
+            "article_id", flat=True
+        )
+        qs = Article.objects.filter(
+            id__in=user_article_ids, scraped_at__gte=cutoff
+        ).order_by("-scraped_at")[:20]
         if qs.exists():
-            is_personalized = True
+            pass
         else:
             # Fall back to global recent content
-            qs = Article.objects.filter(scraped_at__gte=cutoff).order_by("-scraped_at")[:20]
-        articles = [{"title": a.title, "summary": (a.summary or "")[:200], "source": a.source_type} for a in qs]
+            qs = Article.objects.filter(scraped_at__gte=cutoff).order_by("-scraped_at")[
+                :20
+            ]
+        articles = [
+            {
+                "title": a.title,
+                "summary": (a.summary or "")[:200],
+                "source": a.source_type,
+            }
+            for a in qs
+        ]
     except Exception:
         pass
 
     try:
         from apps.papers.models import ResearchPaper
-        qs = ResearchPaper.objects.filter(fetched_at__gte=cutoff).order_by("-fetched_at")[:10]
+
+        qs = ResearchPaper.objects.filter(fetched_at__gte=cutoff).order_by(
+            "-fetched_at"
+        )[:10]
         papers = [{"title": p.title, "abstract": (p.abstract or "")[:200]} for p in qs]
     except Exception:
         pass
 
     try:
         from apps.repositories.models import Repository
+
         qs = Repository.objects.filter(scraped_at__gte=cutoff).order_by("-stars")[:10]
-        repos = [{"name": r.full_name, "description": (r.description or "")[:150], "stars": r.stars} for r in qs]
+        repos = [
+            {
+                "name": r.full_name,
+                "description": (r.description or "")[:150],
+                "stars": r.stars,
+            }
+            for r in qs
+        ]
     except Exception:
         pass
 
     if not articles and not papers and not repos:
-        return Response({
-            "success": True,
-            "brief": (
-                "## Nothing yet for this time window\n\n"
-                "No content found in the last {days} day{s}. "
-                "Run the automation from the **Automation** page to fetch the latest articles, "
-                "papers, and repositories for your watchlist.\n\n"
-                "> **Tip:** Shorter windows (1d) need very recent data. Try 7d for a broader look."
-            ).format(days=days, s="s" if days != 1 else ""),
-        })
+        return Response(
+            {
+                "success": True,
+                "brief": (
+                    "## Nothing yet for this time window\n\n"
+                    "No content found in the last {days} day{s}. "
+                    "Run the automation from the **Automation** page to fetch the latest articles, "
+                    "papers, and repositories for your watchlist.\n\n"
+                    "> **Tip:** Shorter windows (1d) need very recent data. Try 7d for a broader look."
+                ).format(days=days, s="s" if days != 1 else ""),
+            }
+        )
 
     content_summary = ""
     if articles:
         content_summary += f"## Recent Articles ({len(articles)} total)\n"
         for a in articles[:8]:
-            content_summary += f"- **{a['title']}** ({a.get('source','')}) — {a.get('summary','')[:100]}\n"
+            content_summary += f"- **{a['title']}** ({a.get('source', '')}) — {a.get('summary', '')[:100]}\n"
         content_summary += "\n"
     if papers:
         content_summary += f"## Research Papers ({len(papers)} total)\n"
         for p in papers[:5]:
-            content_summary += f"- **{p['title']}** — {p.get('abstract','')[:100]}\n"
+            content_summary += f"- **{p['title']}** — {p.get('abstract', '')[:100]}\n"
         content_summary += "\n"
     if repos:
         content_summary += f"## Trending Repos ({len(repos)} total)\n"
         for r in repos[:5]:
-            content_summary += f"- **{r['name']}** ⭐{r.get('stars','?')} — {r.get('description','')[:80]}\n"
+            content_summary += f"- **{r['name']}** ⭐{r.get('stars', '?')} — {r.get('description', '')[:80]}\n"
 
     system = (
         "You are a sharp tech editor who writes crisp, insightful briefings. "
@@ -268,18 +315,28 @@ def catch_me_up(request):
     )
     try:
         result = _chat(system, prompt, max_tokens=1200)
-        return Response({
-            "success": True,
-            "brief": result,
-            "stats": {"articles": len(articles), "papers": len(papers), "repos": len(repos), "days": days},
-        })
+        return Response(
+            {
+                "success": True,
+                "brief": result,
+                "stats": {
+                    "articles": len(articles),
+                    "papers": len(papers),
+                    "repos": len(repos),
+                    "days": days,
+                },
+            }
+        )
     except Exception as exc:
         logger.error("catch_me_up error: %s", exc)
-        return Response({"success": False, "error": str(exc)},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 # ── Feature 11: AI Research Agent ────────────────────────────────────────────
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -293,16 +350,22 @@ def research_brief(request):
     focus = request.data.get("focus", "engineers")  # target audience
 
     if not topic:
-        return Response({"success": False, "error": "topic is required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "topic is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     # Try to find relevant content in the DB to ground the research
     context_items = []
     try:
         from apps.articles.models import Article
+
         from django.db.models import Q
+
         qs = Article.objects.filter(
-            Q(title__icontains=topic) | Q(tags__icontains=topic) | Q(summary__icontains=topic[:20])
+            Q(title__icontains=topic)
+            | Q(tags__icontains=topic)
+            | Q(summary__icontains=topic[:20])
         ).order_by("-scraped_at")[:10]
         context_items = [f"- {a.title}: {(a.summary or '')[:150]}" for a in qs]
     except Exception:
@@ -338,11 +401,14 @@ def research_brief(request):
         return Response({"success": True, "brief": result, "topic": topic})
     except Exception as exc:
         logger.error("research_brief error: %s", exc)
-        return Response({"success": False, "error": str(exc)},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 # ── Feature 13: Code Extractor ────────────────────────────────────────────────
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -352,11 +418,13 @@ def code_extract(request):
     Body: { content, title? }
     """
     content = (request.data.get("content") or request.data.get("text") or "").strip()
-    title   = request.data.get("title", "").strip()
+    title = request.data.get("title", "").strip()
 
     if not content:
-        return Response({"success": False, "error": "content required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "content required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     system = (
         "You are a senior software engineer. Extract and explain code from articles. "
@@ -374,7 +442,8 @@ def code_extract(request):
         raw = _chat(system, prompt, max_tokens=1500)
         # Parse JSON from response
         import re
-        json_match = re.search(r'\[.*\]', raw, re.DOTALL)
+
+        json_match = re.search(r"\[.*\]", raw, re.DOTALL)
         snippets = json.loads(json_match.group()) if json_match else []
         return Response({"success": True, "snippets": snippets})
     except Exception as exc:
@@ -384,6 +453,7 @@ def code_extract(request):
 
 # ── Feature 8: Text-to-Speech ─────────────────────────────────────────────────
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def text_to_speech(request):
@@ -392,7 +462,7 @@ def text_to_speech(request):
     Body: { text, voice? ('alloy'|'echo'|'fable'|'onyx'|'nova'|'shimmer') }
     Returns binary MP3 audio stream.
     """
-    text  = (request.data.get("text") or "").strip()[:4096]
+    text = (request.data.get("text") or "").strip()[:4096]
     voice = request.data.get("voice", "alloy")
 
     VALID_VOICES = {"alloy", "echo", "fable", "onyx", "nova", "shimmer"}
@@ -400,17 +470,24 @@ def text_to_speech(request):
         voice = "alloy"
 
     if not text:
-        return Response({"success": False, "error": "text is required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "text is required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         import openai as _openai
+
         base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL", "").strip()
-        api_key  = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY", "").strip() or "sk-replit"
+        api_key = (
+            os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY", "").strip() or "sk-replit"
+        )
 
         if not base_url:
-            return Response({"success": False, "error": "TTS not configured"},
-                            status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            return Response(
+                {"success": False, "error": "TTS not configured"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         client = _openai.OpenAI(base_url=base_url, api_key=api_key)
         audio_response = client.audio.speech.create(
@@ -422,6 +499,7 @@ def text_to_speech(request):
         audio_data = audio_response.read()
 
         from django.http import HttpResponse
+
         resp = HttpResponse(audio_data, content_type="audio/mpeg")
         resp["Content-Disposition"] = 'attachment; filename="synapse-tts.mp3"'
         resp["Cache-Control"] = "no-cache"
@@ -436,6 +514,7 @@ def text_to_speech(request):
 
 
 # ── Feature 15: AI Podcast Script ─────────────────────────────────────────────
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -452,12 +531,20 @@ def generate_podcast(request):
         # Fall back to recent articles
         try:
             from apps.articles.models import Article
+
             qs = Article.objects.order_by("-scraped_at")[:8]
-            articles = [{"title": a.title, "summary": (a.summary or "")[:200]} for a in qs]
+            articles = [
+                {"title": a.title, "summary": (a.summary or "")[:200]} for a in qs
+            ]
         except Exception:
             pass
 
-    articles_str = "\n".join([f"- **{a.get('title','')}**: {a.get('summary','')[:150]}" for a in articles[:8]])
+    articles_str = "\n".join(
+        [
+            f"- **{a.get('title', '')}**: {a.get('summary', '')[:150]}"
+            for a in articles[:8]
+        ]
+    )
 
     system = (
         "You are a podcast script writer for a tech show. "
@@ -475,14 +562,19 @@ def generate_podcast(request):
     )
     try:
         result = _chat(system, prompt, max_tokens=2500)
-        return Response({"success": True, "script": result, "duration_minutes": duration})
+        return Response(
+            {"success": True, "script": result, "duration_minutes": duration}
+        )
     except Exception as exc:
         logger.error("generate_podcast error: %s", exc)
-        return Response({"success": False, "error": str(exc)},
-                        status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
 
 
 # ── Feature 5: Related Articles ───────────────────────────────────────────────
+
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -492,14 +584,17 @@ def related_articles(request):
     Query params: article_id (required), limit (default 5)
     """
     article_id = request.query_params.get("article_id", "")
-    limit      = min(int(request.query_params.get("limit", 5)), 10)
+    limit = min(int(request.query_params.get("limit", 5)), 10)
 
     if not article_id:
-        return Response({"success": False, "error": "article_id required"},
-                        status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"success": False, "error": "article_id required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         from apps.articles.models import Article
+
         from django.db.models import Q
 
         try:
@@ -524,6 +619,7 @@ def related_articles(request):
         qs = qs.order_by("-scraped_at")[:limit]
 
         from apps.articles.serializers import ArticleSerializer
+
         serializer = ArticleSerializer(qs, many=True, context={"request": request})
         return Response({"success": True, "articles": serializer.data})
 
@@ -534,6 +630,7 @@ def related_articles(request):
 
 # ── Feature: AI Deep-Dive Analysis ────────────────────────────────────────────
 
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def deep_dive(request):
@@ -541,7 +638,7 @@ def deep_dive(request):
     Generate a thorough, multi-angle deep-dive analysis of an article.
     Body: { title, content, article_id? }
     """
-    title   = request.data.get("title", "Untitled")
+    title = request.data.get("title", "Untitled")
     content = request.data.get("content", "")
 
     system = (
@@ -565,4 +662,7 @@ def deep_dive(request):
         return Response({"success": True, "analysis": result, "title": title})
     except Exception as exc:
         logger.error("deep_dive error: %s", exc)
-        return Response({"success": False, "error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"success": False, "error": str(exc)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )

@@ -15,7 +15,7 @@ Covers:
 from __future__ import annotations
 
 import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from apps.trends.models import TechnologyTrend
 from apps.trends.tasks import (
@@ -27,7 +27,6 @@ from apps.trends.tasks import (
 )
 
 from django.test import TestCase
-from django.utils import timezone
 
 
 class CategoryInferenceTests(TestCase):
@@ -223,7 +222,7 @@ class ScoreTechnologyTests(TestCase):
         from apps.articles.models import Article
         from apps.repositories.models import Repository
 
-        today = datetime.date.today()
+        datetime.date.today()
         # Create one article mentioning Python (source is nullable FK)
         Article.objects.create(
             title="Python is great for data science",

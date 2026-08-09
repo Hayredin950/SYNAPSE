@@ -10,9 +10,8 @@ Covers:
 """
 
 import time
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
-import pytest
 from apps.core.throttles import (
     AGENT_LIMITS,
     API_LIMITS,

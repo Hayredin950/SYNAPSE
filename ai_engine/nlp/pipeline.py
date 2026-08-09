@@ -20,7 +20,7 @@ from typing import Dict, List, Optional
 
 from .cleaner import clean_text
 from .keyword_extractor import extract_keywords
-from .language_detector import detect_language, is_english
+from .language_detector import detect_language
 from .ner import extract_entities
 from .sentiment_analyzer import analyze_sentiment, sentiment_to_score
 from .topic_classifier import classify_topic

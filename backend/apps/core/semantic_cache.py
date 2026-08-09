@@ -75,9 +75,9 @@ def lookup(prompt: str, scope: str = "default") -> Optional[str]:
     try:
         from datetime import timedelta
 
-        from django.utils import timezone
-
         from apps.core.models import SemanticCacheEntry  # noqa: PLC0415
+
+        from django.utils import timezone
 
         vector = _embed(prompt)
         if vector is None:
@@ -141,9 +141,9 @@ def purge_expired() -> int:
     """Delete entries past their TTL. Returns the number removed."""
     from datetime import timedelta
 
-    from django.utils import timezone
-
     from apps.core.models import SemanticCacheEntry  # noqa: PLC0415
+
+    from django.utils import timezone
 
     cutoff = timezone.now() - timedelta(hours=_TTL_HOURS)
     deleted, _ = SemanticCacheEntry.objects.filter(created_at__lt=cutoff).delete()

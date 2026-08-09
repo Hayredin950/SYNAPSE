@@ -16,7 +16,6 @@ import logging
 import time
 
 from django.http import StreamingHttpResponse
-from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -536,7 +535,7 @@ def list_schedule_view(request):
     Returns all PeriodicTasks for the current user's workflows.
     """
     try:
-        import json
+        pass
 
         from django_celery_beat.models import PeriodicTask
 
@@ -625,7 +624,6 @@ def workflow_analytics_view(request):
       - top_workflows:    workflows ranked by run count
       - total_stats:      summary totals
     """
-    import json
     from datetime import timedelta
 
     from django.db.models import Count, Q
@@ -766,7 +764,7 @@ class MarketplaceListView(APIView):
             .select_related("user")
             .order_by("-upvotes", "-download_count")
         )
-        category = request.query_params.get("category", "")
+        request.query_params.get("category", "")
         free = request.query_params.get("free", "")
         if free == "true":
             qs = qs.filter(price_cents=0)

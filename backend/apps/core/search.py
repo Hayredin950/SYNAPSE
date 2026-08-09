@@ -256,7 +256,6 @@ def bm25_search(
         Dict mapping content_type → list[SearchResult], sorted by BM25 rank.
     """
     from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
-    from django.db.models import F
 
     if content_types is None:
         content_types = ["articles", "papers", "repos", "videos"]

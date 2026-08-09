@@ -23,7 +23,6 @@ Phase 5.1 — Agent Framework (Week 13)
 from __future__ import annotations
 
 import logging
-import os
 import time
 from typing import Any, Dict, Iterator, List, Optional
 
@@ -258,7 +257,7 @@ class SynapseAgent:
             messages = state.get("messages", [])
             answer = ""
             steps = []
-            
+
             # Temporary storage for tool call details from AIMessage
             pending_tool_calls = {}
 
@@ -276,13 +275,13 @@ class SynapseAgent:
                             pending_tool_calls[tc["id"]] = {
                                 "tool": tc["name"],
                                 "tool_input": tc["args"],
-                                "thought": msg.additional_kwargs.get("thought", "")
+                                "thought": msg.additional_kwargs.get("thought", ""),
                             }
                 elif isinstance(msg, ToolMessage):
                     # Match this observation with the tool call details
                     tc_id = getattr(msg, "tool_call_id", None)
                     tc_info = pending_tool_calls.get(tc_id, {})
-                    
+
                     steps.append(
                         {
                             "tool": tc_info.get("tool") or getattr(msg, "name", "tool"),

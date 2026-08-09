@@ -3,8 +3,9 @@ SYNAPSE Django settings for Replit development environment.
 Inherits from development.py but overrides Redis/Celery to use in-memory backends.
 """
 
-from .development import *  # noqa: F401, F403
 import os
+
+from .development import *  # noqa: F401, F403
 
 # Override ALLOWED_HOSTS for Replit proxy
 ALLOWED_HOSTS = ["*"]
@@ -19,30 +20,32 @@ CHANNEL_LAYERS = {
 }
 
 # ── Redis cache — try real Redis first, fall back to LocMemCache ─────────────
-import subprocess as _subprocess
+
 
 def _redis_running() -> bool:
     try:
         import socket
+
         s = socket.create_connection(("127.0.0.1", 6379), timeout=1)
         s.close()
         return True
     except Exception:
         return False
 
+
 if _redis_running():
     CACHES = {
         "default": {
-            "BACKEND":  "django_redis.cache.RedisCache",
+            "BACKEND": "django_redis.cache.RedisCache",
             "LOCATION": "redis://127.0.0.1:6379/0",
             "OPTIONS": {
-                "CLIENT_CLASS":          "django_redis.client.DefaultClient",
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
                 "SOCKET_CONNECT_TIMEOUT": 2,
-                "SOCKET_TIMEOUT":         2,
-                "IGNORE_EXCEPTIONS":      True,
+                "SOCKET_TIMEOUT": 2,
+                "IGNORE_EXCEPTIONS": True,
             },
             "KEY_PREFIX": "synapse",
-            "TIMEOUT":    300,
+            "TIMEOUT": 300,
         }
     }
     SESSION_ENGINE = "django.contrib.sessions.backends.cache"
@@ -50,21 +53,21 @@ if _redis_running():
 else:
     CACHES = {
         "default": {
-            "BACKEND":  "django.core.cache.backends.locmem.LocMemCache",
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
             "LOCATION": "synapse-default",
         }
     }
 
 # ── Celery — use Redis broker if available, otherwise in-memory ───────────────
 if _redis_running():
-    CELERY_BROKER_URL      = "redis://127.0.0.1:6379/1"
-    CELERY_RESULT_BACKEND  = "redis://127.0.0.1:6379/2"
-    CELERY_ALWAYS_EAGER    = False
+    CELERY_BROKER_URL = "redis://127.0.0.1:6379/1"
+    CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/2"
+    CELERY_ALWAYS_EAGER = False
     CELERY_TASK_ALWAYS_EAGER = False
 else:
-    CELERY_BROKER_URL      = "memory://"
-    CELERY_RESULT_BACKEND  = "cache+memory://"
-    CELERY_ALWAYS_EAGER    = True
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache+memory://"
+    CELERY_ALWAYS_EAGER = True
     CELERY_EAGER_PROPAGATES = True
     CELERY_TASK_ALWAYS_EAGER = True
 
@@ -121,6 +124,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 
 # ── JWT settings ───────────────────────────────────────────────────────────────
 from datetime import timedelta  # noqa: E402
+
 SIMPLE_JWT = {
     **SIMPLE_JWT,
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),

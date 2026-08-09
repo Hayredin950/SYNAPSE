@@ -22,12 +22,6 @@ from apps.core.auth import APIKeyAuthentication
 from apps.core.throttles import APIRateThrottle
 
 from django.db.models import Q
-from rest_framework.decorators import (
-    api_view,
-    authentication_classes,
-    permission_classes,
-    throttle_classes,
-)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -247,8 +241,6 @@ class PublicSaveContentView(APIView):
         # Create a bookmark
         try:
             from apps.core.models import UserBookmark  # noqa: PLC0415
-
-            from django.contrib.contenttypes.models import ContentType  # noqa: PLC0415
 
             # For browser extension saves, store as generic metadata
             bookmark, created = UserBookmark.objects.get_or_create(

@@ -9,8 +9,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Docker:    /app/scraper/settings.py -> /app (no backend/ subdir)
 _backend_dir = BASE_DIR / "backend"
 sys.path.insert(0, str(_backend_dir if _backend_dir.exists() else BASE_DIR))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE",
-    "config.settings.development" if _backend_dir.exists() else "config.settings.production")
+os.environ.setdefault(
+    "DJANGO_SETTINGS_MODULE",
+    (
+        "config.settings.development"
+        if _backend_dir.exists()
+        else "config.settings.production"
+    ),
+)
 
 BOT_NAME = "synapse_scraper"
 SPIDER_MODULES = ["scraper.spiders"]

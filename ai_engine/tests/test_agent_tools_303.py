@@ -12,8 +12,6 @@ Covers:
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 # ── web_search ────────────────────────────────────────────────────────────────
 
 

@@ -9,13 +9,11 @@ Covers:
 """
 
 import uuid
-from datetime import timedelta
 from unittest.mock import MagicMock, patch
 
 from apps.users.models import User
 
 from django.test import TestCase
-from django.utils import timezone
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

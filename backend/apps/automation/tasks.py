@@ -190,7 +190,9 @@ def _action_collect_news(params: dict, workflow=None) -> dict:
         # arXiv uses slow_scraping queue due to API rate limits
         t = scrape_arxiv.apply_async(
             kwargs={
-                "categories": params.get("categories"),  # Allow user-configured categories
+                "categories": params.get(
+                    "categories"
+                ),  # Allow user-configured categories
                 "days_back": int(params.get("days_back", 7)),
                 "max_papers": arxiv_limit,
                 "user_id": user_id,
@@ -561,9 +563,13 @@ def _dispatch_action(workflow, action: dict) -> dict:
     if action_type == "collect_news":
         return _action_collect_news(params, workflow=workflow)
     if action_type == "scrape_hackernews":
-        return _action_collect_news({**params, "sources": ["hackernews"]}, workflow=workflow)
+        return _action_collect_news(
+            {**params, "sources": ["hackernews"]}, workflow=workflow
+        )
     if action_type == "scrape_github":
-        return _action_collect_news({**params, "sources": ["github"]}, workflow=workflow)
+        return _action_collect_news(
+            {**params, "sources": ["github"]}, workflow=workflow
+        )
     if action_type == "scrape_arxiv":
         return _action_collect_news({**params, "sources": ["arxiv"]}, workflow=workflow)
     if action_type == "summarize_content":

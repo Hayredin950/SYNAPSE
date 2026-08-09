@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Tuple
-
 from apps.articles.models import Article
 from apps.core.models import UserActivity
 from apps.papers.models import ResearchPaper

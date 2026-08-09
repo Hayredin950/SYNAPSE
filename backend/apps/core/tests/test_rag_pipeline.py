@@ -5,12 +5,11 @@ Tests the chat API endpoints and RAG pipeline components with mocked Gemini/Lang
 
 import json
 import uuid
-from unittest.mock import MagicMock, PropertyMock, patch
+from unittest.mock import MagicMock, patch
 
 from apps.core.models import Conversation
 
-from django.test import TestCase, override_settings
-from django.urls import reverse
+from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 

@@ -12,7 +12,6 @@ Tests for RAG-enhanced document generation:
 
 from __future__ import annotations
 
-import os
 import tempfile
 import uuid
 from unittest.mock import MagicMock, patch
@@ -22,7 +21,6 @@ from apps.documents.views import DocumentGenerateView
 from apps.users.models import User
 
 from django.test import TestCase
-from django.urls import reverse
 from rest_framework.test import APIClient
 
 # ---------------------------------------------------------------------------

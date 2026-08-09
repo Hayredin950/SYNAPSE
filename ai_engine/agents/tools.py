@@ -21,12 +21,10 @@ Each tool:
 
 from __future__ import annotations
 
-import json
 import logging
 import os
-import time
-from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from datetime import timedelta
+from typing import List, Optional
 
 import httpx
 from langchain_core.tools import StructuredTool
@@ -253,7 +251,7 @@ def _analyze_trends(
         from apps.articles.models import Article
         from apps.repositories.models import Repository
 
-        from django.db.models import Avg, Count, Q
+        from django.db.models import Avg, Q
         from django.utils import timezone
 
         cutoff = timezone.now() - timedelta(days=period_days)
@@ -487,7 +485,8 @@ def _fetch_arxiv_papers(
         import xml.etree.ElementTree as ET
 
         ns = {"atom": "http://www.w3.org/2005/Atom"}
-        root = ET.fromstring(content)
+        # Atom feed from the fixed export.arxiv.org endpoint — trusted source
+        root = ET.fromstring(content)  # nosec B314
         entries = root.findall("atom:entry", ns)
 
         if not entries:
@@ -832,7 +831,10 @@ def _run_python_code(code: str, timeout_seconds: int = 10) -> dict:
         old_stdout = sys.stdout
         sys.stdout = stdout_buf
         try:
-            exec(compile(code, "<sandbox>", "exec"), sandbox_globals)  # noqa: S102
+            # Deliberate sandboxed code-execution tool: isolated globals/builtins
+            exec(
+                compile(code, "<sandbox>", "exec"), sandbox_globals
+            )  # noqa: S102  # nosec B102
         except Exception:
             err_container["error"] = traceback.format_exc()
         finally:

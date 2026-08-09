@@ -11,10 +11,7 @@ Phase 5.1 — Agent Framework (Week 13)
 
 from __future__ import annotations
 
-import json
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from django.test import TestCase
 
@@ -377,7 +374,7 @@ class TestAgentToolRegistry(TestCase):
     def test_get_registry_returns_singleton(self, mock_build):
         """get_registry() always returns the same instance."""
         import ai_engine.agents.registry as reg_module
-        from ai_engine.agents.registry import _registry_instance, get_registry
+        from ai_engine.agents.registry import get_registry
 
         # Reset singleton for isolated test
         reg_module._registry_instance = None

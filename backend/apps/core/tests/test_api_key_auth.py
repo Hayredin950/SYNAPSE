@@ -9,9 +9,7 @@ Covers:
   - last_used timestamp updated on successful auth
 """
 
-import hashlib
 from datetime import timedelta
-from unittest.mock import patch
 
 import pytest
 from apps.core.auth import APIKeyAuthentication

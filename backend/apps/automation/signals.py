@@ -12,7 +12,7 @@ Signal connections are registered in AutomationConfig.ready().
 import logging
 
 from django.db.models.signals import post_save
-from django.dispatch import Signal, receiver
+from django.dispatch import Signal
 
 logger = logging.getLogger(__name__)
 

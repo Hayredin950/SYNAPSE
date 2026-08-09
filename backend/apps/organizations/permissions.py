@@ -12,8 +12,6 @@ from __future__ import annotations
 
 from rest_framework.permissions import BasePermission
 
-from .models import OrgRole
-
 
 def get_user_org_role(user, org) -> str | None:
     """Return the user's role in `org`, or None if not an active member."""

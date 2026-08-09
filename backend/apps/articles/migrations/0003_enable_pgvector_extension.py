@@ -2,7 +2,7 @@
 # Enables the pgvector extension in PostgreSQL (required before vector columns).
 # SQLite-safe: skips the CREATE EXTENSION statement on non-PostgreSQL backends.
 
-from django.db import connection, migrations
+from django.db import migrations
 
 
 def enable_pgvector(apps, schema_editor):
