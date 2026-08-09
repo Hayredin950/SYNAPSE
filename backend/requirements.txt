@@ -5,6 +5,10 @@ Django>=4.2,<5.0
 # ── WebSockets / Real-time ────────────────────────────────────
 channels>=4.1,<5.0
 daphne>=4.1,<5.0
+# twisted[tls] would otherwise pull pyOpenSSL 25.x, whose runtime code needs a
+# cryptography >=45 while this file pins 42.x — crashes daphne on import
+# (X509Extension: module 'lib' has no attribute 'GEN_EMAIL').
+pyOpenSSL>=24.0,<25.0
 channels-redis>=4.2,<5.0
 djangorestframework>=3.15,<4.0
 django-cors-headers>=4.3,<5.0
