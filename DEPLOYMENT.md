@@ -162,37 +162,43 @@ applied migration history.
 **There is no billing.** The app is free. `apps/growth` holds referrals and
 feedback; quotas live in `apps/core/quotas.py`.
 
-### The deleted `main` branch — archived, do not merge
+### The archived second branch — do not merge or restore
 
-`master` is the only branch. A second branch, `main`, once held the same
-application nested under `src/engine/`. **It has been deleted**, and is
-preserved as the tag `archive/main-truncated` (133 commits, 861 files).
+`main` is the only branch, and it is the healthy one.
+
+A second branch once existed alongside it, holding the same application nested
+under `src/engine/`. **It has been deleted**, and is preserved as the tag
+`archive/truncated-branch` (133 commits, 861 files).
+
+> Naming note: that deleted branch was itself once called `main`. The name now
+> belongs to the working branch. The archive tag was deliberately renamed so the
+> word `main` refers to exactly one thing.
 
 It was deleted rather than kept because it looked like the newer, tidier branch
 while being quietly damaged. It was produced by stripping the **last line of
-every file** in a corrupted snapshot of `master`. Where the corruption was a
-duplicated closing delimiter, that accidentally fixed the file. Everywhere else
-it **deleted a real line of code** — `connect_signals()`, `ph.flush()`, a
+every file** in a corrupted snapshot of the working branch. Where the corruption
+was a duplicated closing delimiter, that accidentally fixed the file. Everywhere
+else it **deleted a real line of code** — `connect_signals()`, `ph.flush()`, a
 `fields = [...]` declaration, and so on across roughly 51 files.
 
 The dangerous part is that those files still parse. No syntax check, linter, or
 type checker flags them; the behaviour just silently goes missing at runtime.
 
-Everything worth keeping was merged into `master` first:
-`infrastructure/` (nginx, Prometheus/Grafana/Loki, pgbouncer, OpenTelemetry),
-personalized briefings in `views_ai.py`, the background-thread workflow
-fallback, real analytics data (master had `Math.random()` placeholders), and two
-UI components. The audit is recorded in commits `009999e` and `186a6aa`.
+Everything worth keeping was merged in first: `infrastructure/` (nginx,
+Prometheus/Grafana/Loki, pgbouncer, OpenTelemetry), personalized briefings in
+`views_ai.py`, the background-thread workflow fallback, real analytics data (the
+working branch had `Math.random()` placeholders), and two UI components. The
+audit is recorded in commits `009999e` and `186a6aa`.
 
 To inspect the archive:
 
 ```bash
-git show archive/main-truncated:src/engine/<path>
-git ls-tree -r archive/main-truncated --name-only
+git show archive/truncated-branch:src/engine/<path>
+git ls-tree -r archive/truncated-branch --name-only
 ```
 
 Take individual hunks only. Never restore the branch or merge the tag.
 
-> CI, CD, the security scan, and `render.yaml` all used to target `main`, which
-> meant the pipeline built and deployed the damaged branch while nothing on
-> `master` was ever built. All five references now point at `master`.
+> CI, CD, the security scan, and `render.yaml` all once targeted the *other*
+> branch, so the pipeline built and deployed the damaged code while the working
+> branch was never built at all. All five references now target `main`.
