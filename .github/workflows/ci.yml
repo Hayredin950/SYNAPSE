@@ -161,13 +161,6 @@ jobs:
         working-directory: backend
         run: python manage.py migrate --noinput
 
-      - name: Dependency scanning (security audit)
-        working-directory: backend
-        run: |
-          pip install safety pip-audit
-          safety check -r requirements.txt || true
-          pip-audit || true
-
       - name: Run tests
         working-directory: backend
         run: |
@@ -179,6 +172,17 @@ jobs:
             -v \
             --tb=short \
             -q
+
+      - name: Dependency scanning (security audit)
+        # Runs AFTER the tests: `pip install safety pip-audit` pulls a newer
+        # cryptography that would overwrite the pinned 42.x and crash daphne
+        # (pyOpenSSL: module 'lib' has no attribute 'GEN_EMAIL'). The scan only
+        # reads requirements.txt, so the env is irrelevant to it.
+        working-directory: backend
+        run: |
+          pip install safety pip-audit
+          safety check -r requirements.txt || true
+          pip-audit || true
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
