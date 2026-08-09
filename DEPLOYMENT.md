@@ -162,27 +162,37 @@ applied migration history.
 **There is no billing.** The app is free. `apps/growth` holds referrals and
 feedback; quotas live in `apps/core/quotas.py`.
 
-### The `main` branch — do not merge from it
+### The deleted `main` branch — archived, do not merge
 
-`master` is the branch to work on. A second branch, `main`, holds the same
-application nested under `src/engine/` with a pnpm-workspace wrapper. **Do not
-treat it as a newer or cleaner source.**
+`master` is the only branch. A second branch, `main`, once held the same
+application nested under `src/engine/`. **It has been deleted**, and is
+preserved as the tag `archive/main-truncated` (133 commits, 861 files).
 
-It was produced by stripping the **last line of every file** in a corrupted
-snapshot of `master`. Where the corruption was a duplicated closing delimiter,
-that accidentally fixed the file. Everywhere else it **deleted a real line of
-code** — `connect_signals()`, `ph.flush()`, a `fields = [...]` declaration, and
-so on across roughly 51 files.
+It was deleted rather than kept because it looked like the newer, tidier branch
+while being quietly damaged. It was produced by stripping the **last line of
+every file** in a corrupted snapshot of `master`. Where the corruption was a
+duplicated closing delimiter, that accidentally fixed the file. Everywhere else
+it **deleted a real line of code** — `connect_signals()`, `ph.flush()`, a
+`fields = [...]` declaration, and so on across roughly 51 files.
 
 The dangerous part is that those files still parse. No syntax check, linter, or
-type checker will flag them; the behaviour just silently goes missing.
+type checker flags them; the behaviour just silently goes missing at runtime.
 
-Everything worth keeping has already been merged into `master`:
+Everything worth keeping was merged into `master` first:
 `infrastructure/` (nginx, Prometheus/Grafana/Loki, pgbouncer, OpenTelemetry),
 personalized briefings in `views_ai.py`, the background-thread workflow
-fallback, real analytics data, and two UI components. The audit is recorded in
-commit `186a6aa`.
+fallback, real analytics data (master had `Math.random()` placeholders), and two
+UI components. The audit is recorded in commits `009999e` and `186a6aa`.
 
-`main` is kept only as a historical record. If you need something from it,
-diff the single file and take the specific hunk — never copy a whole file, and
-never merge the branch.
+To inspect the archive:
+
+```bash
+git show archive/main-truncated:src/engine/<path>
+git ls-tree -r archive/main-truncated --name-only
+```
+
+Take individual hunks only. Never restore the branch or merge the tag.
+
+> CI, CD, the security scan, and `render.yaml` all used to target `main`, which
+> meant the pipeline built and deployed the damaged branch while nothing on
+> `master` was ever built. All five references now point at `master`.
