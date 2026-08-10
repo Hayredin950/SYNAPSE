@@ -94,12 +94,16 @@ def _extract_yake(text: str, top_n: int) -> List[Tuple[str, float]]:
 
 def extract_keywords(text: str, top_n: int = TOP_N_FINAL) -> List[str]:
     """
-    Extract the top *top_n* keywords from *text* using KeyBERT + YAKE.
+    Extract the top *top_n* keywords from *text*.
 
-    Both extractors are run and their results are merged.  When a keyword
+    Full mode runs KeyBERT + YAKE and merges their results.  When a keyword
     appears in both lists its scores are averaged, giving it a higher final
     rank.  The merged list is sorted descending by score and the top *top_n*
     keywords are returned as plain strings.
+
+    Lite mode (SYNAPSE_LITE=1) uses YAKE only — KeyBERT loads a
+    sentence-transformer model (~500 MB) that would defeat the point of the
+    small-box mode.
 
     Args:
         text:  Plain-text document (HTML should be stripped beforehand).
@@ -110,6 +114,11 @@ def extract_keywords(text: str, top_n: int = TOP_N_FINAL) -> List[str]:
     """
     if not text or len(text.split()) < 10:
         return []
+
+    from ai_engine.lite import is_lite_mode  # noqa: PLC0415
+
+    if is_lite_mode():
+        return [kw for kw, _ in _extract_yake(text, TOP_N_EACH)][:top_n]
 
     keybert_kws = _extract_keybert(text, TOP_N_EACH)
     yake_kws = _extract_yake(text, TOP_N_EACH)

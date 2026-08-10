@@ -67,6 +67,40 @@ def _get_classifier():
     return _classifier
 
 
+def _classify_topic_lite(
+    text: str,
+    candidate_labels: Optional[List[str]] = None,
+) -> Tuple[str, float]:
+    """
+    Lite-mode topic classification via the cloud LLM (Groq → NVIDIA → Gemini).
+
+    Returns ``("Technology", 0.0)`` when no provider is available so the
+    pipeline degrades gracefully.
+    """
+    from ai_engine.lite import llm_complete  # noqa: PLC0415
+
+    labels = candidate_labels or TECH_TOPICS
+    labels_str = ", ".join(labels)
+    prompt = (
+        "Classify the following tech article into exactly one of these topics: "
+        f"{labels_str}.\n\n"
+        f"Article:\n{text[:2000]}\n\n"
+        "Respond with ONLY the single topic name, no explanation."
+    )
+    answer = llm_complete(prompt, max_tokens=40, temperature=0.0)
+    if not answer:
+        logger.warning("Lite topic classifier: no LLM provider available.")
+        return ("Technology", 0.0)
+
+    normalized = answer.strip().lower()
+    for label in labels:
+        if label.lower() in normalized:
+            logger.info("Lite topic classifier: %s", label)
+            return (label, 0.9)
+    logger.info("Lite topic classifier: no label matched (%r) → Technology", answer)
+    return ("Technology", 0.0)
+
+
 def classify_topic(
     text: str,
     candidate_labels: Optional[List[str]] = None,
@@ -74,6 +108,9 @@ def classify_topic(
 ) -> Tuple[str, float]:
     """
     Classify *text* into one of the predefined technology topics.
+
+    Lite mode (SYNAPSE_LITE=1) delegates to the cloud LLM; full mode uses
+    zero-shot BART. Falls back to ``("Technology", 0.0)`` on any failure.
 
     Args:
         text:             Plain-text document to classify.
@@ -86,6 +123,11 @@ def classify_topic(
     """
     if not text or len(text.split()) < 5:
         return ("Technology", 0.0)
+
+    from ai_engine.lite import is_lite_mode  # noqa: PLC0415
+
+    if is_lite_mode():
+        return _classify_topic_lite(text, candidate_labels)
 
     labels = candidate_labels or TECH_TOPICS
     classifier = _get_classifier()

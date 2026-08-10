@@ -126,6 +126,8 @@ jobs:
           cache-from: type=gha,scope=backend
           cache-to:   type=gha,scope=backend,mode=max
           labels:  ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SYNAPSE_LITE=${{ vars.SYNAPSE_LITE || '0' }}
 
       # ── Frontend ─────────────────────────────────────────────────────────
       - name: Build & push frontend
@@ -155,6 +157,8 @@ jobs:
           cache-from: type=gha,scope=ai-engine
           cache-to:   type=gha,scope=ai-engine,mode=max
           labels:  ${{ steps.meta.outputs.labels }}
+          build-args: |
+            SYNAPSE_LITE=${{ vars.SYNAPSE_LITE || '0' }}
 
   # ── Deploy to a host over SSH ─────────────────────────────────────────────
   deploy:
@@ -229,7 +233,10 @@ jobs:
             # frontend container is opt-in (Vercel is the production frontend).
             # Only 'backend' and 'fastapi_ai' have build sections;
             # worker/beat/flower reuse the backend image, so build it once.
+            # SYNAPSE_LITE=1 builds the slim images (no torch/transformers) —
+            # the same toggle that runs the app in lite mode on small boxes.
             mkdir -p infrastructure/nginx/certbot-webroot
+            export SYNAPSE_LITE="$(grep -E '^SYNAPSE_LITE=' .env.prod | cut -d= -f2 | tr -d '\r' || echo 0)"
             docker compose -f docker-compose.prod.yml build \
               backend fastapi_ai
 

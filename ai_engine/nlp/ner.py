@@ -56,6 +56,9 @@ def extract_entities(text: str) -> List[Dict[str, str]]:
     """
     Extract named entities from *text* using spaCy NER.
 
+    Lite mode (SYNAPSE_LITE=1) skips NER entirely — spaCy is a local model
+    that lite mode is designed to avoid — and returns an empty list.
+
     Args:
         text: Plain-text document.
 
@@ -65,9 +68,15 @@ def extract_entities(text: str) -> List[Dict[str, str]]:
 
             [{"text": "OpenAI", "label": "ORG", "start": 0, "end": 6}, …]
 
-        Returns an empty list if the model is unavailable or text is empty.
+        Returns an empty list in lite mode or if the model is unavailable.
     """
     if not text:
+        return []
+
+    from ai_engine.lite import is_lite_mode  # noqa: PLC0415
+
+    if is_lite_mode():
+        logger.debug("NER skipped (SYNAPSE Lite mode).")
         return []
 
     nlp = _get_nlp()
@@ -101,6 +110,24 @@ def extract_entities(text: str) -> List[Dict[str, str]]:
     except Exception as exc:
         logger.error("NER extraction failed: %s", exc)
         return []
+
+
+class NERExtractor:
+    """
+    Small wrapper around :func:`extract_entities` for callers that expect an
+    object with an ``extract()`` method (e.g. the knowledge-graph builder in
+    ``backend/apps/core/tasks.py``).
+
+    Example::
+
+        ner = NERExtractor()
+        ner.extract("OpenAI released a new model.")
+        # [{"text": "OpenAI", "label": "ORG", "start": 0, "end": 6}]
+    """
+
+    def extract(self, text: str) -> List[Dict[str, str]]:
+        """Extract entities — same result as :func:`extract_entities`."""
+        return extract_entities(text)
 
 
 def extract_tech_terms(text: str) -> List[str]:

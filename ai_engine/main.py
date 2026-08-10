@@ -103,7 +103,7 @@ async def lifespan(app: FastAPI):
         embedder = get_embedder()
         logger.info(
             "embedder_ready",
-            model=os.environ.get("EMBEDDING_MODEL", "all-MiniLM-L6-v2"),
+            model=getattr(embedder, "_model_name", "unknown"),
             dims=embedder.dimensions,
         )
     except Exception as exc:
@@ -407,7 +407,7 @@ async def embed_texts(request: EmbedRequest) -> Dict[str, Any]:
         embeddings = embedder.embed_batch(request.texts, batch_size=request.batch_size)
         return {
             "embeddings": embeddings,
-            "model": "all-MiniLM-L6-v2",
+            "model": getattr(embedder, "_model_name", "unknown"),
             "dimensions": embedder.dimensions,
             "count": len(embeddings),
         }

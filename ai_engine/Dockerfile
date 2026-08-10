@@ -1,11 +1,20 @@
 FROM python:3.11-slim AS builder
 WORKDIR /build
+
+# SYNAPSE_LITE=1 → slim image: no torch/sentence-transformers (embeddings move
+# to the NVIDIA NIM API). Shrinks the image ~1-2 GB. Defaults to full mode.
+ARG SYNAPSE_LITE=0
+
 RUN apt-get update && apt-get install -y build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
-COPY ai_engine/requirements.txt .
-# Install CPU-only torch first (avoids 5GB+ NVIDIA CUDA libraries)
+COPY ai_engine/requirements.txt ai_engine/requirements.lite.txt ./
+# Install CPU-only torch first (avoids 5GB+ NVIDIA CUDA libraries) — full mode only
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
-    && pip install --no-cache-dir -r requirements.txt --use-deprecated=legacy-resolver
+    && if [ "$SYNAPSE_LITE" = "1" ]; then \
+         pip install --no-cache-dir -r requirements.lite.txt --use-deprecated=legacy-resolver; \
+       else \
+         pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+         && pip install --no-cache-dir -r requirements.txt --use-deprecated=legacy-resolver; \
+       fi
 
 FROM python:3.11-slim AS production
 WORKDIR /app

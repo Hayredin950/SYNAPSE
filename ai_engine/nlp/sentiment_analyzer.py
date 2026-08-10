@@ -83,12 +83,42 @@ def _chunk_text(text: str, chunk_size: int = MAX_CHARS_PER_CHUNK) -> list:
     return [c for c in chunks if c]
 
 
+def _analyze_sentiment_lite(text: str) -> Tuple[str, float]:
+    """
+    Lite-mode sentiment via the cloud LLM (Groq → NVIDIA → Gemini).
+
+    Returns ``("NEUTRAL", 0.0)`` when no provider is available.
+    """
+    from ai_engine.lite import llm_complete  # noqa: PLC0415
+
+    prompt = (
+        "Classify the sentiment of the following text as POSITIVE, NEGATIVE, "
+        "or NEUTRAL. Respond with ONLY the label.\n\n"
+        f"Text:\n{text[:2000]}"
+    )
+    answer = llm_complete(prompt, max_tokens=10, temperature=0.0)
+    if not answer:
+        logger.warning("Lite sentiment: no LLM provider available.")
+        return ("NEUTRAL", 0.0)
+
+    normalized = answer.strip().upper()
+    if "POSITIVE" in normalized:
+        return ("POSITIVE", 0.9)
+    if "NEGATIVE" in normalized:
+        return ("NEGATIVE", 0.9)
+    if "NEUTRAL" in normalized:
+        return ("NEUTRAL", 0.9)
+    logger.info("Lite sentiment: unexpected label %r → NEUTRAL", answer)
+    return ("NEUTRAL", 0.0)
+
+
 def analyze_sentiment(text: str) -> Tuple[str, float]:
     """
     Analyse the sentiment of *text*.
 
-    Long texts are split into chunks; the chunk with the highest confidence
-    score determines the final result.
+    Lite mode (SYNAPSE_LITE=1) delegates to the cloud LLM; full mode uses
+    the RoBERTa pipeline. Long texts are split into chunks; the chunk with
+    the highest confidence score determines the final result.
 
     Args:
         text: Plain text to analyse.
@@ -100,6 +130,11 @@ def analyze_sentiment(text: str) -> Tuple[str, float]:
     """
     if not text or len(text.split()) < 3:
         return ("NEUTRAL", 0.0)
+
+    from ai_engine.lite import is_lite_mode  # noqa: PLC0415
+
+    if is_lite_mode():
+        return _analyze_sentiment_lite(text)
 
     pipe = _get_pipeline()
     if pipe is None:

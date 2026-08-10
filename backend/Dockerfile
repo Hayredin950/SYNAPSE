@@ -4,14 +4,23 @@
 FROM python:3.11-slim AS builder
 WORKDIR /app
 
+# SYNAPSE_LITE=1 → slim image: no torch/transformers/sentence-transformers/
+# spaCy (the models move to cloud APIs). Shrinks the image ~2-3 GB and the
+# runtime footprint to a normal Django app. Defaults to full mode.
+ARG SYNAPSE_LITE=0
+
 RUN apt-get update && apt-get install -y \
     build-essential libpq-dev gcc curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy ONLY backend requirements first — Docker caches this layer
-COPY backend/requirements.txt .
+COPY backend/requirements.txt backend/requirements.lite.txt ./
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt --use-deprecated=legacy-resolver
+    && if [ "$SYNAPSE_LITE" = "1" ]; then \
+         pip install --no-cache-dir -r requirements.lite.txt --use-deprecated=legacy-resolver; \
+       else \
+         pip install --no-cache-dir -r requirements.txt --use-deprecated=legacy-resolver; \
+       fi
 
 # ── Stage 2: Development ──────────────────────────────────────────────────────
 FROM python:3.11-slim AS development

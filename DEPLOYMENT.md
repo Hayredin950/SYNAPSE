@@ -285,6 +285,71 @@ Two fixes shipped alongside this setup:
 
 ---
 
+## 3c. SYNAPSE Lite mode — run the whole app on a 2 GB box
+
+The full stack loads five local ML models into RAM (~6–8 GB before Postgres,
+Redis and Celery). If you can't get the 24 GB Oracle box, **Lite mode** runs the
+same app on ~1.5–2 GB by moving those jobs to the free cloud APIs the app
+already calls.
+
+Set in `.env.prod` (or any env):
+
+```bash
+SYNAPSE_LITE=1
+EMBEDDING_PROVIDER=api   # default when SYNAPSE_LITE=1
+```
+
+What changes:
+
+| Local model (full mode) | Lite mode uses |
+|---|---|
+| `BAAI/bge-large-en-v1.5` embeddings (~1.3 GB) | **NVIDIA NIM API** — `nvidia/nv-embedqa-e5-v5`, 1024-dim (verified to match the vector columns) |
+| `facebook/bart-large-cnn` summarizer (~1.6 GB) | Groq → NVIDIA → Gemini LLM |
+| `facebook/bart-large-mnli` topic (~1.6 GB) | same LLM chain |
+| `twitter-roberta-base` sentiment (~500 MB) | same LLM chain |
+| KeyBERT keywords (loads sentence-transformers) | YAKE only (pure Python) |
+| spaCy NER (~100 MB) | skipped (entities left empty) |
+
+torch, transformers, sentence-transformers, spaCy and KeyBERT are **never
+imported** in lite mode — verified by the `test_lite_mode.py` suite.
+
+### Building the slim images
+
+The Dockerfiles accept `SYNAPSE_LITE` as a build arg to omit the heavy wheels
+(image shrinks ~2–3 GB, builds much faster):
+
+```bash
+export SYNAPSE_LITE=1
+# CD does this automatically for the on-host build (reads it from .env.prod).
+# For a manual build you must export it — compose reads build args from the
+# shell env / `.env`, NOT from `env_file`, so `docker compose build` alone
+# will not see SYNAPSE_LITE=1 from .env.prod.
+docker compose -f docker-compose.prod.yml build backend fastapi_ai
+```
+
+On a small box, lower the compose memory limits too (the defaults assume the
+full ML stack):
+
+```bash
+BACKEND_MEM_LIMIT=768M
+AI_MEM_LIMIT=1G
+```
+
+### Trade-offs (honest)
+
+- **Quota ceiling** — every summarize/topic/sentiment call spends the free
+  tiers (Groq 14,400 req/day, NVIDIA ~40 rpm, Gemini 1,000/day). The existing
+  content-hash caches mean duplicate articles and repeated search queries are
+  not re-billed.
+- **Latency** — API calls add ~0.2–2 s per item vs ~0.1 s local inference.
+- **Quality** — LLM summaries/topics are generally *better* than the local
+  BART models; NER entities are dropped entirely.
+
+Flip `SYNAPSE_LITE=0` (and rebuild) to restore the full local-model stack —
+nothing is permanently lost; the toggle is fully reversible.
+
+---
+
 ## 4. Cost and quota behaviour
 
 AI providers are tried in order, failing over on error or rate limit:

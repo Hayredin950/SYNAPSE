@@ -81,6 +81,31 @@ def _split_into_chunks(text: str, max_chars: int = MAX_CHARS_PER_CHUNK) -> list:
     return chunks
 
 
+def _summarize_lite(text: str, max_length: int = MAX_LENGTH) -> Optional[str]:
+    """
+    Lite-mode summarization via the free cloud LLM (Groq → NVIDIA → Gemini).
+
+    No torch / transformers on the box. Returns ``None`` when no provider
+    key is configured so callers can degrade to the extractive fallback.
+    """
+    from ai_engine.lite import llm_complete  # noqa: PLC0415
+
+    truncated = text[:8000]
+    prompt = (
+        "You are a technical summarizer for a developer news feed. Write a "
+        "concise 3-4 sentence summary of the article below. Focus on: what "
+        "the project/finding is, why it matters, and the key technical "
+        "details. Be specific and informative.\n\n"
+        f"Article:\n{truncated}\n\nSummary:"
+    )
+    summary = llm_complete(prompt, max_tokens=min(int(max_length) * 4, 500))
+    if summary:
+        logger.info("Lite summarizer: LLM summary generated (%d chars).", len(summary))
+        return summary
+    logger.warning("Lite summarizer: no LLM provider available.")
+    return None
+
+
 def summarize(
     text: str,
     max_length: int = MAX_LENGTH,
@@ -89,8 +114,12 @@ def summarize(
     """
     Generate an abstractive summary of *text*.
 
-    For texts shorter than ``MIN_WORDS`` words, returns the original text.
-    For long texts, chunks are summarised individually and combined.
+    Lite mode (SYNAPSE_LITE=1) delegates to the cloud LLM via
+    :func:`_summarize_lite` — no local BART model is loaded.
+
+    Full mode uses ``facebook/bart-large-cnn``. For texts shorter than
+    ``MIN_WORDS`` words, returns the original text. For long texts, chunks
+    are summarised individually and combined.
 
     Args:
         text:       Plain-text article content.
@@ -99,7 +128,7 @@ def summarize(
 
     Returns:
         Summary string, or the original text if it is too short,
-        or ``None`` if the model is unavailable.
+        or ``None`` if summarization is unavailable.
     """
     if not text:
         return None
@@ -110,6 +139,11 @@ def summarize(
             "Text too short to summarise (%d words); returning as-is.", word_count
         )
         return text.strip()
+
+    from ai_engine.lite import is_lite_mode  # noqa: PLC0415
+
+    if is_lite_mode():
+        return _summarize_lite(text, max_length=max_length)
 
     pipe = _get_summarizer()
     if pipe is None:
