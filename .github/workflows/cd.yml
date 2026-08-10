@@ -25,9 +25,14 @@ name: CD — Build, Push & Deploy
 #                SSH_PORT           (optional, defaults to 22)
 #                NEXT_PUBLIC_API_URL (baked into the frontend image at build)
 #                SLACK_WEBHOOK_URL  (optional)
+##   The host must have /opt/synapse containing docker-compose.prod.yml,
+#   infrastructure/, and a populated .env.prod.
 #
-# The host must have /opt/synapse containing docker-compose.prod.yml,
-# infrastructure/, and a populated .env.prod.
+#   ARM HOSTS (Oracle Ampere): images are built NATIVELY on the host.
+#   PyPI ships aarch64 torch wheels, so a native arm64 build is fast;
+#   cross-building arm64 torch on an amd64 runner via QEMU can exceed the
+#   6-hour job limit, so this workflow does NOT pull GHCR images onto the
+#   ARM host — it git-pulls and `docker compose build`s there instead.
 # ============================================================
 
 on:
@@ -203,18 +208,30 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key:      ${{ secrets.SSH_KEY }}
           port:     ${{ secrets.SSH_PORT || 22 }}
-          timeout:  300s
+          timeout:  1800s
           script: |
             set -e
             cd /opt/synapse
 
-            echo "=== Pulling latest images ==="
-            export IMAGE_TAG=${{ github.sha }}
-            # docker-compose.prod.yml builds image names as
-            #   ghcr.io/$IMAGE_OWNER/synapse-<component>:$IMAGE_TAG
-            # which must match exactly what build-push published above.
-            export IMAGE_OWNER=${{ needs.build-push.outputs.owner_lc }}
-            docker compose -f docker-compose.prod.yml pull
+            echo "=== Updating source ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== Regenerating nginx vhost from template ==="
+            export DOMAIN="$(grep -oP '(?<=ALLOWED_HOSTS=)[^,]+' .env.prod | head -1)"
+            export APP_URL="$(grep '^FRONTEND_URL=' .env.prod | cut -d= -f2-)"
+            envsubst '$$DOMAIN $$APP_URL' \
+              < infrastructure/nginx/conf.d/synapse.conf.template \
+              > infrastructure/nginx/conf.d/synapse.conf
+
+            echo "=== Building images natively (arm64) ==="
+            # ARM host: native build is fast (aarch64 wheels on PyPI). The
+            # frontend container is opt-in (Vercel is the production frontend).
+            # Only 'backend' and 'fastapi_ai' have build sections;
+            # worker/beat/flower reuse the backend image, so build it once.
+            mkdir -p infrastructure/nginx/certbot-webroot
+            docker compose -f docker-compose.prod.yml build \
+              backend fastapi_ai
 
             echo "=== Running database migrations ==="
             docker compose -f docker-compose.prod.yml run --rm backend \
@@ -228,12 +245,15 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d \
               --remove-orphans \
               --no-deps \
-              backend fastapi_ai frontend celery_worker celery_beat flower
+              backend fastapi_ai celery_worker celery_beat flower
+
+            echo "=== Reload nginx (vhost may have changed) ==="
+            docker compose -f docker-compose.prod.yml restart nginx || true
 
             echo "=== Pruning old images ==="
             docker image prune -f --filter "until=72h"
 
-            echo "=== Deploy complete ==="
+            echo "=== Deploy complete ===
 
       - name: Production health check
         run: |

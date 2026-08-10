@@ -126,3 +126,7 @@ fix/
 *firebase-adminsdk*.json
 firebase-service-account.json
 firebase-service-account.json
+infrastructure/nginx/conf.d/synapse.conf
+infrastructure/nginx/.htpasswd
+infrastructure/nginx/certs/fullchain.pem
+infrastructure/nginx/certs/privkey.pem

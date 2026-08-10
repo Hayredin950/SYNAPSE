@@ -189,6 +189,102 @@ fires twice.
 
 ---
 
+## 3b. Oracle Cloud ARM + Vercel + Brevo (recommended free stack)
+
+This is the zero-cost production path, matching the app's real needs:
+
+| Layer | Service | Cost |
+|---|---|---|
+| Compute | Oracle Cloud ARM Ampere A1 (4 vCPU / 24 GB) | free, forever |
+| Database | Postgres + pgvector in Docker on the box | uses free 200 GB disk |
+| Redis | Redis in Docker on the box | same |
+| Frontend | Vercel Hobby | free |
+| Email | Brevo SMTP | free, 300/day |
+| DNS/TLS | DuckDNS + Let's Encrypt | free |
+
+**Why this works on ARM:** PyPI ships `aarch64` wheels for torch 2.13.0
+(cp311), so the ML stack builds natively on the box — no QEMU emulation, no
+6-hour CI job. The CD pipeline therefore builds images **on the host**, not by
+pulling amd64 images from GHCR (which would not run on ARM).
+
+**Why DuckDNS does not serve the frontend:** DuckDNS only supports A/AAAA
+records (no CNAME), and Vercel needs a CNAME. So the frontend keeps Vercel's
+own `*.vercel.app` URL, and the DuckDNS hostname (A record → box IP) serves the
+API, admin, AI engine and WebSockets. Vercel auto-provisions its own
+Let's Encrypt certificate.
+
+### Provisioning steps (one-time)
+
+1. **Oracle Cloud** — create an Always Free Ampere A1 instance
+   (Ubuntu 22.04/24.04, 4 vCPU/24 GB, 200 GB boot volume). Open inbound rules
+   for TCP 22, 80, 443. Save the SSH key.
+2. **DuckDNS** — register a hostname, e.g. `synapse` → `synapse.duckdns.org`,
+   and copy the token. (DuckDNS updates are not needed for the A record once
+   the cron below runs; the IP is pinned to the box.)
+3. **Vercel** — create a project from the `frontend/` directory, or
+   `cd frontend && npx vercel --prod`. Set env vars:
+   `NEXT_PUBLIC_API_URL=https://synapse.duckdns.org`,
+   `NEXT_PUBLIC_WS_URL=wss://synapse.duckdns.org/ws`,
+   `NEXT_PUBLIC_APP_URL=https://<project>.vercel.app`.
+   Vercel provisions TLS automatically.
+4. **Brevo** — sign up, copy the SMTP relay login + master key
+   (SMTP settings page). These go into `.env.prod`.
+5. **AI keys** — Groq (primary), NVIDIA NIM, Gemini (fallbacks). Free tiers.
+6. **Bootstrap the box** — SSH in and run:
+
+   ```bash
+   bash <(curl -sL https://raw.githubusercontent.com/Hayredin950/SYNAPSE/main/scripts/oracle_bootstrap.sh)
+   ```
+
+   The script installs Docker, generates `.env.prod` (random secrets for
+   Django/DB/Redis/Flower), wires DuckDNS + certbot, builds all images
+   natively and starts the stack. **After it finishes, edit
+   `/opt/synapse/.env.prod`** and add Brevo SMTP + AI keys, then restart:
+
+   ```bash
+   cd /opt/synapse
+   nano .env.prod          # EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, GROQ_API_KEY, ...
+   docker compose -f docker-compose.prod.yml restart backend celery_worker celery_beat
+   docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
+   ```
+
+7. **Enable automated deploys** — set these GitHub Actions **secrets/vars**
+   (Settings → Secrets and variables → Actions):
+
+   *Variables*
+   | Name | Value |
+   |---|---|
+   | `DEPLOY_ENABLED` | `true` |
+   | `PRODUCTION_URL` | `https://synapse.duckdns.org` |
+
+   *Secrets*
+   | Name | Notes |
+   |---|---|
+   | `SSH_HOST` | Oracle box public IP |
+   | `SSH_USER` | `ubuntu` (or `opc` on Oracle Linux) |
+   | `SSH_KEY` | private key **whose public half is in the box's authorized_keys** |
+   | `NEXT_PUBLIC_API_URL` | `https://synapse.duckdns.org` (baked into Vercel/Docker build) |
+   | `SLACK_WEBHOOK_URL` | optional |
+
+   The deploy job then git-pulls on the host, rebuilds natively, migrates and
+   restarts with zero downtime.
+
+### What the box runs
+
+`docker-compose.prod.yml` (production profile): nginx (TLS/API gateway),
+postgres+pgvector, redis, Django backend on **Daphne** (ASGI — serves the
+`/ws/notifications/` WebSockets that gunicorn cannot), FastAPI AI engine,
+Celery worker, Celery beat, Flower. The frontend container is opt-in via
+`--profile frontend` (default is Vercel).
+
+Two fixes shipped alongside this setup:
+- The Celery worker now listens on the queues the app actually routes to
+  (`default,scraping,slow_scraping,agents,nlp,embeddings`) — the old hardcoded
+  list matched none of them, so scraped/NLP/embedding tasks queued forever.
+- The backend command is Daphne, not gunicorn, so Channels WebSockets work.
+
+---
+
 ## 4. Cost and quota behaviour
 
 AI providers are tried in order, failing over on error or rate limit:
