@@ -130,3 +130,5 @@ infrastructure/nginx/conf.d/synapse.conf
 infrastructure/nginx/.htpasswd
 infrastructure/nginx/certs/fullchain.pem
 infrastructure/nginx/certs/privkey.pem
+.env.prod
+.env
