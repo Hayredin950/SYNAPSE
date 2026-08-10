@@ -39,7 +39,7 @@ echo "=== SYNAPSE Oracle ARM Bootstrap starting at $(date) ==="
 # ── Config (edit these BEFORE running) ────────────────────────────────────────
 DUCKDNS_DOMAIN="${DUCKDNS_DOMAIN:-synapseai}"            # DuckDNS hostname (no .duckdns.org)
 DUCKDNS_TOKEN="${DUCKDNS_TOKEN:-CHANGE_ME}"            # DuckDNS token
-APP_URL="${APP_URL:-https://synapse-app-six.vercel.app}" # Vercel frontend URL
+APP_URL="${APP_URL:-https://synapse-one-blond.vercel.app}" # Vercel frontend URL
 GITHUB_REPO="${GITHUB_REPO:-https://github.com/Hayredin950/SYNAPSE.git}"
 EMAIL_FOR_TLS="${EMAIL_FOR_TLS:-admin@synapse.ai}"
 

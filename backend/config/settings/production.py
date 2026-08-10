@@ -143,7 +143,7 @@ _raw_fe = os.environ.get("FRONTEND_URL", "").strip()
 FRONTEND_URL = (
     _raw_fe
     if _raw_fe.startswith(("http://", "https://"))
-    else f"https://{_raw_fe}" if _raw_fe else "https://synapse-app-six.vercel.app"
+    else f"https://{_raw_fe}" if _raw_fe else "https://synapse-one-blond.vercel.app"
 )
 
 # ── Security headers ──────────────────────────────────────────────────────────
@@ -267,7 +267,7 @@ if not CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS = [FRONTEND_URL]
 
 # Always ensure the known frontend URL is present (guards against env var misconfiguration)
-_KNOWN_FRONTEND = "https://synapse-app-six.vercel.app"
+_KNOWN_FRONTEND = "https://synapse-one-blond.vercel.app"
 if _KNOWN_FRONTEND not in CORS_ALLOWED_ORIGINS:
     CORS_ALLOWED_ORIGINS.append(_KNOWN_FRONTEND)
 

@@ -22,7 +22,7 @@ GITHUB_REDIRECT_URI=http://localhost:8000/api/v1/auth/github/callback/
 
 **GitHub App Name:** `SYNAPSE - Production`
 
-- **Homepage URL:** `https://synapse-app-six.vercel.app`
+- **Homepage URL:** `https://synapse-one-blond.vercel.app`
 - **Authorization callback URL:** `https://srv-d7iv5h3bc2fs739bbpt0.render.com/api/v1/auth/github/callback/`
 
 **Production `.env` Configuration (on Render):**
