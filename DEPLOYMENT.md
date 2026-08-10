@@ -375,6 +375,9 @@ that drains the Upstash queue and exits, and
 re-embedding on cron. Beat's `django_celery_beat` DB scheduler is not used in
 this stopgap.
 
+> 📖 **Full click-by-click guide:** see `docs/CLOUD_STOPGAP_RUNBOOK.md` —
+> every button, every field, every secret name, plus troubleshooting.
+
 ### Setup — step by step
 
 **1. Neon Postgres** (~5 min)
