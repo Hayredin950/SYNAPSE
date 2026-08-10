@@ -24,7 +24,7 @@ on:
       target_url:
         description: OWASP ZAP target URL
         required: false
-        default: 'https://synapse.duckdns.org'
+        default: 'https://synapseai.duckdns.org'
 
 concurrency:
   group: security-${{ github.ref }}
@@ -225,7 +225,7 @@ jobs:
       - name: OWASP ZAP Baseline Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
-          target: ${{ inputs.target_url || 'https://synapse.duckdns.org' }}
+          target: ${{ inputs.target_url || 'https://synapseai.duckdns.org' }}
           rules_file_name: .zap/rules.tsv
           cmd_options: '-a -j'
           fail_action: false  # Don't fail CI — report only
@@ -240,7 +240,7 @@ jobs:
       - name: ZAP Full Scan (API)
         uses: zaproxy/action-full-scan@v0.10.0
         with:
-          target: ${{ inputs.target_url || 'https://synapse.duckdns.org' }}/api/v1/
+          target: ${{ inputs.target_url || 'https://synapseai.duckdns.org' }}/api/v1/
           cmd_options: '-a'
           fail_action: false
         continue-on-error: true

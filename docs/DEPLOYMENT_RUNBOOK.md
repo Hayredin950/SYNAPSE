@@ -70,11 +70,11 @@ ssh -i ~/.ssh/id_ed25519 ubuntu@<YOUR_PUBLIC_IP>
    synapse
    ```
 4. Click **add domain**.
-5. Your domain now reads: **synapse.duckdns.org** and the page shows your **token** (a long hex string). **Copy the token** and keep it.
+5. Your domain now reads: **synapseai.duckdns.org** and the page shows your **token** (a long hex string). **Copy the token** and keep it.
 6. (Optional but smart) In the same page, set the current IP: the "ip" field → paste your Oracle box's public IP → click **update ip**. This makes the A record point at the box immediately.
 7. Confirm in a terminal:
    ```bash
-   dig +short synapse.duckdns.org
+   dig +short synapseai.duckdns.org
    ```
    → should print your Oracle public IP.
 
@@ -92,8 +92,8 @@ ssh -i ~/.ssh/id_ed25519 ubuntu@<YOUR_PUBLIC_IP>
 6. **Environment Variables** — add these (click "Add" each time):
    | Name | Value |
    |---|---|
-   | `NEXT_PUBLIC_API_URL` | `https://synapse.duckdns.org` |
-   | `NEXT_PUBLIC_WS_URL` | `wss://synapse.duckdns.org/ws` |
+   | `NEXT_PUBLIC_API_URL` | `https://synapseai.duckdns.org` |
+   | `NEXT_PUBLIC_WS_URL` | `wss://synapseai.duckdns.org/ws` |
    | `NEXT_PUBLIC_APP_URL` | `https://<your-project>.vercel.app` |
    | `NEXT_PUBLIC_APP_NAME` | `SYNAPSE` |
 7. Click **Deploy**.
@@ -129,12 +129,12 @@ sed -i 's|^GROQ_API_KEY=.*|GROQ_API_KEY=gsk_YOUR_KEY|; s|^NVIDIA_API_KEY=.*|NVID
 
 1. In the repo directory on your laptop:
 ```bash
-bash scripts/setup_github_deploy.sh <ORACLE_PUBLIC_IP> ubuntu synapse.duckdns.org
+bash scripts/setup_github_deploy.sh <ORACLE_PUBLIC_IP> ubuntu synapseai.duckdns.org
 ```
    What it does:
    - Generates a dedicated SSH key `~/.ssh/synapse_deploy` (never touches your personal key)
    - Sets GitHub **secrets**: `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_KEY`, `NEXT_PUBLIC_API_URL`
-   - Sets GitHub **variables**: `DEPLOY_ENABLED=true`, `PRODUCTION_URL=https://synapse.duckdns.org`
+   - Sets GitHub **variables**: `DEPLOY_ENABLED=true`, `PRODUCTION_URL=https://synapseai.duckdns.org`
    - **Prints the public key** to paste into the box (next step)
 2. Copy the printed `ssh-ed25519 AAAA...` line.
 
@@ -150,7 +150,7 @@ ssh -i ~/.ssh/id_ed25519 ubuntu@<YOUR_PUBLIC_IP>
 ```
 2. Add the GitHub deploy public key (from Part 5):
 ```bash
-echo 'ssh-ed25519 AAAA... synapse-cd@synapse.duckdns.org' >> ~/.ssh/authorized_keys
+echo 'ssh-ed25519 AAAA... synapse-cd@synapseai.duckdns.org' >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 3. Run the bootstrap (this installs Docker, generates `.env.prod`, wires DuckDNS + Let's Encrypt, builds images natively, starts everything):
@@ -177,9 +177,9 @@ sudo chmod 600 /opt/synapse/.env.prod
 cd /opt/synapse
 docker compose -f docker-compose.prod.yml restart backend fastapi_ai celery_worker celery_beat
 ```
-6. **Wait for the final health check line** in the bootstrap output — it curls `https://synapse.duckdns.org/api/v1/health/`.
+6. **Wait for the final health check line** in the bootstrap output — it curls `https://synapseai.duckdns.org/api/v1/health/`.
 
-✅ **Part 6 done when:** `curl https://synapse.duckdns.org/api/v1/health/` returns JSON with `"status":"ok"`.
+✅ **Part 6 done when:** `curl https://synapseai.duckdns.org/api/v1/health/` returns JSON with `"status":"ok"`.
 
 ---
 
@@ -190,7 +190,7 @@ docker compose -f docker-compose.prod.yml restart backend fastapi_ai celery_work
 cd /opt/synapse
 docker compose -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 ```
-2. **Admin panel:** open `https://synapse.duckdns.org/admin` and log in.
+2. **Admin panel:** open `https://synapseai.duckdns.org/admin` and log in.
 3. **Frontend:** open your `https://<your-project>.vercel.app` → register a test account → check your inbox for the Brevo verification email.
 4. **Send a test email:**
 ```bash
@@ -213,8 +213,8 @@ print('sent')
 
 | Symptom | Fix |
 |---|---|
-| `curl https://synapse.duckdns.org` times out | Port 80/443 not open in the Oracle Security List (Part 1.4) or DuckDNS A record wrong (Part 2.7) |
-| certbot failed during bootstrap | DNS not resolving yet → wait 5 min, re-run: `certbot certonly --webroot -w /var/www/certbot -d synapse.duckdns.org` on the box, then `sudo cp /etc/letsencrypt/live/synapse.duckdns.org/{fullchain.pem,privkey.pem} /opt/synapse/infrastructure/nginx/certs/` |
+| `curl https://synapseai.duckdns.org` times out | Port 80/443 not open in the Oracle Security List (Part 1.4) or DuckDNS A record wrong (Part 2.7) |
+| certbot failed during bootstrap | DNS not resolving yet → wait 5 min, re-run: `certbot certonly --webroot -w /var/www/certbot -d synapseai.duckdns.org` on the box, then `sudo cp /etc/letsencrypt/live/synapseai.duckdns.org/{fullchain.pem,privkey.pem} /opt/synapse/infrastructure/nginx/certs/` |
 | Health check 502 | Backend still starting (torch import takes 30–60s); wait and retry |
 | Register → no email | `.env.prod` EMAIL_* values; run the test-send command (Part 7.4); check `docker compose logs backend \| grep -i error` |
 | CD deploy job skipped | `DEPLOY_ENABLED` variable not `true`; re-run `bash scripts/setup_github_deploy.sh ...` |

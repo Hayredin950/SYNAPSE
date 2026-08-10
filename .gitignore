@@ -23,6 +23,7 @@ MANIFEST
 .env
 .env.*
 !.env.example
+!.env.prod.example
 venv/
 env/
 ENV/

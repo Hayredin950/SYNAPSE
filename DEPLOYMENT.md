@@ -218,13 +218,13 @@ Let's Encrypt certificate.
 1. **Oracle Cloud** — create an Always Free Ampere A1 instance
    (Ubuntu 22.04/24.04, 4 vCPU/24 GB, 200 GB boot volume). Open inbound rules
    for TCP 22, 80, 443. Save the SSH key.
-2. **DuckDNS** — register a hostname, e.g. `synapse` → `synapse.duckdns.org`,
+2. **DuckDNS** — register a hostname, e.g. `synapse` → `synapseai.duckdns.org`,
    and copy the token. (DuckDNS updates are not needed for the A record once
    the cron below runs; the IP is pinned to the box.)
 3. **Vercel** — create a project from the `frontend/` directory, or
    `cd frontend && npx vercel --prod`. Set env vars:
-   `NEXT_PUBLIC_API_URL=https://synapse.duckdns.org`,
-   `NEXT_PUBLIC_WS_URL=wss://synapse.duckdns.org/ws`,
+   `NEXT_PUBLIC_API_URL=https://synapseai.duckdns.org`,
+   `NEXT_PUBLIC_WS_URL=wss://synapseai.duckdns.org/ws`,
    `NEXT_PUBLIC_APP_URL=https://<project>.vercel.app`.
    Vercel provisions TLS automatically.
 4. **Brevo** — sign up, copy the SMTP relay login + master key
@@ -255,7 +255,7 @@ Let's Encrypt certificate.
    | Name | Value |
    |---|---|
    | `DEPLOY_ENABLED` | `true` |
-   | `PRODUCTION_URL` | `https://synapse.duckdns.org` |
+   | `PRODUCTION_URL` | `https://synapseai.duckdns.org` |
 
    *Secrets*
    | Name | Notes |
@@ -263,7 +263,7 @@ Let's Encrypt certificate.
    | `SSH_HOST` | Oracle box public IP |
    | `SSH_USER` | `ubuntu` (or `opc` on Oracle Linux) |
    | `SSH_KEY` | private key **whose public half is in the box's authorized_keys** |
-   | `NEXT_PUBLIC_API_URL` | `https://synapse.duckdns.org` (baked into Vercel/Docker build) |
+   | `NEXT_PUBLIC_API_URL` | `https://synapseai.duckdns.org` (baked into Vercel/Docker build) |
    | `SLACK_WEBHOOK_URL` | optional |
 
    The deploy job then git-pulls on the host, rebuilds natively, migrates and

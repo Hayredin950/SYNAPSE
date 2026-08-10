@@ -8,7 +8,7 @@
 # mounted read-only into the nginx container by docker-compose.prod.yml.
 #
 # Architecture:
-#   • synapse.duckdns.org  → A record → Oracle box (this config)
+#   • synapseai.duckdns.org  → A record → Oracle box (this config)
 #   • Vercel frontend       → *.vercel.app (TLS auto-provisioned by Vercel)
 # ============================================================
 

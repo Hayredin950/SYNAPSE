@@ -10,7 +10,7 @@
 # Args:
 #   $1  Oracle box public IP (required)
 #   $2  SSH user on the box        (default: ubuntu)
-#   $3  DuckDNS API domain         (default: synapse.duckdns.org)
+#   $3  DuckDNS API domain         (default: synapseai.duckdns.org)
 #   $4  Vercel frontend URL        (default: https://synapse-app-six.vercel.app)
 #
 # What it does:
@@ -27,7 +27,7 @@ set -euo pipefail
 
 BOX_IP="${1:?Usage: $0 <box-ip> [ssh-user] [domain] [app-url]}"
 SSH_USER="${2:-ubuntu}"
-DOMAIN="${3:-synapse.duckdns.org}"
+DOMAIN="${3:-synapseai.duckdns.org}"
 APP_URL="${4:-https://synapse-app-six.vercel.app}"
 
 echo "=== Configuring GitHub deploy secrets for ${DOMAIN} @ ${SSH_USER}@${BOX_IP} ==="

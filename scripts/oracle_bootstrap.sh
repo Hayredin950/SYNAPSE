@@ -24,7 +24,7 @@
 # PRE-REQUISITES (done before running):
 #   • Oracle Cloud instance created (Ubuntu 22.04/24.04, Ampere A1)
 #   • Inbound rules allow TCP 22, 80, 443
-#   • A DuckDNS hostname exists, e.g. synapse.duckdns.org
+#   • A DuckDNS hostname exists, e.g. synapseai.duckdns.org
 #   • SSH key added to ~/.ssh/authorized_keys so GitHub Actions can deploy
 # ============================================================
 
