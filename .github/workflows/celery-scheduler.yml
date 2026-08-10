@@ -1,0 +1,179 @@
+# ============================================================
+# SYNAPSE — Card-free scheduler (replaces Celery Beat)
+# ============================================================
+# Celery Beat needs a long-running process — paid on every host
+# without a card. Instead, GitHub Actions cron (unlimited on
+# public repos) triggers the periodic jobs directly:
+#
+#   06:30 UTC daily → generate_daily_briefings
+#   02:00 UTC daily → run scrapers (HN, GitHub, arXiv)
+#   03:00 UTC daily → re-embed all content with current model
+#
+# The heavy lifting runs inside this job's process (manage.py
+# commands) so it works even if the queue worker is between
+# cron ticks.
+#
+# Secrets: same set as celery-worker.yml.
+# ============================================================
+
+name: Celery Scheduler (cron)
+
+on:
+  schedule:
+    - cron: '30 6 * * *'    # daily briefings 06:30 UTC
+    - cron: '0 2 * * *'     # scrapers 02:00 UTC
+    - cron: '0 3 * * *'     # re-embed 03:00 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: celery-scheduler
+  cancel-in-progress: false
+
+jobs:
+  daily-briefings:
+    name: Daily briefings (06:30 UTC)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+      # SMTP host (Brevo) — settings default to sendgrid when unset.
+      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+      EMAIL_USE_TLS: ${{ secrets.EMAIL_USE_TLS }}
+      DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      SYNAPSE_LITE: "1"
+      EMBEDDING_PROVIDER: api
+      EMBEDDING_DIM: "1024"
+      EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.lite.txt
+      - name: Install dependencies (lite)
+        run: pip install -r backend/requirements.lite.txt --use-deprecated=legacy-resolver
+      - name: Migrate database
+        working-directory: backend
+        run: python manage.py migrate --noinput
+      - name: Generate daily briefings
+        working-directory: backend
+        run: |
+          python -c "
+          import django, os
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.production')
+          django.setup()
+          from apps.core.tasks import generate_daily_briefings
+          result = generate_daily_briefings.apply().get()
+          print('briefings result:', result)
+          "
+
+  run-scrapers:
+    name: Run scrapers (02:00 UTC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+      EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+      # SMTP host (Brevo) — settings default to sendgrid when unset.
+      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+      EMAIL_USE_TLS: ${{ secrets.EMAIL_USE_TLS }}
+      DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      SYNAPSE_LITE: "1"
+      EMBEDDING_PROVIDER: api
+      EMBEDDING_DIM: "1024"
+      EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.lite.txt
+      - name: Install dependencies (lite)
+        run: pip install -r backend/requirements.lite.txt --use-deprecated=legacy-resolver
+      - name: Migrate database
+        working-directory: backend
+        run: python manage.py migrate --noinput
+      - name: Run scrapers (hn github arxiv)
+        working-directory: backend
+        run: python manage.py run_scrapers --sources hn github arxiv
+
+  reembed:
+    name: Re-embed all content (03:00 UTC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      PYTHONPATH: ${{ github.workspace }}
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      REDIS_URL: ${{ secrets.REDIS_URL }}
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+      JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      SYNAPSE_LITE: "1"
+      EMBEDDING_PROVIDER: api
+      EMBEDDING_DIM: "1024"
+      EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.lite.txt
+      - name: Install dependencies (lite)
+        run: pip install -r backend/requirements.lite.txt --use-deprecated=legacy-resolver
+      - name: Migrate database
+        working-directory: backend
+        run: python manage.py migrate --noinput
+      - name: Re-embed articles, repositories, papers
+        working-directory: backend
+        run: |
+          python -c "
+          import django, os
+          os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.production')
+          django.setup()
+          from apps.articles.reembed_tasks import reembed_all_articles
+          from apps.repositories.reembed_tasks import reembed_all_repos
+          from apps.papers.reembed_tasks import reembed_all_papers
+          for fn in (reembed_all_articles, reembed_all_repos, reembed_all_papers):
+              try:
+                  print(fn.name, '→', fn.apply().get())
+              except Exception as exc:
+                  print(fn.name, 'FAILED:', exc)
+          "

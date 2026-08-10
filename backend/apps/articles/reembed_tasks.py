@@ -12,9 +12,6 @@ TASK-005-B3
 from __future__ import annotations
 
 import logging
-import os
-
-import httpx
 
 from celery import shared_task
 
@@ -31,9 +28,9 @@ def reembed_all_articles(self, batch_size: int = 32) -> dict:
 
     Returns: dict with total, embedded, skipped counts.
     """
-    from apps.articles.models import Article
+    from ai_engine.embeddings import embed_batch
 
-    AI_ENGINE_URL = os.environ.get("AI_ENGINE_URL", "http://localhost:8001")
+    from apps.articles.models import Article
 
     articles = (
         Article.objects.filter(content__isnull=False).exclude(content="").order_by("id")
@@ -63,13 +60,7 @@ def reembed_all_articles(self, batch_size: int = 32) -> dict:
             continue
 
         try:
-            resp = httpx.post(
-                f"{AI_ENGINE_URL}/embeddings",
-                json={"texts": texts},
-                timeout=120,
-            )
-            resp.raise_for_status()
-            embeddings = resp.json()["embeddings"]
+            embeddings = embed_batch(texts)
 
             for article, embedding in zip(valid, embeddings):
                 article.embedding = embedding

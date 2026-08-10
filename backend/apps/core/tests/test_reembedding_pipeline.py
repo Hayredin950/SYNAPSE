@@ -52,35 +52,39 @@ class TestReembedArticlesPipeline(TestCase):
         return articles
 
     def test_reembed_calls_ai_engine(self):
-        """reembed_all_articles should call the AI engine /embeddings endpoint."""
-        import apps.articles.reembed_tasks as rt
+        """reembed_all_articles should embed via ai_engine.embeddings.embed_batch."""
+        _add_ai_engine_to_path()
+        import ai_engine.embeddings as embeddings
+
         from apps.articles.reembed_tasks import reembed_all_articles
 
         fake_embedding = [0.01] * 1024
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status.return_value = None
-        mock_resp.json.return_value = {"embeddings": [fake_embedding] * 3}
 
         self._make_articles(3)
 
-        with patch.object(rt.httpx, "post", return_value=mock_resp) as mock_post:
+        with patch.object(
+            embeddings, "embed_batch", return_value=[fake_embedding] * 3
+        ) as mock_embed:
             result = reembed_all_articles.run(batch_size=10)
 
-        # The task should have found the articles and called the AI engine
+        # The task should have found the articles and called embed_batch directly
         self.assertEqual(result["total"], 3)
-        mock_post.assert_called()
-        call_args = mock_post.call_args
-        self.assertIn("/embeddings", call_args[0][0])
+        mock_embed.assert_called()
+        texts = mock_embed.call_args[0][0]
+        self.assertEqual(len(texts), 3)
+        self.assertIn("Reembed Article", texts[0])
 
     def test_reembed_handles_ai_engine_failure_gracefully(self):
-        """If AI engine is down, task should log error and not crash."""
-        import apps.articles.reembed_tasks as rt
+        """If embedding fails, task should log error and not crash."""
+        _add_ai_engine_to_path()
+        import ai_engine.embeddings as embeddings
+
         from apps.articles.reembed_tasks import reembed_all_articles
 
         self._make_articles(2)
 
         with patch.object(
-            rt.httpx, "post", side_effect=Exception("Connection refused")
+            embeddings, "embed_batch", side_effect=Exception("Connection refused")
         ):
             result = reembed_all_articles.run(batch_size=10)
 
@@ -89,7 +93,8 @@ class TestReembedArticlesPipeline(TestCase):
 
     def test_reembed_skips_articles_without_content(self):
         """Queryset filter should exclude articles with no content."""
-        import apps.articles.reembed_tasks as rt
+        _add_ai_engine_to_path()
+        import ai_engine.embeddings as embeddings
         from apps.articles.models import Article
         from apps.articles.reembed_tasks import reembed_all_articles
 
@@ -103,35 +108,36 @@ class TestReembedArticlesPipeline(TestCase):
         )
 
         fake_embedding = [0.01] * 1024
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status.return_value = None
-        mock_resp.json.return_value = {"embeddings": [fake_embedding]}
 
-        with patch.object(rt.httpx, "post", return_value=mock_resp) as mock_post:
+        with patch.object(
+            embeddings, "embed_batch", return_value=[fake_embedding]
+        ) as mock_embed:
             result = reembed_all_articles.run(batch_size=10)
 
         # The task should have found the article and tried to embed it
         self.assertGreater(result["total"], 0)
-        mock_post.assert_called()
+        mock_embed.assert_called()
 
     def test_reembed_saves_embeddings_to_db(self):
         """After re-embedding, articles should have the returned embedding stored."""
-        import apps.articles.reembed_tasks as rt
+        _add_ai_engine_to_path()
+        import ai_engine.embeddings as embeddings
+
         from apps.articles.reembed_tasks import reembed_all_articles
 
         fake_embedding = [float(i) / 1024 for i in range(1024)]
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status.return_value = None
-        mock_resp.json.return_value = {"embeddings": [fake_embedding] * 3}
 
         self._make_articles(3)
 
-        with patch.object(rt.httpx, "post", return_value=mock_resp) as mock_post:
+        with patch.object(
+            embeddings, "embed_batch", return_value=[fake_embedding] * 3
+        ) as mock_embed:
             result = reembed_all_articles.run(batch_size=10)
 
-        # Verify task found articles and called AI engine
+        # Verify task found articles and stored embeddings
         self.assertEqual(result["total"], 3)
-        mock_post.assert_called()
+        self.assertEqual(result["embedded"], 3)
+        mock_embed.assert_called()
 
 
 # ── TASK-005-T2: Embedder unit tests ─────────────────────────────────────────

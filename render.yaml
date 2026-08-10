@@ -1,68 +1,80 @@
-# render.yaml — SYNAPSE Infrastructure Blueprint
+# render.yaml — SYNAPSE Infrastructure Blueprint (FREE-TIER LITE STOPGAP)
 # Docs: https://render.com/docs/blueprint-spec
-# Apply: connect the repo in the Render dashboard, or `render blueprint launch`
+# Apply: connect the repo in the Render dashboard → New → Blueprint,
+#        or `render blueprint launch` (uses this file).
 #
-# Schema note: Blueprints require a top-level `services:` LIST and a top-level
-# `databases:` LIST. An earlier version of this file used singular mapping keys
-# (`web:`, `worker:`, `database:`, `redis:`), which is not valid Blueprint
-# syntax — it parses as YAML but Render will not accept it.
+# ─────────────────────────────────────────────────────────────────────────────
+# THIS IS THE CARD-FREE LITE-MODE SETUP (runs until the Oracle box is ready):
 #
-# Sizing warning: the backend image includes torch, transformers,
-# sentence-transformers and spaCy. That needs roughly 2GB RAM to boot, so the
-# `starter` plan will OOM. `standard` is the realistic minimum; see DEPLOYMENT.md.
-
-databases:
-  - name: synapse-db
-    databaseName: synapse_db
-    user: synapse_user
-    plan: basic-256mb
-    postgresMajorVersion: "16"
-    ipAllowList: []          # private network only
+#   • Django backend (Daphne) on Render FREE web service  — 512 MB, lite mode
+#   • Postgres+pgvector on NEON (free, no card)  → paste DATABASE_URL
+#   • Redis on UPSTASH (free, no card)           → paste REDIS_URL
+#   • Celery worker + beat on GitHub Actions cron (public repo = unlimited)
+#   • Frontend on Vercel (already live: https://synapse-one-blond.vercel.app)
+#
+# Why no `databases:`/`keyvalue:` blocks here: Render's own free Postgres
+# expires after 30 days, and free Key Value is in-memory (loses data on
+# restart). Neon + Upstash are free forever and card-free.
+#
+# Sizing: SYNAPSE_LITE=1 removes torch/transformers/spaCy from the image and
+# uses cloud APIs instead, so the 512 MB free instance is fine.
+# ─────────────────────────────────────────────────────────────────────────────
 
 services:
-  # ── Redis (Celery broker, cache, Channels layer) ────────────────────────────
-  - type: keyvalue
-    name: synapse-redis
-    plan: starter
-    region: oregon
-    ipAllowList: []          # private network only
-    maxmemoryPolicy: allkeys-lru
-
   # ── Django backend (Daphne ASGI — HTTP + WebSockets) ────────────────────────
   - type: web
     name: synapse-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
-    dockerContext: .         # build context is the repo root, not ./backend
-    plan: standard           # 2GB — `starter` (512MB) cannot load the ML stack
+    dockerContext: .         # build context is the repo root
+    plan: free               # 512 MB — fine in lite mode (no torch in image)
     region: oregon
     branch: main
     healthCheckPath: /api/v1/health/
+    dockerDetails:
+      buildArgs:
+        - key: SYNAPSE_LITE
+          value: "1"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
-      - key: SECRET_KEY
-        generateValue: true
+      - key: SYNAPSE_LITE
+        value: "1"
+      # ── Neon Postgres (paste from Neon dashboard — free, no card) ─────────
       - key: DATABASE_URL
-        fromDatabase:
-          name: synapse-db
-          property: connectionString
+        sync: false
+      # ── Upstash Redis (paste from Upstash console — free, no card) ────────
       - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: synapse-redis
-          property: connectionString
-      # Hostnames this backend answers to — never the frontend's hostname.
+        sync: false
+      # The code normalizes rediss:// (Upstash) to DB 0 for broker/backend.
+      # ── Secrets ────────────────────────────────────────────────────────────
+      - key: SECRET_KEY
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: JWT_SIGNING_KEY
+        sync: false
+      # ── Hostnames & CORS ───────────────────────────────────────────────────
       - key: ALLOWED_HOSTS
-        value: synapse-backend.onrender.com
-      # Origins allowed to call it — this IS where the frontend belongs.
-      - key: CORS_ALLOWED_ORIGINS
-        sync: false
+        value: synapse-backend.onrender.com,localhost,127.0.0.1
       - key: CSRF_TRUSTED_ORIGINS
-        sync: false
+        value: https://synapse-backend.onrender.com,https://synapse-one-blond.vercel.app
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://synapse-one-blond.vercel.app
       - key: FRONTEND_URL
-        sync: false
-      # AI providers — the fallback chain tries them in this order.
+        value: https://synapse-one-blond.vercel.app
+      - key: AI_ENGINE_URL
+        value: http://localhost:8001   # unused in lite mode (direct imports)
+      # ── Lite-mode ML config (NVIDIA NIM embeddings, cloud LLMs) ────────────
+      - key: EMBEDDING_PROVIDER
+        value: api
+      - key: EMBEDDING_DIM
+        value: "1024"
+      - key: EMBEDDING_MODEL
+        value: BAAI/bge-large-en-v1.5   # kept for compat; API provider is used
+      # ── AI providers (paste keys — all free tiers) ─────────────────────────
       - key: GROQ_API_KEY
         sync: false
       - key: NVIDIA_API_KEY
@@ -73,88 +85,45 @@ services:
         sync: false
       - key: TAVILY_API_KEY
         sync: false
-      # OAuth
+      # ── Email (Brevo SMTP — paste from Brevo SMTP settings) ───────────────
+      - key: EMAIL_BACKEND
+        value: django.core.mail.backends.smtp.EmailBackend
+      - key: EMAIL_HOST
+        value: smtp-relay.brevo.com
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "True"
+      - key: EMAIL_HOST_USER
+        sync: false
+      - key: EMAIL_HOST_PASSWORD
+        sync: false
+      - key: DEFAULT_FROM_EMAIL
+        value: "SYNAPSE <noreply@synapse.ai>"
+      # ── Feature toggles (lite mode) ────────────────────────────────────────
+      - key: ENABLE_AGENTS
+        value: "True"
+      - key: ENABLE_AI_CHAT
+        value: "True"
+      - key: ENABLE_NLP
+        value: "True"
+      - key: ENABLE_SCRAPING
+        value: "True"
+      - key: ENABLE_NOTIFICATIONS
+        value: "True"
+      # ── OAuth (optional — fill only if you configure Google/GitHub OAuth) ──
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
       - key: GITHUB_CLIENT_ID
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
-      - key: GITHUB_REDIRECT_URI
-        sync: false          # a URL, not a database property
-      - key: GITHUB_TOKEN
-        sync: false
-      # Email — without this, signup verification silently no-ops.
-      - key: EMAIL_HOST_PASSWORD
-        sync: false
-      - key: DEFAULT_FROM_EMAIL
-        sync: false
-      - key: SENTRY_DSN
-        sync: false
-
-  # ── Celery worker ───────────────────────────────────────────────────────────
-  - type: worker
-    name: synapse-worker
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
-    dockerCommand: /app/start-worker.sh
-    plan: standard
-    region: oregon
-    branch: main
-    envVars:
-      - key: DJANGO_SETTINGS_MODULE
-        value: config.settings.production
-      - key: SECRET_KEY
-        fromService:
-          type: web
-          name: synapse-backend
-          envVarKey: SECRET_KEY
-      - key: DATABASE_URL
-        fromDatabase:
-          name: synapse-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: synapse-redis
-          property: connectionString
-      - key: GROQ_API_KEY
-        sync: false
-      - key: NVIDIA_API_KEY
-        sync: false
-      - key: GEMINI_API_KEY
-        sync: false
-      - key: TAVILY_API_KEY
-        sync: false
+      # ── Scheduler / worker tuning (cron worker on GH Actions) ─────────────
       - key: CELERY_CONCURRENCY
         value: "2"
-
-  # ── Celery beat (scheduler) ─────────────────────────────────────────────────
-  # Must stay at exactly one instance: two schedulers fire every periodic task
-  # twice.
-  - type: worker
-    name: synapse-beat
-    runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: .
-    dockerCommand: /app/start-beat.sh
-    plan: starter            # beat only schedules; it does not load models
-    region: oregon
-    branch: main
-    numInstances: 1
-    envVars:
-      - key: DJANGO_SETTINGS_MODULE
-        value: config.settings.production
-      - key: SECRET_KEY
-        fromService:
-          type: web
-          name: synapse-backend
-          envVarKey: SECRET_KEY
-      - key: DATABASE_URL
-        fromDatabase:
-          name: synapse-db
-          property: connectionString
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: synapse-redis
-          property: connectionString
+      - key: CELERY_MAX_TASKS_PER_CHILD
+        value: "50"
+      - key: CELERY_QUEUES
+        value: default,scraping,slow_scraping,agents,nlp,embeddings

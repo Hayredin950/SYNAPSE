@@ -18,12 +18,10 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, name="papers.reembed_all_papers", max_retries=3)
 def reembed_all_papers(self, batch_size: int = 32) -> dict:
     """Re-embed all research papers using the current embedding model (1024 dims)."""
-    import os
+    from ai_engine.embeddings import embed_batch
 
-    import httpx
     from apps.papers.models import ResearchPaper
 
-    AI_ENGINE_URL = os.environ.get("AI_ENGINE_URL", "http://localhost:8001")
     papers = (
         ResearchPaper.objects.filter(abstract__isnull=False)
         .exclude(abstract="")
@@ -50,11 +48,7 @@ def reembed_all_papers(self, batch_size: int = 32) -> dict:
             continue
 
         try:
-            resp = httpx.post(
-                f"{AI_ENGINE_URL}/embeddings", json={"texts": texts}, timeout=120
-            )
-            resp.raise_for_status()
-            embeddings = resp.json()["embeddings"]
+            embeddings = embed_batch(texts)
             for paper, embedding in zip(valid, embeddings):
                 paper.embedding = embedding
             ResearchPaper.objects.bulk_update(valid, ["embedding"])

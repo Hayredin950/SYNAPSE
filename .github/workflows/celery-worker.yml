@@ -1,0 +1,116 @@
+# ============================================================
+# SYNAPSE — Card-free Celery Worker (GitHub Actions cron)
+# ============================================================
+# Public repos get UNLIMITED free Actions minutes, so this job
+# is the free replacement for a paid Celery worker host:
+#
+#   Every 10 minutes it boots a throwaway worker that drains the
+#   Upstash Redis queue (scraping, embeddings, NLP, agents,
+#   notifications), then exits. Also pings the Render health
+#   endpoint so the free web service never goes idle-sleep.
+#
+# Secrets required (Settings → Secrets and variables → Actions):
+#   DATABASE_URL          (Neon — free)
+#   REDIS_URL             (Upstash — free; rediss://)
+#   SECRET_KEY, DB_PASSWORD, REDIS_PASSWORD, JWT_SIGNING_KEY
+#   GROQ_API_KEY, NVIDIA_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY
+#   TAVILY_API_KEY
+#   EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (Brevo SMTP)
+#   RENDER_HEALTH_URL     (https://synapse-backend.onrender.com/api/v1/health/)
+# ============================================================
+
+name: Celery Worker (cron)
+
+on:
+  schedule:
+    # Every 10 minutes — matches the queue drain cadence.
+    # GitHub Actions cron is UTC.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # allow manual "Run worker now"
+
+concurrency:
+  group: celery-worker
+  cancel-in-progress: false   # never kill a running drain
+
+jobs:
+  drain-queue:
+    name: Drain Celery queue
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: backend/requirements.lite.txt
+
+      # Lite requirements = no torch/transformers/spaCy → fast install.
+      - name: Install dependencies (lite)
+        run: pip install -r backend/requirements.lite.txt --use-deprecated=legacy-resolver
+
+      # Apply any pending migrations before processing tasks.
+      - name: Migrate database
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+        run: python manage.py migrate --noinput
+
+      # Drain the queue for up to 9 minutes, then exit. `--pool=solo`
+      # avoids fork issues on an ephemeral runner; `--without-*` skips
+      # cluster chatter so startup is instant.
+      - name: Run Celery worker (drain)
+        working-directory: backend
+        env:
+          PYTHONPATH: ${{ github.workspace }}   # so `import ai_engine` works
+          DJANGO_SETTINGS_MODULE: config.settings.production
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          JWT_SIGNING_KEY: ${{ secrets.JWT_SIGNING_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          EMAIL_HOST_USER: ${{ secrets.EMAIL_HOST_USER }}
+          EMAIL_HOST_PASSWORD: ${{ secrets.EMAIL_HOST_PASSWORD }}
+          # SMTP host (Brevo) — without these, settings default to
+          # smtp.sendgrid.net and notification/briefing emails silently fail.
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_USE_TLS: ${{ secrets.EMAIL_USE_TLS }}
+          DEFAULT_FROM_EMAIL: ${{ secrets.DEFAULT_FROM_EMAIL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          # Lite-mode ML: cloud embeddings (NVIDIA NIM) + cloud LLMs
+          SYNAPSE_LITE: "1"
+          EMBEDDING_PROVIDER: api
+          EMBEDDING_DIM: "1024"
+          EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
+          CELERY_QUEUES: default,scraping,slow_scraping,agents,nlp,embeddings
+          CELERY_CONCURRENCY: "2"
+          CELERY_MAX_TASKS_PER_CHILD: "50"
+        run: |
+          # --pool=solo runs one task at a time (cron drain); -c is ignored
+          # with solo, so concurrency is effectively 1.
+          timeout 540 celery -A config.celery worker \
+            --pool=solo \
+            -Q "${CELERY_QUEUES}" \
+            -l info \
+            --without-gossip --without-mingle --without-heartbeat \
+            --max-tasks-per-child="${CELERY_MAX_TASKS_PER_CHILD}" \
+            || [ $? -eq 124 ]   # 124 = timeout reached = normal exit
+
+      # Keep the Render free web service awake (it sleeps after 15 min idle).
+      - name: Keep Render web service warm
+        run: |
+          curl -sf -o /dev/null "${{ secrets.RENDER_HEALTH_URL }}" || echo "Render service is waking up (normal)"

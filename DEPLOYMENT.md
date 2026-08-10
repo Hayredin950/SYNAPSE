@@ -176,16 +176,14 @@ export IMAGE_TAG=latest        # or a specific commit SHA
 docker compose -f docker-compose.prod.yml pull
 ```
 
-### Render
+### Render (free-tier lite blueprint)
 
-`render.yaml` is a valid Blueprint (top-level `services:` and `databases:`
-lists — an earlier version used singular keys that Render silently would not
-accept). It provisions Postgres, Redis, the Daphne web service, a Celery
-worker, and a single beat scheduler.
-
-The backend is on the `standard` plan, not `starter`: 512MB cannot load torch +
-transformers + spaCy. Keep beat at exactly one instance or every periodic task
-fires twice.
+`render.yaml` is a Blueprint for the **card-free lite stopgap** (§3d): a single
+Docker web service on the free plan with `SYNAPSE_LITE=1` baked in, connected
+to external Neon (Postgres+pgvector) and Upstash (Redis) URLs. It deliberately
+contains **no** `databases:`/`keyvalue:` blocks — Render's own free Postgres
+expires after 30 days and free Key Value is in-memory (data lost on restart),
+so Neon + Upstash (free forever, no card) are used instead.
 
 ---
 
@@ -347,6 +345,105 @@ AI_MEM_LIMIT=1G
 
 Flip `SYNAPSE_LITE=0` (and rebuild) to restore the full local-model stack —
 nothing is permanently lost; the toggle is fully reversible.
+
+---
+
+## 3d. Card-free cloud stopgap — Render + Neon + Upstash + GH Actions
+
+> Use this **only until the Oracle box (§3b) is available** (or forever, if you
+> never get a card). It needs **no credit card anywhere** and the laptop never
+> serves traffic.
+>
+> It runs **Lite mode** (§3c): local ML models are replaced by free cloud APIs.
+
+| Layer | Service | Cost | Card? |
+|---|---|---|---|
+| Frontend | Vercel Hobby (already live) | free | no |
+| Backend | Render free web (Django/Daphne, 512 MB) | free | no |
+| Database | Neon Postgres + pgvector (0.5 GB) | free | no |
+| Redis | Upstash (256 MB) | free | no |
+| Celery worker + beat | GitHub Actions cron (public repo = unlimited) | free | no |
+| Email | Brevo SMTP | free | no |
+| AI | Groq + NVIDIA NIM + Gemini | free | no |
+
+**Why GitHub Actions runs the worker:** every card-free host (Render free,
+Koyeb free) forbids background workers or sleeps after idle. But this repo is
+**public**, and public repos get **unlimited** Actions minutes — so
+`.github/workflows/celery-worker.yml` boots a throwaway worker every 10 minutes
+that drains the Upstash queue and exits, and
+`.github/workflows/celery-scheduler.yml` fires daily briefings, scrapers and
+re-embedding on cron. Beat's `django_celery_beat` DB scheduler is not used in
+this stopgap.
+
+### Setup — step by step
+
+**1. Neon Postgres** (~5 min)
+1. neon.tech → Sign in with Google/GitHub → **Create a project**.
+2. Copy the **pooled** connection string (Settings → Connection Details →
+   `postgresql://...?...sslmode=require`).
+3. Neon supports pgvector natively — nothing to install.
+
+**2. Upstash Redis** (~3 min)
+1. upstash.com → Create a database (any region, free tier, 256 MB).
+2. Copy the **TLS** URL: `rediss://default:<password>@<region>.upstash.io:6379`.
+3. The app normalizes it to DB 0 automatically (Upstash free only allows DB 0).
+
+**3. Render web service** (~15 min + build)
+1. render.com → New → **Blueprint** → select the SYNAPSE repo. `render.yaml`
+   creates `synapse-backend` on the **free** plan with `SYNAPSE_LITE=1`.
+2. Open the service → **Environment** and set the `sync: false` values:
+   `DATABASE_URL`, `REDIS_URL`, `SECRET_KEY`, `JWT_SIGNING_KEY`,
+   `GROQ_API_KEY`, `NVIDIA_API_KEY`, `GEMINI_API_KEY`, `EMAIL_HOST_USER`,
+   `EMAIL_HOST_PASSWORD` (all from your `.env.prod` / §2 table).
+3. Deploy. When the build finishes, the service health-checks
+   `/api/v1/health/` and stays live.
+4. Note the service URL, e.g. `https://synapse-backend.onrender.com`.
+
+**4. Point the frontend at it** (Vercel, ~5 min)
+1. Vercel → SYNAPSE project → Settings → Environment Variables.
+2. `NEXT_PUBLIC_API_URL=https://synapse-backend.onrender.com`
+3. `NEXT_PUBLIC_WS_URL=wss://synapse-backend.onrender.com/ws`
+4. Redeploy (`npx vercel --prod` or push to the connected branch).
+   The old `synapseai.duckdns.org` values stay ready for the Oracle switch.
+
+**5. GitHub Actions secrets** (~5 min)
+Settings → Secrets and variables → Actions → New repository secret — exactly
+the names the workflows read (see `.env.cloud.example`):
+
+```
+DATABASE_URL, REDIS_URL, SECRET_KEY, DB_PASSWORD, REDIS_PASSWORD,
+JWT_SIGNING_KEY, GROQ_API_KEY, NVIDIA_API_KEY, GEMINI_API_KEY,
+OPENROUTER_API_KEY, TAVILY_API_KEY,
+EMAIL_HOST=smtp-relay.brevo.com, EMAIL_PORT=587, EMAIL_USE_TLS=True,
+EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, DEFAULT_FROM_EMAIL="SYNAPSE <noreply@synapse.ai>",
+FRONTEND_URL=https://synapse-one-blond.vercel.app,
+RENDER_HEALTH_URL=https://synapse-backend.onrender.com/api/v1/health/
+```
+
+> The `EMAIL_*` secrets matter: without them the settings default to
+> `smtp.sendgrid.net`, and notification/briefing emails from the cron worker
+> silently fail instead of going through Brevo.
+
+**6. Verify**
+```bash
+curl https://synapse-backend.onrender.com/api/v1/health/          # 200
+# open the Vercel URL → register an account → check Brevo inbox
+# Actions tab: celery-worker.yml runs every 10 min, scheduler daily
+```
+
+### Limitations (honest)
+
+- Render free sleeps after 15 min idle → first hit after idle is a ~1 min cold
+  start. The GH Actions keep-warm ping mitigates this.
+- Scraping/embeddings/notifications run on the 10-minute cron, so fresh data
+  appears with up to 10 min delay (fine for daily briefings).
+- 512 MB is enough for Django + Daphne in lite mode, but not for huge
+  concurrent exports; the worker and web share the free 750 instance-hours.
+- Re-embedding now calls `ai_engine.embeddings.embed_batch` **directly** — the
+  separate FastAPI service is not deployed in this stopgap.
+
+When the Oracle box is ready: set `SYNAPSE_LITE=0`, flip the Vercel env vars
+back to `synapseai.duckdns.org`, run §3b, and these workflows become inert.
 
 ---
 
