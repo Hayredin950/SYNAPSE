@@ -85,8 +85,11 @@ for _k in _PLACEHOLDER_KEYS:
         or _v_lower.startswith("your_")
         or _v_lower.startswith("change-")
         or _v_lower.startswith("change_")
-        or _v_lower.startswith("<")
-        or _v_lower.endswith(">")
+        # Angle-bracket check: discard ONLY when the WHOLE value is a wrapped
+        # placeholder like "<your-email@example.com>". A legitimate From address
+        # "SYNAPSE <noreply@synapse.ai>" starts with a display name and must
+        # NOT be discarded (a bare endswith(">") wrongly killed it).
+        or (_v_lower.startswith("<") and _v_lower.endswith(">"))
     ):
         os.environ.pop(_k, None)
         import warnings as _placeholder_warnings
