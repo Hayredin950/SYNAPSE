@@ -26,12 +26,33 @@ JSON body on 429:
 
 from __future__ import annotations
 
+import logging
 import time
 from datetime import datetime
 from datetime import timezone as dt_timezone
 from typing import Optional
 
-from rest_framework.throttling import SimpleRateThrottle
+from rest_framework.throttling import (
+    AnonRateThrottle,
+    SimpleRateThrottle,
+    UserRateThrottle,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _fail_open(exc: Exception) -> bool:
+    """
+    Redis/cache is down — fail OPEN so the API never 500s because
+    throttling storage is unavailable.
+
+    Rate limiting is a defence, not a hard dependency: a cache outage must
+    not take down every endpoint (including /api/v1/health/, which Render
+    probes — that is exactly how this deployed service was killed).
+    """
+    logger.warning("Throttle cache unavailable — failing open: %s", exc)
+    return True
+
 
 # ── Rate limit tables ─────────────────────────────────────────────────────────
 #
@@ -107,24 +128,27 @@ class PlanAwareThrottle(SimpleRateThrottle):
         if key is None:
             return True
 
-        # Atomic increment in Redis
-        count = self.cache.get(key, 0)
-        if count is None:
-            count = 0
+        try:
+            # Atomic increment in Redis
+            count = self.cache.get(key, 0)
+            if count is None:
+                count = 0
 
-        bucket = int(time.time()) // window
-        reset_ts = (bucket + 1) * window
-        self._reset_at = reset_ts
-        self._remaining = max(0, limit - count - 1)
+            bucket = int(time.time()) // window
+            reset_ts = (bucket + 1) * window
+            self._reset_at = reset_ts
+            self._remaining = max(0, limit - count - 1)
 
-        if count >= limit:
-            self._remaining = 0
-            self.wait()  # sets self.history / self.now used by DRF
-            return False
+            if count >= limit:
+                self._remaining = 0
+                self.wait()  # sets self.history / self.now used by DRF
+                return False
 
-        # Increment counter
-        new_count = count + 1
-        self.cache.set(key, new_count, timeout=window)
+            # Increment counter
+            new_count = count + 1
+            self.cache.set(key, new_count, timeout=window)
+        except Exception as exc:  # noqa: BLE001 — any cache error must fail open
+            return _fail_open(exc)
         return True
 
     def wait(self) -> Optional[float]:
@@ -202,4 +226,33 @@ class RegistrationThrottle(SimpleRateThrottle):
     def allow_request(self, request, view):
         if getattr(request.user, "is_authenticated", False):
             return True
-        return super().allow_request(request, view)
+        try:
+            return super().allow_request(request, view)
+        except Exception as exc:  # noqa: BLE001 — any cache error must fail open
+            return _fail_open(exc)
+
+
+class ResilientAnonRateThrottle(AnonRateThrottle):
+    """
+    Stock DRF AnonRateThrottle, but fail-open when the cache is unreachable.
+
+    This is the class configured in DEFAULT_THROTTLE_CLASSES. Without it, a
+    Redis outage turns every anonymous request (health checks included) into
+    a 500 — which is how this exact bug killed the Render deploy.
+    """
+
+    def allow_request(self, request, view):
+        try:
+            return super().allow_request(request, view)
+        except Exception as exc:  # noqa: BLE001 — any cache error must fail open
+            return _fail_open(exc)
+
+
+class ResilientUserRateThrottle(UserRateThrottle):
+    """UserRateThrottle that fails open when the cache is unreachable."""
+
+    def allow_request(self, request, view):
+        try:
+            return super().allow_request(request, view)
+        except Exception as exc:  # noqa: BLE001 — any cache error must fail open
+            return _fail_open(exc)

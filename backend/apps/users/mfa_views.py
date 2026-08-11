@@ -23,17 +23,17 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.throttling import UserRateThrottle
+from apps.core.throttles import ResilientUserRateThrottle
 
 
-class MFAVerifyThrottle(UserRateThrottle):
+class MFAVerifyThrottle(ResilientUserRateThrottle):
     """Strict rate limit for MFA endpoints — max 5 attempts per minute per user."""
 
     rate = "5/minute"
     scope = "mfa_verify"
 
 
-class MFASetupThrottle(UserRateThrottle):
+class MFASetupThrottle(ResilientUserRateThrottle):
     """Rate limit for MFA setup — max 3 per minute."""
 
     rate = "3/minute"

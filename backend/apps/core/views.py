@@ -14,7 +14,7 @@ from django.db import connection
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
+@throttle_classes([])  # infra probe — must never be throttled or 429/500
 def health_check(request):
     health = {"status": "healthy", "services": {}}
     try:

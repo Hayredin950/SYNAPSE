@@ -243,7 +243,7 @@ REST_FRAMEWORK = {
     ],
     # TASK-501: Per-user throttling — see apps.core.throttles
     "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
+        "apps.core.throttles.ResilientAnonRateThrottle",  # fails open if Redis is down
         "apps.core.throttles.APIRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
