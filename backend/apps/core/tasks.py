@@ -1668,9 +1668,7 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
 
 """
     for video in videos:
-        channel = getattr(video, "channel", None) or getattr(
-            video, "channel_title", "Unknown"
-        )
+        channel = getattr(video, "channel_name", "") or "Unknown"
         content += f"- **{video.title}** by {channel}\n"
         sources.append({"title": video.title, "url": video.url, "type": "video"})
 
