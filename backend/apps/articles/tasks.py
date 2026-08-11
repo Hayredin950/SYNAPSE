@@ -344,44 +344,42 @@ def process_article_nlp(self, article_id: str) -> Dict:
             update_fields.append("sentiment_score")
 
         # Phase 2.2 — Persist summary.
-        # Prefer a Gemini-generated summary; fall back to whatever the NLP
-        # pipeline produced (BART / extractive).  Only write if the article
-        # does not already have a human-supplied summary so we don't destroy
-        # richer scraped content.
+        # AI summaries are on-demand only by default — generating them here
+        # costs LLM tokens for every newly scraped article. Set
+        # ENABLE_AUTO_AI_SUMMARIES=1 to restore automatic generation.
+        #
+        # When disabled we deliberately do NOT persist the local extractive
+        # summary either: cards are fed by the free structured excerpt, and
+        # persisting a non-AI summary would make the card show a misleading
+        # "AI Summary" badge.
         if not article.summary:
-            # Build rich context for summarization (title + excerpt + content)
-            summary_parts = []
-            if title:
-                summary_parts.append(f"Title: {title}")
-            if article.url:
-                summary_parts.append(f"URL: {article.url}")
-            if article.topic:
-                summary_parts.append(f"Topic: {article.topic}")
-            tags_str = ", ".join(article.tags) if article.tags else ""
-            if tags_str:
-                summary_parts.append(f"Tags: {tags_str}")
-            metadata = article.metadata or {}
-            if metadata.get("excerpt"):
-                summary_parts.append(f"Excerpt: {metadata['excerpt']}")
-            if text:
-                summary_parts.append(f"\nArticle Content:\n{text}")
-            summary_text = "\n".join(summary_parts) if summary_parts else text
-
-            # AI summaries are on-demand only by default — generating them here
-            # costs LLM tokens for every newly scraped article. Set
-            # ENABLE_AUTO_AI_SUMMARIES=1 to restore automatic generation.
             if os.environ.get("ENABLE_AUTO_AI_SUMMARIES", "0") == "1":
+                # Build rich context for summarization (title + excerpt + content)
+                summary_parts = []
+                if title:
+                    summary_parts.append(f"Title: {title}")
+                if article.url:
+                    summary_parts.append(f"URL: {article.url}")
+                if article.topic:
+                    summary_parts.append(f"Topic: {article.topic}")
+                tags_str = ", ".join(article.tags) if article.tags else ""
+                if tags_str:
+                    summary_parts.append(f"Tags: {tags_str}")
+                metadata = article.metadata or {}
+                if metadata.get("excerpt"):
+                    summary_parts.append(f"Excerpt: {metadata['excerpt']}")
+                if text:
+                    summary_parts.append(f"\nArticle Content:\n{text}")
+                summary_text = "\n".join(summary_parts) if summary_parts else text
+
                 gemini_summary = _summarize_with_gemini(summary_text)
                 chosen_summary = gemini_summary or result.summary
-            else:
-                # Local (free) summary produced by the NLP pipeline / extractive
-                chosen_summary = result.summary
-            # Final fallback: use first 200 chars of cleaned text if no AI summary
-            if not chosen_summary and len(text) > 50:
-                chosen_summary = text[:200] + "..." if len(text) > 200 else text
-            if chosen_summary:
-                article.summary = chosen_summary
-                update_fields.append("summary")
+                # Final fallback: use first 200 chars of cleaned text
+                if not chosen_summary and len(text) > 50:
+                    chosen_summary = text[:200] + "..." if len(text) > 200 else text
+                if chosen_summary:
+                    article.summary = chosen_summary
+                    update_fields.append("summary")
 
         # Store NER entities in metadata JSON field
         if result.entities:
@@ -543,11 +541,16 @@ def _extract_structured_excerpt(soup, max_words: int = 100) -> str:
         return done
 
     # Leaf content tags in document order — wrappers (div/section/ul) are
-    # skipped so their children are emitted exactly once.
+    # skipped so their children are emitted exactly once. Elements nested
+    # inside a blockquote/li/pre are ALSO skipped: their parent's get_text()
+    # already includes their text, so emitting them again would duplicate
+    # content (e.g. <blockquote><p>…</p></blockquote>).
     for el in root.find_all(
         ["h2", "h3", "h4", "h5", "h6", "p", "blockquote", "li", "pre"],
         recursive=True,
     ):
+        if el.find_parent(["blockquote", "li", "pre"]):
+            continue
         name = (el.name or "").lower()
         text = el.get_text(" ", strip=True)
         if not text:
