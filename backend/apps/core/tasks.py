@@ -450,6 +450,25 @@ def scrape_hackernews(
                 found_article_ids.append(str(article.id))
                 if created:
                     total_saved += 1
+                    # Fetch a real content excerpt (free HTTP, no LLM) so feed
+                    # cards show the top of the article immediately instead of
+                    # the "A Technology article." placeholder. Also upgrades the
+                    # topic from the real page content. Only the Scrapy pipeline
+                    # used to do this; the direct-API HN scraper never did, so
+                    # every article it scraped showed an empty card.
+                    try:
+                        from apps.articles.tasks import (  # noqa: PLC0415
+                            fetch_article_excerpt,
+                        )
+
+                        fetch_article_excerpt.apply_async(
+                            args=[str(article.id)], countdown=2, queue="default"
+                        )
+                    except Exception as exc:
+                        logger.warning(
+                            f"[{task_id}] Failed to enqueue excerpt fetch "
+                            f"for {article.id}: {exc}"
+                        )
 
             except Exception as exc:
                 logger.warning(f"[{task_id}] Failed to fetch HN item {sid}: {exc}")
