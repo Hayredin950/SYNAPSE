@@ -609,23 +609,35 @@ def google_auth(request):
     """
     POST /api/v1/auth/google/
     Body: { "access_token": "<google_access_token>" }
+       or: { "id_token": "<google_id_token>" }   (Google Identity Services)
 
-    Verifies Google access token, finds or creates a user, returns JWT tokens.
+    Verifies the Google credential, finds or creates a user, returns JWT tokens.
     """
-    access_token = request.data.get("access_token")
+    access_token = request.data.get("access_token") or request.data.get("id_token")
     if not access_token:
         return Response(
             {"error": "Google access token is required."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    is_id_token = bool(request.data.get("id_token"))
+
     # Verify token with Google and get user info
     try:
-        google_response = http_requests.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10,
-        )
+        if is_id_token:
+            # Google Identity Services credential (JWT id_token) — verify via
+            # Google's tokeninfo endpoint (works without a client secret).
+            google_response = http_requests.get(
+                "https://oauth2.googleapis.com/tokeninfo",
+                params={"id_token": access_token},
+                timeout=10,
+            )
+        else:
+            google_response = http_requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=10,
+            )
         if google_response.status_code != 200:
             return Response(
                 {"error": "Invalid Google token."}, status=status.HTTP_400_BAD_REQUEST
@@ -697,6 +709,7 @@ def google_auth(request):
                 "first_name": user.first_name,
                 "email_verified": user.email_verified,
                 "avatar_url": user.avatar_url,
+                "is_onboarded": user.is_onboarded,
             },
             "tokens": {
                 "access": str(refresh.access_token),

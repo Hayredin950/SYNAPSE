@@ -17,7 +17,7 @@ interface AuthStore {
   fetchUser: () => Promise<void>
   refreshUser: () => Promise<void>   // TASK-001: re-fetch user after onboarding
   setTokens: (access: string, refresh: string) => void
-  googleAuth: (accessToken: string) => Promise<void>
+  googleAuth: (token: string) => Promise<User | null>
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -185,10 +185,16 @@ export const useAuthStore = create<AuthStore>()(
         localStorage.setItem('synapse_refresh_token', refresh)
       },
 
-      googleAuth: async (accessToken: string) => {
+      googleAuth: async (token: string) => {
         set({ isLoading: true })
         try {
-          const response = await authApi.post('/auth/google/', { access_token: accessToken })
+          // GSI (Google Identity Services) returns an id_token credential;
+          // keep access_token support for backwards compatibility.
+          const body =
+            token.split('.').length === 3
+              ? { id_token: token }   // JWT credential from the GSI button
+              : { access_token: token }
+          const response = await authApi.post('/auth/google/', body)
           const { tokens, user } = response.data
 
           set({
@@ -207,6 +213,7 @@ export const useAuthStore = create<AuthStore>()(
             identifyUser(user.id, { plan: user.role ?? 'user', role: user.role ?? 'user' })
           }
           track('login_completed', { method: 'google' })
+          return user ?? null
         } catch (error: unknown) {
           set({ isLoading: false })
           if (axios.isAxiosError(error)) {

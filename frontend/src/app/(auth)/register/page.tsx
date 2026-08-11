@@ -9,6 +9,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
 const registerSchema = z.object({
   username:         z.string().min(3, 'Username must be at least 3 characters'),
@@ -153,6 +154,10 @@ export default function RegisterPage() {
         <div className="flex-1 h-px bg-slate-200 dark:bg-white/15" />
         <span className="text-xs text-slate-400">or sign up with</span>
         <div className="flex-1 h-px bg-slate-200 dark:bg-white/15" />
+      </div>
+
+      <div className="mb-3">
+        <GoogleSignInButton />
       </div>
 
       <button

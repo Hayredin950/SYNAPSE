@@ -115,7 +115,13 @@ services:
         value: "True"
       - key: ENABLE_NOTIFICATIONS
         value: "True"
-      # ── OAuth (optional — fill only if you configure Google/GitHub OAuth) ──
+      # ── OAuth (Google + GitHub social login) ────────────────────────────────
+      # GOOGLE_CLIENT_ID / SECRET: create a Web OAuth client in Google Cloud
+      # Console with authorized JS origin https://synapse-one-blond.vercel.app
+      # GITHUB_CLIENT_ID / SECRET: create an OAuth App in GitHub Developer
+      # Settings; Authorization callback URL must match GITHUB_REDIRECT_URI.
+      # The code derives GITHUB_REDIRECT_URI from the request host if unset,
+      # but set it explicitly here for GitHub's app registration.
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -123,6 +129,8 @@ services:
       - key: GITHUB_CLIENT_ID
         sync: false
       - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_REDIRECT_URI
         sync: false
       # ── Scheduler / worker tuning (cron worker on GH Actions) ─────────────
       - key: CELERY_CONCURRENCY

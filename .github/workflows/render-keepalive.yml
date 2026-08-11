@@ -1,0 +1,47 @@
+# ============================================================
+# SYNAPSE — Render Keep-Alive (free tier anti-sleep)
+# ============================================================
+# Render free web services spin down after ~15 minutes of
+# inactivity, causing 30-50s cold starts. This workflow is a
+# tiny, dedicated warmer: every 5 minutes it sends one request
+# to the health endpoint. No pip install, no DB — just a curl,
+# so each run costs ~10 seconds of free Actions minutes.
+#
+# Secret required:
+#   RENDER_HEALTH_URL  (https://synapse-backend.onrender.com/api/v1/health/)
+# ============================================================
+
+name: Render Keep-Alive
+
+on:
+  schedule:
+    # Every 5 minutes — well inside Render's 15-minute idle window.
+    # GitHub Actions cron is UTC.
+    - cron: '*/5 * * * *'
+  workflow_dispatch: # allow manual "ping now"
+
+concurrency:
+  group: render-keepalive
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Ping health endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Render health URL
+        run: |
+          if [ -z "${{ secrets.RENDER_HEALTH_URL }}" ]; then
+            echo "::warning::RENDER_HEALTH_URL secret is not set — skipping keep-alive"
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' -m 60 "${{ secrets.RENDER_HEALTH_URL }}" || true)
+          echo "health endpoint returned HTTP ${code}"
+          # Non-2xx is tolerated (cold start may take up to 60s);
+          # the next 5-minute tick will catch it.
+          if [ "${code}" -ge 200 ] && [ "${code}" -lt 300 ]; then
+            echo "Render instance is warm."
+          else
+            echo "Render instance waking up (expected on free tier)."
+          fi

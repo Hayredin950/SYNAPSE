@@ -27,11 +27,46 @@ logger = logging.getLogger(__name__)
 
 GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "")
 GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
-GITHUB_REDIRECT_URI = os.environ.get(
-    "GITHUB_REDIRECT_URI",
-    "http://localhost:8000/api/v1/auth/github/callback/",
-)
 FRONTEND_URL = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
+
+
+def _github_redirect_uri(request=None) -> str:
+    """
+    Production-safe GitHub callback URL.
+
+    Priority:
+      1. Explicit GITHUB_REDIRECT_URI env var (best — matches the callback
+         URL you registered in GitHub's OAuth App settings).
+      2. Derive from the request host (works on Render, Vercel proxies,
+         DuckDNS, or the future Oracle box) — built straight from the
+         X-Forwarded-Host / Host headers so it bypasses ALLOWED_HOSTS
+         validation (which would reject unregistered hosts).
+      3. Old localhost default (dev only).
+    """
+    env_uri = os.environ.get("GITHUB_REDIRECT_URI", "").strip()
+    if env_uri and "localhost" not in env_uri and "127.0.0.1" not in env_uri:
+        return env_uri
+
+    if request is not None:
+        try:
+            # Render sends X-Forwarded-Proto: https and X-Forwarded-Host.
+            host = (
+                request.META.get("HTTP_X_FORWARDED_HOST")
+                or request.META.get("HTTP_HOST")
+                or ""
+            )
+            scheme = request.META.get("HTTP_X_FORWARDED_PROTO", "https")
+            if host and "localhost" not in host and "127.0.0.1" not in host:
+                return f"{scheme}://{host}/api/v1/auth/github/callback/"
+        except Exception:
+            pass
+
+    # Render sets RENDER_EXTERNAL_HOSTNAME for the live subdomain.
+    render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    if render_host:
+        return f"https://{render_host}/api/v1/auth/github/callback/"
+
+    return "http://localhost:8000/api/v1/auth/github/callback/"
 
 
 def _get_tokens_for_user(user: User) -> dict:
@@ -59,7 +94,7 @@ def github_auth(request):
     params = urllib.parse.urlencode(
         {
             "client_id": GITHUB_CLIENT_ID,
-            "redirect_uri": GITHUB_REDIRECT_URI,
+            "redirect_uri": _github_redirect_uri(request),
             "scope": "user:email read:user",
             "state": "synapse_github_oauth",  # In production, use a CSRF token
         }
@@ -103,7 +138,7 @@ def github_callback(request):
                 "client_id": GITHUB_CLIENT_ID,
                 "client_secret": GITHUB_CLIENT_SECRET,
                 "code": code,
-                "redirect_uri": GITHUB_REDIRECT_URI,
+                "redirect_uri": _github_redirect_uri(request),
             },
             headers={"Accept": "application/json"},
             timeout=10,

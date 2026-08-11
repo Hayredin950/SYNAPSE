@@ -9,6 +9,7 @@ import { z } from 'zod'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -155,6 +156,10 @@ function LoginContent() {
         <div className="flex-1 h-px bg-slate-200 dark:bg-white/15" />
         <span className="text-xs text-slate-400">or continue with</span>
         <div className="flex-1 h-px bg-slate-200 dark:bg-white/15" />
+      </div>
+
+      <div className="mb-3">
+        <GoogleSignInButton />
       </div>
 
       <button
