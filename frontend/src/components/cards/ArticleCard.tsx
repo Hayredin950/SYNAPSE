@@ -30,6 +30,33 @@ const SummaryText = memo(function SummaryText({ text }: { text: string }) {
   );
 });
 
+// Structure-preserving excerpt: the first ~100 words of the article body as
+// markdown-ish text (headings, quotes, lists on their own lines). No AI calls.
+const ExcerptText = memo(function ExcerptText({ text }: { text: string }) {
+  const [expanded, setExpanded] = React.useState(false);
+  if (!text) return null;
+  const isLong = text.split('\n').length > 5 || text.split(' ').length > 45;
+  return (
+    <div>
+      <p className={cn(
+        'text-sm text-slate-600 dark:text-slate-400 leading-relaxed whitespace-pre-line',
+        !expanded && 'line-clamp-4'
+      )}>
+        {text}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          className="mt-1 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+        >
+          {expanded ? 'Show less' : 'Read more'}
+        </button>
+      )}
+    </div>
+  );
+});
+
 interface ArticleCardProps {
   article: Article;
   onBookmark?: (id: string) => void;
@@ -115,30 +142,17 @@ export const ArticleCard = memo(function ArticleCard({ article }: ArticleCardPro
           </div>
           <SummaryText text={article.summary} />
         </div>
-      ) : !article.summary || article.summary === '' ? (
+      ) : article.excerpt ? (
         <div className="mb-3">
-          {article.excerpt ? (
-            <p className="line-clamp-2 text-sm text-slate-600 dark:text-slate-400 mb-1.5 leading-relaxed">
-              {article.excerpt}
-            </p>
-          ) : (article.tags?.length > 0 || article.topic) ? (
-            <p className="line-clamp-2 text-sm text-slate-500 dark:text-slate-400 mb-1.5 leading-relaxed">
-              {[
-                article.topic ? `A ${article.topic} article` : null,
-                article.tags?.length > 0 ? `covering ${article.tags.slice(0, 3).join(', ')}` : null,
-              ].filter(Boolean).join(' ')}.
-            </p>
-          ) : null}
-          {!article.excerpt && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700/60 text-slate-400 dark:text-slate-500">
-              <svg className="w-2.5 h-2.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-              AI summarizing…
-            </span>
-          )}
+          <ExcerptText text={article.excerpt} />
         </div>
+      ) : (article.tags?.length > 0 || article.topic) ? (
+        <p className="line-clamp-2 text-sm text-slate-500 dark:text-slate-400 mb-1.5 leading-relaxed">
+          {[
+            article.topic ? `A ${article.topic} article` : null,
+            article.tags?.length > 0 ? `covering ${article.tags.slice(0, 3).join(', ')}` : null,
+          ].filter(Boolean).join(' ')}.
+        </p>
       ) : null}
 
       {/* Tags */}

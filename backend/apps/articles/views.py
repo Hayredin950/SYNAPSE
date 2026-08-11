@@ -9,7 +9,7 @@ from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from .models import Article
@@ -175,7 +175,7 @@ def article_search(request):
 
 
 @api_view(["POST"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def trigger_summarization(request):
     """
     Manually trigger summarization of pending articles.
@@ -183,10 +183,9 @@ def trigger_summarization(request):
     POST /api/v1/articles/summarize/
     Optional body: { "batch_size": 20 }
 
-    This endpoint is called by the frontend when the feed loads so that
-    summaries are generated even if the Celery beat worker is not running.
-    It is intentionally open (AllowAny) for development; restrict to
-    IsAdminUser or IsAuthenticated in production if preferred.
+    Requires authentication — this endpoint spends LLM tokens, so it must
+    not be callable anonymously (was AllowAny for dev, which let anyone
+    drain the configured LLM keys).
     """
     from .tasks import summarize_pending_articles  # noqa: PLC0415
 

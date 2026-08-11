@@ -111,15 +111,6 @@ export default function FeedPage() {
     };
   }, [activatePostWorkflowPolling]);
 
-  // Fire-and-forget: kick off summarization when the feed mounts so articles
-  // get summaries even if the Celery beat worker hasn't run yet.
-  const didTrigger = useRef(false);
-  useEffect(() => {
-    if (didTrigger.current) return;
-    didTrigger.current = true;
-    api.post('/articles/summarize/', { batch_size: 20 }).catch(() => {});
-  }, []);
-
   // Detect when new articles arrive during post-workflow polling and show banner
   useEffect(() => {
     if (!postWorkflowPolling) return;

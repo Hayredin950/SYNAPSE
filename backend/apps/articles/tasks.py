@@ -367,10 +367,15 @@ def process_article_nlp(self, article_id: str) -> Dict:
                 summary_parts.append(f"\nArticle Content:\n{text}")
             summary_text = "\n".join(summary_parts) if summary_parts else text
 
-            # Try to use the article owner's API key if available (future: link articles to users)
-            # For now falls back to env var key inside _summarize_with_gemini
-            gemini_summary = _summarize_with_gemini(summary_text)
-            chosen_summary = gemini_summary or result.summary
+            # AI summaries are on-demand only by default — generating them here
+            # costs LLM tokens for every newly scraped article. Set
+            # ENABLE_AUTO_AI_SUMMARIES=1 to restore automatic generation.
+            if os.environ.get("ENABLE_AUTO_AI_SUMMARIES", "0") == "1":
+                gemini_summary = _summarize_with_gemini(summary_text)
+                chosen_summary = gemini_summary or result.summary
+            else:
+                # Local (free) summary produced by the NLP pipeline / extractive
+                chosen_summary = result.summary
             # Final fallback: use first 200 chars of cleaned text if no AI summary
             if not chosen_summary and len(text) > 50:
                 chosen_summary = text[:200] + "..." if len(text) > 200 else text
@@ -476,6 +481,102 @@ def process_pending_articles_nlp(self, batch_size: int = 10) -> Dict:
         raise self.retry(exc=exc, countdown=120)
 
 
+def _extract_structured_excerpt(soup, max_words: int = 100) -> str:
+    """
+    Walk the top of the article body and capture the first ~100 words as
+    markdown-ish text that preserves structure (headings, quotes, lists, code).
+
+    Returns "" when nothing usable is found.
+    """
+    import re
+
+    # Drop navigation / boilerplate that would pollute the top of the page
+    for junk in soup.find_all(
+        [
+            "script",
+            "style",
+            "noscript",
+            "nav",
+            "aside",
+            "footer",
+            "form",
+            "button",
+            "svg",
+            "iframe",
+            "figure",
+            "figcaption",
+            "header",
+        ]
+    ):
+        junk.decompose()
+
+    root = soup.find("article") or soup.find("main") or soup.body or soup
+    if root is None:
+        return ""
+
+    lines: list = []
+    words = 0
+    done = False
+
+    def _push(text: str, prefix: str = "", code: bool = False) -> bool:
+        """Append one structured line, trimming to fit the word budget."""
+        nonlocal words, done
+        text = re.sub(r"\s+", " ", text).strip()
+        if not text or done:
+            return done
+        wc = len(text.split())
+        remaining = max_words - words
+        if wc > remaining:
+            if remaining <= 0:
+                done = True
+                return done
+            text = " ".join(text.split()[:remaining])
+            text = text.rstrip(".,;:") + "…"
+            wc = remaining
+        if code:
+            lines.append(f"```\n{text}\n```")
+        else:
+            lines.append(f"{prefix}{text}")
+        words += wc
+        if words >= max_words:
+            done = True
+        return done
+
+    # Leaf content tags in document order — wrappers (div/section/ul) are
+    # skipped so their children are emitted exactly once.
+    for el in root.find_all(
+        ["h2", "h3", "h4", "h5", "h6", "p", "blockquote", "li", "pre"],
+        recursive=True,
+    ):
+        name = (el.name or "").lower()
+        text = el.get_text(" ", strip=True)
+        if not text:
+            continue
+        if name.startswith("h"):
+            if len(text) < 2:
+                continue
+            level = int(name[1])
+            prefix = "#" * min(level, 4) + " "
+            if _push(text, prefix):
+                break
+        elif name == "blockquote":
+            if _push(text, "> "):
+                break
+        elif name == "li":
+            if _push(text, "- "):
+                break
+        elif name == "pre":
+            if _push(text, code=True):
+                break
+        else:  # <p>
+            if len(text) < 15:
+                continue  # skip short/junk lines
+            if _push(text):
+                break
+
+    return "\n".join(lines).strip()
+
+
 @shared_task(
     bind=True,
     max_retries=2,
@@ -493,8 +594,12 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
       3. twitter:description — Twitter card description
       4. First meaningful <p> tag from the article body
       5. trafilatura full-text extraction fallback
+      6. Structured body excerpt — top ~100 words of the article body with
+         headings, quotes, lists and code preserved (markdown-ish text)
 
-    Result stored in article.metadata['excerpt'] — no DB migration needed.
+    Results stored in article.metadata['excerpt'] (plain) and
+    article.metadata['excerpt_structured'] (structure-preserving) — no DB
+    migration needed.
     """
     task_id = self.request.id or "no-task-id"
     try:
@@ -505,8 +610,10 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
         except Article.DoesNotExist:
             return {"status": "not_found", "article_id": article_id}
 
-        # Skip if already fetched a real excerpt
-        existing = (article.metadata or {}).get("excerpt", "")
+        # Skip if we already captured the structured body excerpt (the richer
+        # artifact). Articles with only the legacy plain excerpt get re-fetched
+        # once so they upgrade to the structure-preserving version.
+        existing = (article.metadata or {}).get("excerpt_structured", "")
         if existing and len(existing) > 30:
             return {"status": "skipped", "reason": "already_has_excerpt"}
 
@@ -517,6 +624,7 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
         logger.info("[%s] fetch_article_excerpt: fetching %s", task_id, url[:80])
 
         excerpt = ""
+        soup = None
         try:
             import requests as req  # noqa: PLC0415
             from bs4 import BeautifulSoup  # noqa: PLC0415
@@ -591,9 +699,17 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
         if len(excerpt) > 220:
             excerpt = excerpt[:220].rsplit(" ", 1)[0] + "…"
 
-        if excerpt:
+        # Structured body excerpt (top ~100 words, headings/quotes/lists kept)
+        structured = (
+            _extract_structured_excerpt(soup, max_words=100) if soup is not None else ""
+        )
+
+        if excerpt or structured:
             meta = article.metadata or {}
-            meta["excerpt"] = excerpt
+            if excerpt:
+                meta["excerpt"] = excerpt
+            if structured:
+                meta["excerpt_structured"] = structured
             article.metadata = meta
             # Sanitise metadata — remove null bytes and invalid Unicode
             # that PostgreSQL JSON rejects.
@@ -610,12 +726,18 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
                 article.metadata = {}
             article.save(update_fields=["metadata", "updated_at"])
             logger.info(
-                "[%s] fetch_article_excerpt: saved %d chars for article %s",
+                "[%s] fetch_article_excerpt: saved %d chars (structured=%d) "
+                "for article %s",
                 task_id,
-                len(excerpt),
+                len(structured or excerpt),
+                len(structured),
                 article_id,
             )
-            return {"status": "success", "excerpt_length": len(excerpt)}
+            return {
+                "status": "success",
+                "excerpt_length": len(structured or excerpt),
+                "structured_length": len(structured),
+            }
         else:
             logger.warning(
                 "[%s] fetch_article_excerpt: no excerpt found for %s", task_id, url[:60]
@@ -645,10 +767,12 @@ def fetch_pending_excerpts(self, batch_size: int = 30) -> dict:
         all_articles = list(
             Article.objects.filter(url__startswith="http").values("id", "metadata")
         )
+        # Upgrade path: also re-fetch articles that only have the legacy plain
+        # excerpt so they gain the structure-preserving excerpt_structured.
         to_fetch = [
             str(a["id"])
             for a in all_articles
-            if not (a.get("metadata") or {}).get("excerpt")
+            if not (a.get("metadata") or {}).get("excerpt_structured")
         ][:batch_size]
 
         for i, article_id in enumerate(to_fetch):

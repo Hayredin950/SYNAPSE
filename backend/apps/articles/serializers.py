@@ -58,13 +58,20 @@ class ArticleListSerializer(serializers.ModelSerializer):
         is being generated.
 
         Priority:
-          1. metadata['excerpt'] — fetched from og:description / meta description
-             by the fetch_article_excerpt Celery task (best quality)
-          2. First 200 chars of article content (if available)
-          3. Empty string — frontend will just show the title (which is already
+          1. metadata['excerpt_structured'] — top ~100 words of the article
+             body with headings/quotes/lists preserved (fetched free by the
+             fetch_article_excerpt Celery task)
+          2. metadata['excerpt'] — og:description / meta description
+          3. First 200 chars of article content (if available)
+          4. Empty string — frontend will just show the title (which is already
              displayed as the card heading, so no duplication)
         """
-        # 1. Fetched web excerpt (og:description / meta description)
+        # 1. Structured body excerpt (headings/quotes/lists preserved)
+        structured = (obj.metadata or {}).get("excerpt_structured", "")
+        if structured and len(structured) > 30:
+            return structured
+
+        # 2. Fetched web excerpt (og:description / meta description)
         metadata_excerpt = (obj.metadata or {}).get("excerpt", "")
         if metadata_excerpt and len(metadata_excerpt) > 30:
             return metadata_excerpt

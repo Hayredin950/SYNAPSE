@@ -156,18 +156,14 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "nlp"},
     },
     # Summarization catch-up — Phase 2.2
-    # Runs every 15 minutes to summarize articles that missed the pipeline
-    # (e.g. imported before Phase 2.2, or whose summarization failed)
+    # Excerpt fetching (free HTTP, no LLM) runs every 5 minutes so every card
+    # gets a real content excerpt. Automatic LLM summarization was removed —
+    # it burned LLM tokens on every article; AI summaries are now on-demand
+    # only (Ask AI / Deep Dive).
     "fetch-pending-excerpts-every-5min": {
         "task": "apps.articles.tasks.fetch_pending_excerpts",
         "schedule": 5 * 60,  # every 5 minutes — fast HTTP fetches, not Gemini
         "options": {"queue": "default"},  # separate from nlp so Gemini can't block it
-    },
-    "summarize-pending-articles-every-15min": {
-        "task": "apps.articles.tasks.summarize_pending_articles",
-        "schedule": 15 * 60,  # 15 minutes in seconds
-        "args": (20,),  # batch_size=20
-        "options": {"queue": "nlp"},
     },
     # Phase 4.1 — Workflow Engine
     # Periodic cleanup: mark stale 'running' workflow runs as failed (every hour)
