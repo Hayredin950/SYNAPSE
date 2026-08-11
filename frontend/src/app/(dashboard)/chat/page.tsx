@@ -43,14 +43,15 @@ import { cn } from '@/utils/helpers';
 import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
 import Link from 'next/link';
 
-// ─── Available models (powered by Replit AI — OpenAI-compatible) ─────────────
-// All models route through Replit's built-in AI gateway (gpt-4o-mini default).
-// User-supplied OpenRouter/Gemini keys unlock additional models in Settings.
+// ─── Available models (server-provided — Groq by default) ──────────────────
+// The backend routes chat through its configured provider (Groq on Render).
+// Groq serves Llama/Gemma models; OpenAI IDs like "gpt-4o-mini" only work
+// when a user adds their own OpenRouter key in Settings.
 const GEMINI_MODELS = [
-  // ── Replit AI (built-in, no key needed) ──────────────────────────────────
-  { id: 'gpt-4o-mini',   label: 'GPT-4o Mini',     badge: '⚡ Default' },
-  { id: 'gpt-4o',        label: 'GPT-4o',           badge: '🧠 Smart' },
-  { id: 'o1-mini',       label: 'o1 Mini',           badge: '🔬 Reasoning' },
+  // ── Server-provided (no key needed) ─────────────────────────────────────
+  { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', badge: '⚡ Default' },
+  { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',  badge: '🧠 Fast' },
+  { id: 'gemma2-9b-it',            label: 'Gemma 2 9B',    badge: '🔬 Light' },
   // ── Models available with your own OpenRouter key (add in Settings) ──────
   { id: 'google/gemini-2.0-flash-001',            label: 'Gemini 2.0 Flash',        badge: '🔑 Key needed' },
   { id: 'google/gemini-2.5-flash-preview',        label: 'Gemini 2.5 Flash Preview', badge: '🔑 Key needed' },
@@ -58,8 +59,9 @@ const GEMINI_MODELS = [
   { id: 'deepseek/deepseek-r1',                  label: 'DeepSeek R1 (Reasoning)',  badge: '🔑 Key needed' },
   { id: 'anthropic/claude-3.5-sonnet',           label: 'Claude 3.5 Sonnet',        badge: '🔑 Key needed' },
   { id: 'openai/gpt-4o',                         label: 'GPT-4o (OpenRouter)',       badge: '🔑 Key needed' },
+  { id: 'openai/gpt-4o-mini',                    label: 'GPT-4o Mini (OpenRouter)',  badge: '🔑 Key needed' },
 ];
-const DEFAULT_MODEL = 'gpt-4o-mini';
+const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
 
 // ─── Suggested prompts shown on empty chat ────────────────────────────────────
 const SUGGESTED_PROMPTS = [

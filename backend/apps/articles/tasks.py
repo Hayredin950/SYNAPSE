@@ -721,6 +721,56 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
             _extract_structured_excerpt(soup, max_words=100) if soup is not None else ""
         )
 
+        # 6. Jina Reader fallback — free reader proxy that renders JS-heavy,
+        #    bot-protected and paywalled pages as plain markdown text. Runs
+        #    only when every local strategy came up empty (403s, Cloudflare,
+        #    paywalls, etc.). The returned body is the article text itself,
+        #    so we keep its structure as our structured excerpt.
+        if not excerpt and not structured:
+            try:
+                jina = req.get(
+                    f"https://r.jina.ai/{url}",
+                    headers={"Accept": "text/plain"},
+                    timeout=20,
+                )
+                if jina.status_code == 200 and len(jina.text.strip()) > 200:
+                    body = jina.text
+                    # Jina returns "Title: …\nURL Source: …\nMarkdown Content:\n<article>".
+                    # Snip everything before the first Markdown Content marker.
+                    marker = "Markdown Content:"
+                    if marker in body:
+                        body = body.split(marker, 1)[1]
+                    # Normalise blank-line-heavy markdown to a compact text block.
+                    lines = [ln.strip() for ln in body.split("\n")]
+                    compact = [ln for ln in lines if ln and not ln.startswith("[")]
+                    joined = "\n".join(compact)
+                    # Collapse multiple spaces but keep line breaks for structure.
+                    import re as _re
+
+                    joined = _re.sub(r"[ \t]+$", "", joined, flags=_re.M)
+                    if len(joined) > 60:
+                        structured = joined[:1000].strip()
+                        # Plain-text excerpt = first 220 chars of the same text
+                        plain = _re.sub(r"\s+", " ", joined).strip()
+                        excerpt = (
+                            plain[:220].rsplit(" ", 1)[0] + "…"
+                            if len(plain) > 220
+                            else plain
+                        )
+                        logger.info(
+                            "[%s] fetch_article_excerpt: Jina fallback captured %d chars for %s",
+                            task_id,
+                            len(structured),
+                            url[:60],
+                        )
+            except Exception as jina_exc:
+                logger.warning(
+                    "[%s] fetch_article_excerpt: Jina fallback failed for %s: %s",
+                    task_id,
+                    url[:60],
+                    jina_exc,
+                )
+
         if excerpt or structured:
             meta = article.metadata or {}
             if excerpt:

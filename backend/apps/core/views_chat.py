@@ -314,6 +314,44 @@ def _get_groq_key() -> str:
     return key if key and not key.startswith("your-") else ""
 
 
+# Model IDs that ONLY exist on OpenAI's API. The chat UI defaults to
+# "gpt-4o-mini", but when the server is backed by Groq (llama/gemma only),
+# sending a bare OpenAI ID makes every request fail with 404 model_not_found.
+_OPENAI_ONLY_MODELS = {
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4-turbo",
+    "gpt-4",
+    "gpt-3.5-turbo",
+    "o1",
+    "o1-mini",
+    "o3-mini",
+}
+
+
+def _normalize_model_for_provider(model: str, provider: str) -> str:
+    """
+    Map a bare OpenAI model ID to a model the configured provider can serve.
+
+    - Groq serves Llama/Gemma models — an OpenAI-only ID is replaced with the
+      server's GROQ_MODEL default so the chat works out of the box.
+    - The Vercel AI Gateway requires provider-prefixed IDs — a bare OpenAI
+      ID becomes "openai/<id>".
+
+    Returns the original model unchanged when no mapping is needed.
+    """
+    import os
+
+    if not model:
+        return model
+    bare = model.split("/")[-1] if "/" in model else model
+    if provider == "groq" and bare in _OPENAI_ONLY_MODELS:
+        return os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+    if provider == "gateway" and bare in _OPENAI_ONLY_MODELS and "/" not in model:
+        return f"openai/{bare}"
+    return model
+
+
 def _get_replit_openai_pipeline(model: str = None):
     """
     Return a pipeline backed by Replit's built-in OpenAI proxy.
@@ -470,13 +508,15 @@ def _get_pipeline(model: str = None, user=None):
     if gateway_key:
         return _OpenRouterDirectPipeline(
             api_key=gateway_key,
-            model=model or os.environ.get("AI_GATEWAY_MODEL", "openai/gpt-4o-mini"),
+            model=_normalize_model_for_provider(model, "gateway")
+            or os.environ.get("AI_GATEWAY_MODEL", "openai/gpt-4o-mini"),
             base_url="https://ai-gateway.vercel.sh/v1",
         )
     if groq_key:
         return _OpenRouterDirectPipeline(
             api_key=groq_key,
-            model=model or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            model=_normalize_model_for_provider(model, "groq")
+            or os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
             base_url="https://api.groq.com/openai/v1",
         )
     if scitely_key:
@@ -1003,6 +1043,8 @@ class ChatStreamView(APIView):
                     or "quota" in exc_str
                 ):
                     msg = "All AI quota limits reached. Please try again in a few minutes or add more API keys."
+                elif "model_not_found" in exc_str or "does not exist" in exc_str:
+                    msg = "The selected model isn't available on this server. Please pick another model from the dropdown."
                 elif (
                     "api_key" in exc_str
                     or "invalid" in exc_str

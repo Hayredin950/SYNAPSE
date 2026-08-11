@@ -90,7 +90,12 @@ class GitHubTrendingView(APIView):
         limit = min(int(request.query_params.get("limit", 200)), 500)
 
         qs = Repository.objects.all().order_by("-velocity_7d", "-stars")
-        if request.user and request.user.is_authenticated:
+        # Only narrow to the user's saved repos when explicitly requested.
+        # Without ?saved=1 the radar shows the FULL catalog, not just the
+        # handful the user has bookmarked (bookmarks are opt-in, and the
+        # home page's counts refer to the whole catalog).
+        saved = request.query_params.get("saved") == "1"
+        if saved and request.user and request.user.is_authenticated:
             qs = qs.filter(user_repositories__user=request.user)
         if language:
             qs = qs.filter(language__iexact=language)
@@ -130,7 +135,8 @@ class GitHubEcosystemView(APIView):
 
     def get(self, request, language: str):
         qs = Repository.objects.filter(language__iexact=language)
-        if request.user and request.user.is_authenticated:
+        saved = request.query_params.get("saved") == "1"
+        if saved and request.user and request.user.is_authenticated:
             qs = qs.filter(user_repositories__user=request.user)
         total = qs.count()
         if total == 0:
