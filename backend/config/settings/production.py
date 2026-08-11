@@ -132,9 +132,16 @@ elif not os.environ.get("EMAIL_BACKEND"):
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
+# Always include the hostname Render actually assigned (auto-set env var).
+# The render.yaml blueprint hardcodes a subdomain that may drift (Render
+# appends a random suffix, e.g. synapse-backend-z9bb.onrender.com), so we
+# merge RENDER_EXTERNAL_HOSTNAME in explicitly rather than relying on the
+# "if not ALLOWED_HOSTS" fallback (which only fires when the var is empty).
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if _render_host and _render_host not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_render_host)
 if not ALLOWED_HOSTS:
     # Derive from RENDER_EXTERNAL_HOSTNAME (auto-set by Render) or FRONTEND_URL
-    _render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "")
     if _render_host:
         ALLOWED_HOSTS = [_render_host]
     else:
@@ -312,6 +319,12 @@ if _raw_csrf:
 else:
     # Default: derive from CORS_ALLOWED_ORIGINS (already https://-prefixed above)
     CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS)
+# Merge the actual Render origin (auto-set hostname) so CSRF never blocks
+# POSTs to the live subdomain even if the blueprint's value drifted.
+if _render_host:
+    _render_origin = f"https://{_render_host}"
+    if _render_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_render_origin)
 
 # ── Sentry — error tracking ───────────────────────────────────────────────────
 SENTRY_DSN = os.environ.get("SENTRY_DSN", "")

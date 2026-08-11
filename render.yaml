@@ -57,6 +57,10 @@ services:
       - key: JWT_SIGNING_KEY
         sync: false
       # ── Hostnames & CORS ───────────────────────────────────────────────────
+      # ALLOWED_HOSTS/CSRF pick up the REAL assigned subdomain automatically
+      # from RENDER_EXTERNAL_HOSTNAME in production.py; keep the blueprint
+      # values as the pre-render fallback. Current live URL:
+      # https://synapse-backend-z9bb.onrender.com
       - key: ALLOWED_HOSTS
         value: synapse-backend.onrender.com,localhost,127.0.0.1
       - key: CSRF_TRUSTED_ORIGINS
