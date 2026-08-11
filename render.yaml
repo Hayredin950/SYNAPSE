@@ -25,16 +25,16 @@ services:
   - type: web
     name: synapse-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
+    # Lite Dockerfile: bakes SYNAPSE_LITE=1 (slim deps) by default.
+    # Render's blueprint schema does NOT support docker build args — the only
+    # docker keys are dockerCommand / dockerfilePath / dockerContext — so the
+    # lite-ness must live in the Dockerfile itself, not in a build arg.
+    dockerfilePath: ./backend/Dockerfile.lite
     dockerContext: .         # build context is the repo root
     plan: free               # 512 MB — fine in lite mode (no torch in image)
     region: oregon
     branch: main
     healthCheckPath: /api/v1/health/
-    dockerDetails:
-      buildArgs:
-        - key: SYNAPSE_LITE
-          value: "1"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
