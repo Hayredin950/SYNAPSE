@@ -84,16 +84,25 @@ export function GoogleSignInButton() {
       return () => { cancelled = true }
     }
 
+    // Fail visibly if the GSI script can't load within a reasonable window
+    // (ad-blockers, strict networks, or Google being unreachable). A silently
+    // dropped connection may never fire onload OR onerror, which would leave
+    // the button on "Loading Google sign-in…" forever.
+    const timeout = window.setTimeout(() => {
+      if (!cancelled && !window.google?.accounts?.id) setStatus('error')
+    }, 8000)
+
     const script = document.createElement('script')
     script.src = 'https://accounts.google.com/gsi/client'
     script.async = true
     script.defer = true
-    script.onload = init
-    script.onerror = () => { if (!cancelled) setStatus('error') }
+    script.onload = () => { window.clearTimeout(timeout); init() }
+    script.onerror = () => { window.clearTimeout(timeout); if (!cancelled) setStatus('error') }
     document.head.appendChild(script)
 
     return () => {
       cancelled = true
+      window.clearTimeout(timeout)
       script.remove()
     }
   }, [clientId, googleAuth, router])

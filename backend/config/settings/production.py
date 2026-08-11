@@ -129,6 +129,12 @@ elif not os.environ.get("EMAIL_BACKEND"):
         stacklevel=2,
     )
 
+# SMTP connect/read timeout — without this, a black-holed or slow SMTP server
+# (common on free-tier hosts like Render) can hang the registration request for
+# minutes. 10s is plenty for Brevo; the send is wrapped in fail_silently by
+# callers anyway, so this only caps the wait.
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+
 ALLOWED_HOSTS = [
     h.strip() for h in os.environ.get("ALLOWED_HOSTS", "").split(",") if h.strip()
 ]
