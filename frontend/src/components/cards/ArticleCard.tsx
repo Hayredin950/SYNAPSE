@@ -73,15 +73,6 @@ const getSourceColor = (sourceType: string) => {
   return colors[sourceType] || 'bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600/40';
 };
 
-const getTagColor = (index: number) => {
-  const colors = [
-    'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300',
-    'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300',
-    'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300',
-  ];
-  return colors[index % colors.length];
-};
-
 export const ArticleCard = memo(function ArticleCard({ article }: ArticleCardProps) {
   const router = useRouter();
   const openReader = useReaderStore(s => s.open);
@@ -146,30 +137,11 @@ export const ArticleCard = memo(function ArticleCard({ article }: ArticleCardPro
         <div className="mb-3">
           <ExcerptText text={article.excerpt} />
         </div>
-      ) : (article.tags?.length > 0 || article.topic) ? (
+      ) : article.topic ? (
         <p className="line-clamp-2 text-sm text-slate-500 dark:text-slate-400 mb-1.5 leading-relaxed">
-          {[
-            article.topic ? `A ${article.topic} article` : null,
-            article.tags?.length > 0 ? `covering ${article.tags.slice(0, 3).join(', ')}` : null,
-          ].filter(Boolean).join(' ')}.
+          A {article.topic} article.
         </p>
       ) : null}
-
-      {/* Tags */}
-      {(article.tags?.length > 0 || article.topic) && (
-        <div className="flex flex-wrap gap-1 mb-3">
-          {article.tags?.slice(0, 3).map((tag, idx) => (
-            <span key={tag} className={cn('text-xs px-2 py-0.5 rounded-full font-medium truncate max-w-[100px]', getTagColor(idx))}>
-              {tag}
-            </span>
-          ))}
-          {article.topic && !article.tags?.includes(article.topic) && (
-            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 truncate max-w-[100px]">
-              {article.topic}
-            </span>
-          )}
-        </div>
-      )}
 
       {/* Bottom row: Quick Read + Ask AI + Bookmark */}
       <div className="flex items-center justify-between gap-1 pt-2.5 border-t border-slate-100 dark:border-slate-700/50">
