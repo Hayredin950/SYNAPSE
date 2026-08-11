@@ -1588,22 +1588,36 @@ def generate_user_briefing(self, user_id: str) -> Dict:
     # Delete existing briefing for today to regenerate
     DailyBriefing.objects.filter(user=user, date=today).delete()
 
-    # Fetch EXACTLY 5 items from each source for this user
+    # Fetch EXACTLY 5 items from each source for this user.
+    # Personalization: prefer items linked to the user, but fall back to the
+    # latest global content when the user has no links yet (e.g. a new account
+    # before onboarding scrapes finish) — otherwise the briefing is an empty
+    # "0 from every source" stub even though the feed has plenty of content.
     articles = Article.objects.filter(user_articles__user=user).order_by("-scraped_at")[
         :5
     ]
+    if not articles:
+        articles = Article.objects.order_by("-scraped_at")[:5]
 
     papers = ResearchPaper.objects.filter(user_papers__user=user).order_by(
         "-fetched_at"
     )[:5]
+    if not papers:
+        papers = ResearchPaper.objects.order_by("-fetched_at")[:5]
 
     repos = Repository.objects.filter(user_repositories__user=user).order_by("-stars")[
         :5
     ]
+    if not repos:
+        repos = Repository.objects.order_by("-stars")[:5]
 
     videos = Video.objects.filter(user_videos__user=user).order_by("-fetched_at")[:5]
+    if not videos:
+        videos = Video.objects.order_by("-fetched_at")[:5]
 
     tweets = Tweet.objects.filter(user_tweets__user=user).order_by("-posted_at")[:5]
+    if not tweets:
+        tweets = Tweet.objects.order_by("-posted_at")[:5]
 
     # Build personalized content
     name_greeting = f", {user.first_name}" if user.first_name else ""
