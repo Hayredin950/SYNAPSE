@@ -16,6 +16,7 @@ Endpoints (mounted at /api/v1/auth/mfa/):
 
 from __future__ import annotations
 
+from apps.core.throttles import ResilientUserRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from rest_framework import status
@@ -23,7 +24,6 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from apps.core.throttles import ResilientUserRateThrottle
 
 
 class MFAVerifyThrottle(ResilientUserRateThrottle):

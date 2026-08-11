@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, name="repositories.reembed_all_repos", max_retries=3)
 def reembed_all_repos(self, batch_size: int = 32) -> dict:
     """Re-embed all repositories using the current embedding model (1024 dims)."""
-    from ai_engine.embeddings import embed_batch
-
     from apps.repositories.models import Repository
+
+    from ai_engine.embeddings import embed_batch
 
     repos = (
         Repository.objects.filter(description__isnull=False)

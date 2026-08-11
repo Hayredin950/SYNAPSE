@@ -31,8 +31,12 @@ class TweetListView(ListAPIView):
 
     def get_queryset(self):
         qs = Tweet.objects.all()
-        # ── Personalization: scope to tweets linked via UserTweet junction ──
-        if self.request.user and self.request.user.is_authenticated:
+        # ── Saved feed: only filter to the user's bookmarked tweets when
+        # ?saved=1 — global feed by default, matching the articles/repos views.
+        # (Filtering unconditionally on auth made logged-in users see 0 tweets
+        # because the scrapers store content globally, not per-user.)
+        saved = self.request.GET.get("saved", "").lower() in ("true", "1")
+        if saved and self.request.user and self.request.user.is_authenticated:
             qs = qs.filter(user_tweets__user=self.request.user)
         tag = self.request.GET.get("tag")
         if tag:

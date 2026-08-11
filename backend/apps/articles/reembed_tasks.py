@@ -28,9 +28,9 @@ def reembed_all_articles(self, batch_size: int = 32) -> dict:
 
     Returns: dict with total, embedded, skipped counts.
     """
-    from ai_engine.embeddings import embed_batch
-
     from apps.articles.models import Article
+
+    from ai_engine.embeddings import embed_batch
 
     articles = (
         Article.objects.filter(content__isnull=False).exclude(content="").order_by("id")

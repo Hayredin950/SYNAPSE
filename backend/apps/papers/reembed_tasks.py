@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, name="papers.reembed_all_papers", max_retries=3)
 def reembed_all_papers(self, batch_size: int = 32) -> dict:
     """Re-embed all research papers using the current embedding model (1024 dims)."""
-    from ai_engine.embeddings import embed_batch
-
     from apps.papers.models import ResearchPaper
+
+    from ai_engine.embeddings import embed_batch
 
     papers = (
         ResearchPaper.objects.filter(abstract__isnull=False)

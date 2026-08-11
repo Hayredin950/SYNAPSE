@@ -54,9 +54,9 @@ class TestReembedArticlesPipeline(TestCase):
     def test_reembed_calls_ai_engine(self):
         """reembed_all_articles should embed via ai_engine.embeddings.embed_batch."""
         _add_ai_engine_to_path()
-        import ai_engine.embeddings as embeddings
-
         from apps.articles.reembed_tasks import reembed_all_articles
+
+        import ai_engine.embeddings as embeddings
 
         fake_embedding = [0.01] * 1024
 
@@ -77,9 +77,9 @@ class TestReembedArticlesPipeline(TestCase):
     def test_reembed_handles_ai_engine_failure_gracefully(self):
         """If embedding fails, task should log error and not crash."""
         _add_ai_engine_to_path()
-        import ai_engine.embeddings as embeddings
-
         from apps.articles.reembed_tasks import reembed_all_articles
+
+        import ai_engine.embeddings as embeddings
 
         self._make_articles(2)
 
@@ -94,9 +94,10 @@ class TestReembedArticlesPipeline(TestCase):
     def test_reembed_skips_articles_without_content(self):
         """Queryset filter should exclude articles with no content."""
         _add_ai_engine_to_path()
-        import ai_engine.embeddings as embeddings
         from apps.articles.models import Article
         from apps.articles.reembed_tasks import reembed_all_articles
+
+        import ai_engine.embeddings as embeddings
 
         src = _make_source("skip_src")
         # This article HAS content and WILL be included
@@ -121,9 +122,9 @@ class TestReembedArticlesPipeline(TestCase):
     def test_reembed_saves_embeddings_to_db(self):
         """After re-embedding, articles should have the returned embedding stored."""
         _add_ai_engine_to_path()
-        import ai_engine.embeddings as embeddings
-
         from apps.articles.reembed_tasks import reembed_all_articles
+
+        import ai_engine.embeddings as embeddings
 
         fake_embedding = [float(i) / 1024 for i in range(1024)]
 
