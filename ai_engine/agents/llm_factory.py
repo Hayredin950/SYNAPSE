@@ -31,7 +31,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Optional
+from typing import Any, List, Optional
+
+from langchain_core.runnables import Runnable
 
 logger = logging.getLogger(__name__)
 
@@ -439,6 +441,73 @@ def build_llm(
 #   Groq (14.4k req/day free) → NVIDIA NIM → Gemini (1k/day) → OpenRouter
 #   → Scitely/DeepSeek (paid overflow)
 
+
+class FallbackChatModel(Runnable):
+    """
+    Chat-model-compatible runnable with cross-provider failover + tool binding.
+
+    Wraps a list of raw chat models (first = primary, rest = fallbacks) and
+    transparently retries each provider before failing over to the next on
+    error — same resilience as the old `.with_retry()/.with_fallbacks()` chain.
+
+    Crucially it ALSO implements :meth:`bind_tools`, which the plain
+    RunnableRetry / RunnableWithFallbacks wrappers lack. langgraph's
+    ``create_react_agent()`` calls ``model.bind_tools(tools)`` on any model
+    that isn't already a RunnableBinding, so passing it a retry/fallback
+    wrapper crashed with ``'RunnableRetry' object has no attribute
+    'bind_tools'``. This class binds the tools onto EVERY provider in the
+    chain, so tool calling works even after a failover.
+    """
+
+    def __init__(
+        self,
+        models: List[Any],
+        max_retries_per_provider: int = 2,
+        tools: Optional[Any] = None,
+    ) -> None:
+        if not models:
+            raise ValueError("FallbackChatModel requires at least one model.")
+        self.models = list(models)
+        self.max_retries_per_provider = max_retries_per_provider
+        self._tools = tools
+
+    # ── Tool binding ────────────────────────────────────────────────────────
+    def bind_tools(self, tools: Any, **kwargs: Any) -> "FallbackChatModel":
+        """Return a new wrapper with the given tools bound to every provider."""
+        return FallbackChatModel(
+            self.models,
+            max_retries_per_provider=self.max_retries_per_provider,
+            tools=tools,
+        )
+
+    def _chain(self) -> Runnable:
+        """Build the retry + fallback runnable from the current models/tools."""
+        chained: List[Any] = []
+        for model in self.models:
+            if self._tools is not None:
+                model = model.bind_tools(self._tools)
+            chained.append(
+                model.with_retry(stop_after_attempt=self.max_retries_per_provider)
+            )
+        primary, fallbacks = chained[0], chained[1:]
+        if not fallbacks:
+            return primary
+        return primary.with_fallbacks(fallbacks)
+
+    # ── Runnable interface ──────────────────────────────────────────────────
+    def invoke(self, *args: Any, **kwargs: Any) -> Any:
+        return self._chain().invoke(*args, **kwargs)
+
+    async def ainvoke(self, *args: Any, **kwargs: Any) -> Any:
+        return await self._chain().ainvoke(*args, **kwargs)
+
+    def stream(self, *args: Any, **kwargs: Any) -> Any:
+        return self._chain().stream(*args, **kwargs)
+
+    async def astream(self, *args: Any, **kwargs: Any) -> Any:
+        return self._chain().astream(*args, **kwargs)
+
+
 # Providers tried in order, when a key is present for them.
 _FALLBACK_ORDER = ("groq", "nvidia", "gemini", "openai", "scitely")
 
@@ -495,7 +564,9 @@ def build_llm_with_fallbacks(
             streaming=streaming,
             **key_overrides,  # type: ignore[arg-type]
         )
-        return primary.with_retry(stop_after_attempt=max_retries_per_provider)
+        return FallbackChatModel(
+            [primary], max_retries_per_provider=max_retries_per_provider
+        )
 
     available = _configured_providers(**key_overrides)
 
@@ -510,7 +581,9 @@ def build_llm_with_fallbacks(
             streaming=streaming,
             **key_overrides,  # type: ignore[arg-type]
         )
-        return primary.with_retry(stop_after_attempt=max_retries_per_provider)
+        return FallbackChatModel(
+            [primary], max_retries_per_provider=max_retries_per_provider
+        )
 
     # Build each configured provider in order. The first becomes the primary
     # and the rest become fallbacks — a provider must never appear in its own
@@ -528,7 +601,7 @@ def build_llm_with_fallbacks(
                     max_tokens=max_tokens,
                     streaming=streaming,
                     **key_overrides,  # type: ignore[arg-type]
-                ).with_retry(stop_after_attempt=max_retries_per_provider)
+                )
             )
         except (ValueError, ImportError) as exc:
             logger.debug("llm_factory provider %s unavailable: %s", name, exc)
@@ -539,12 +612,8 @@ def build_llm_with_fallbacks(
             "provider's client package is installed."
         )
 
-    primary, fallbacks = built[0], built[1:]
-    if not fallbacks:
-        return primary
-
     logger.info(
         "llm_factory fallback chain active: %s",
         " → ".join(available[: len(built)]),
     )
-    return primary.with_fallbacks(fallbacks)
+    return FallbackChatModel(built, max_retries_per_provider=max_retries_per_provider)

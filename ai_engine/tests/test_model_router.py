@@ -354,5 +354,5 @@ class TestSynapseAgentBuildLLM:
             patch.object(base_mod, "_OPENAI_AVAILABLE", True),
             patch.object(base_mod, "_ChatOpenAI", None),
         ):
-            with pytest.raises(ValueError, match="No LLM configured"):
+            with pytest.raises(ValueError, match="No AI provider configured"):
                 base_mod.SynapseAgent(tools=[], provider="auto")
