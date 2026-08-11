@@ -40,12 +40,17 @@ class ArticleListView(ListAPIView):
             qs = qs.filter(tags__icontains=tag)
         # Topic filtering — canonical pill values plus synonyms, so legacy
         # stored topics (e.g. "Artificial Intelligence") still match "AI".
+        # Case-insensitive (topic__in would be case-sensitive in Postgres and
+        # miss stored "AI" for a "ai" pill value).
         topic = self.request.GET.get("topic")
         if topic and topic != "All":
             from .topic_utils import TOPIC_ALIASES  # noqa: PLC0415
 
             aliases = TOPIC_ALIASES.get(topic.lower(), [topic])
-            qs = qs.filter(topic__in=aliases)
+            topic_q = Q()
+            for alias in aliases:
+                topic_q |= Q(topic__iexact=alias)
+            qs = qs.filter(topic_q)
         # Full-text search
         q = self.request.GET.get("q", "").strip()
         if q:
