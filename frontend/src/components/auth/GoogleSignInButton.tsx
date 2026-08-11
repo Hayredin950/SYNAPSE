@@ -35,12 +35,16 @@ declare global {
 
 export function GoogleSignInButton() {
   const router = useRouter()
+  // The container div is ALWAYS mounted (even while loading) so the ref is
+  // available the moment the GSI script finishes loading — rendering the
+  // button into a not-yet-mounted node was the "stuck loading" bug.
   const buttonRef = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
   const { googleAuth } = useAuthStore()
 
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''
 
+  // ── Step 1: load GSI script + initialize (one-time) ─────────────────────────
   useEffect(() => {
     if (!clientId) {
       setStatus('missing')
@@ -49,8 +53,8 @@ export function GoogleSignInButton() {
 
     let cancelled = false
 
-    const render = () => {
-      if (cancelled || !window.google?.accounts?.id || !buttonRef.current) return
+    const init = () => {
+      if (cancelled || !window.google?.accounts?.id) return
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: async (resp: { credential?: string }) => {
@@ -72,20 +76,11 @@ export function GoogleSignInButton() {
           }
         },
       })
-      window.google.accounts.id.renderButton(buttonRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        width: 380,
-        text: 'continue_with',
-        shape: 'pill',
-      })
       if (!cancelled) setStatus('ready')
     }
 
-    // Load GSI script if not already present
     if (window.google?.accounts?.id) {
-      render()
+      init()
       return () => { cancelled = true }
     }
 
@@ -93,7 +88,7 @@ export function GoogleSignInButton() {
     script.src = 'https://accounts.google.com/gsi/client'
     script.async = true
     script.defer = true
-    script.onload = render
+    script.onload = init
     script.onerror = () => { if (!cancelled) setStatus('error') }
     document.head.appendChild(script)
 
@@ -103,31 +98,48 @@ export function GoogleSignInButton() {
     }
   }, [clientId, googleAuth, router])
 
-  if (status === 'missing') {
-    return (
-      <div className="w-full text-center text-xs text-slate-400 py-2 rounded-xl border border-dashed border-slate-300 dark:border-white/15">
-        Google sign-in is not configured (set NEXT_PUBLIC_GOOGLE_CLIENT_ID)
-      </div>
-    )
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="w-full text-center text-xs text-red-500 py-2 rounded-xl border border-dashed border-red-300 dark:border-red-500/30">
-        Could not load Google sign-in. Please try again later.
-      </div>
-    )
-  }
+  // ── Step 2: render the branded button once both script + DOM are ready ──────
+  useEffect(() => {
+    if (status !== 'ready' || !buttonRef.current || !window.google?.accounts?.id) return
+    try {
+      // Match the container width so it works on mobile and desktop.
+      const width = Math.max(buttonRef.current.clientWidth, 300)
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        width,
+        text: 'continue_with',
+        shape: 'pill',
+      })
+    } catch {
+      // e.g. the origin is not in the Google client's authorized JS origins
+      setStatus('error')
+    }
+  }, [status])
 
   return (
     <div className="w-full flex justify-center">
-      {status === 'loading' ? (
-        <div className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm text-slate-400">
-          <Loader2 size={16} className="animate-spin" /> Loading Google sign-in…
-        </div>
-      ) : (
-        <div ref={buttonRef} className="scale-90 origin-center" />
-      )}
+      <div
+        ref={buttonRef}
+        className="w-full min-h-[44px] flex items-center justify-center"
+      >
+        {status === 'loading' && (
+          <div className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm text-slate-400">
+            <Loader2 size={16} className="animate-spin" /> Loading Google sign-in…
+          </div>
+        )}
+        {status === 'missing' && (
+          <div className="w-full text-center text-xs text-slate-400 py-2 rounded-xl border border-dashed border-slate-300 dark:border-white/15">
+            Google sign-in is not configured (set NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+          </div>
+        )}
+        {status === 'error' && (
+          <div className="w-full text-center text-xs text-red-500 py-2 rounded-xl border border-dashed border-red-300 dark:border-red-500/30">
+            Could not load Google sign-in. Please try again later.
+          </div>
+        )}
+      </div>
     </div>
   )
 }
