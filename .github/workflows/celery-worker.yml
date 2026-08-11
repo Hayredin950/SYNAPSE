@@ -37,6 +37,9 @@ jobs:
     name: Drain Celery queue
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: write   # self-chain step uses `gh workflow run`
     steps:
       - uses: actions/checkout@v4
 
@@ -96,7 +99,11 @@ jobs:
           EMBEDDING_PROVIDER: api
           EMBEDDING_DIM: "1024"
           EMBEDDING_MODEL: BAAI/bge-large-en-v1.5
-          CELERY_QUEUES: default,scraping,slow_scraping,agents,nlp,embeddings
+          # "celery" MUST be listed first: plain .delay() tasks land in the
+          # unbound "celery" queue (CELERY_DEFAULT_QUEUE is ignored by Celery 5)
+          # and would otherwise sit forever. New tasks also go to "default" now
+          # that settings use CELERY_TASK_DEFAULT_QUEUE.
+          CELERY_QUEUES: celery,default,scraping,slow_scraping,agents,nlp,embeddings
           CELERY_CONCURRENCY: "2"
           CELERY_MAX_TASKS_PER_CHILD: "50"
         run: |
@@ -114,3 +121,17 @@ jobs:
       - name: Keep Render web service warm
         run: |
           curl -sf -o /dev/null "${{ secrets.RENDER_HEALTH_URL }}" || echo "Render service is waking up (normal)"
+
+      # GitHub's cron scheduler is heavily throttled for this repo (observed
+      # ~50-70 min gaps despite */10), so a scheduled-only worker leaves queued
+      # tasks waiting up to an hour. Re-triggering ourselves keeps the drain
+      # loop ~continuous — the concurrency group serializes runs, and public
+      # repos get unlimited Actions minutes. The */10 cron stays as the
+      # fallback heartbeat if a chain ever breaks.
+      - name: Chain next drain
+        if: always()
+        run: |
+          sleep 5
+          gh workflow run celery-worker.yml --ref "${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ github.token }}

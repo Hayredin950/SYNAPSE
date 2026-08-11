@@ -339,7 +339,11 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 min hard limit
 CELERY_TASK_SOFT_TIME_LIMIT = 25 * 60  # 25 min soft limit
 CELERY_RESULT_EXPIRES = 3600  # results expire after 1 hour
-CELERY_DEFAULT_QUEUE = "default"
+# Use the Celery 5.x setting name! "CELERY_DEFAULT_QUEUE" is the pre-5.0
+# name that Celery 5 silently ignores — plain .delay() tasks then fall into
+# the unbound "celery" queue, which no worker subscribes to, and sit there
+# forever (observed: welcome emails, GitHub star syncs, initial workflows).
+CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TASK_ROUTES = {
     # ── Automation (MUST be first — highest priority) ─────────────────────────
     # execute_workflow MUST land on 'default' so the worker that handles the
