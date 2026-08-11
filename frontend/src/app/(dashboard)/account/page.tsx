@@ -105,7 +105,8 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 p-6">
+    <div className="flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-4xl space-y-8 p-6">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Usage &amp; Referrals</h1>
@@ -223,6 +224,7 @@ export default function AccountPage() {
           </div>
         </section>
       )}
+      </div>
     </div>
   )
 }

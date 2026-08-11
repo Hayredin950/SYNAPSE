@@ -64,30 +64,26 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"     arXiv failed: {e}"))
 
         if "youtube" in sources:
-            self.stdout.write("  → YouTube videos...")
+            self.stdout.write("  → YouTube videos (yt-dlp)...")
             try:
                 from apps.core.tasks import scrape_youtube
 
                 result = scrape_youtube(30, 20)
                 self.stdout.write(self.style.SUCCESS(f"     YouTube: {result}"))
             except Exception as e:
-                self.stdout.write(
-                    self.style.WARNING(f"     YouTube failed (needs API key): {e}")
-                )
+                self.stdout.write(self.style.WARNING(f"     YouTube failed: {e}"))
 
         if "twitter" in sources:
-            self.stdout.write("  → Twitter/X...")
+            self.stdout.write("  → Twitter/X (Mastodon public API)...")
             try:
                 from apps.core.tasks import scrape_twitter
 
-                result = scrape_twitter(
-                    max_results=30, query="AI machine learning LLM", use_nitter=False
-                )
+                # No query → uses the built-in tech hashtag list (public API, no key).
+                # A single free-text query would become one hashtag that almost
+                # never matches a Mastodon tag timeline, so rely on the defaults.
+                result = scrape_twitter(max_results=30, use_nitter=False)
                 self.stdout.write(self.style.SUCCESS(f"     Twitter: {result}"))
             except Exception as e:
-                self.stdout.write(
-                    self.style.WARNING(f"     Twitter failed (needs bearer token): {e}")
-                )
+                self.stdout.write(self.style.WARNING(f"     Twitter failed: {e}"))
 
-        self.stdout.write(self.style.SUCCESS("All scrapers done."))
         self.stdout.write(self.style.SUCCESS("All scrapers done."))

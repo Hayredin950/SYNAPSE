@@ -1,18 +1,20 @@
 """
 SSE (Server-Sent Events) streaming endpoint for real-time content updates.
 
-Async-compatible with Daphne/ASGI — uses asyncio.sleep instead of time.sleep
-so it doesn't block the event loop.
+The view is deliberately SYNCHRONOUS: it returns a StreamingHttpResponse
+whose content is a plain (non-async) generator, exactly like the proven
+agent_task_stream view. Django's ASGI handler iterates sync streaming content
+per-chunk via sync_to_async in a worker thread, so time.sleep() below does NOT
+block the Daphne event loop — while an `async def` view returning an async
+generator raises "returned an unawaited coroutine" on the deployed Django 4.2
+image (it only worked on newer Django 5.2 during local dev).
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import time
-
-from asgiref.sync import sync_to_async
 
 from django.http import StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -24,7 +26,7 @@ CHECK_INTERVAL = 30  # seconds between content-count checks
 MAX_DURATION = 5 * 60  # close connection after 5 min; client auto-reconnects
 
 
-def _get_content_counts_sync() -> dict:
+def _get_content_counts() -> dict:
     """Return current content counts (synchronous DB calls)."""
     try:
         from apps.articles.models import Article
@@ -47,9 +49,6 @@ def _get_content_counts_sync() -> dict:
         return {}
 
 
-_get_content_counts = sync_to_async(_get_content_counts_sync, thread_sensitive=False)
-
-
 def _validate_token(token: str) -> bool:
     """Validate a SimpleJWT access token — allow unauthenticated SSE."""
     if not token:
@@ -64,11 +63,11 @@ def _validate_token(token: str) -> bool:
         return True
 
 
-async def _async_event_stream():
+def _event_stream():
     """
-    Async generator for SSE events.
+    Synchronous generator for SSE events.
     Yields heartbeats every 20 s and content_update when counts change.
-    Closes after MAX_DURATION so Daphne can cleanly free the connection.
+    Closes after MAX_DURATION so the connection is freed cleanly.
     """
     start = time.monotonic()
     last_counts: dict = {}
@@ -77,13 +76,13 @@ async def _async_event_stream():
 
     # Send initial snapshot
     try:
-        counts = await _get_content_counts()
+        counts = _get_content_counts()
         last_counts = counts
         payload = json.dumps({"counts": counts, "changed": {}, "ts": int(time.time())})
         yield f"event: init\ndata: {payload}\n\n"
     except Exception as exc:
         logger.warning("SSE: init snapshot failed: %s", exc)
-        yield "event: init\ndata: {{}}\n\n"
+        yield "event: init\ndata: {}\n\n"
 
     while True:
         # Close connection after max duration so client reconnects cleanly
@@ -91,7 +90,7 @@ async def _async_event_stream():
             yield "event: reconnect\ndata: {}\n\n"
             return
 
-        await asyncio.sleep(1)
+        time.sleep(1)
         now = time.time()
 
         # Heartbeat
@@ -102,7 +101,7 @@ async def _async_event_stream():
         # Content check
         if now - last_check >= CHECK_INTERVAL:
             try:
-                counts = await _get_content_counts()
+                counts = _get_content_counts()
                 changed: dict = {}
                 for key, val in counts.items():
                     old = last_counts.get(key, 0)
@@ -125,12 +124,13 @@ async def _async_event_stream():
 
 
 @csrf_exempt
-async def content_stream(request):
+def content_stream(request):
     """
     SSE endpoint — GET /api/v1/stream/
 
-    Async view — compatible with Daphne/ASGI without blocking the event loop.
-    Query params:
+    Plain Django view (sync) returning StreamingHttpResponse, so it works on
+    the deployed Django 4.2 image (async views returning async-generator
+    streaming responses 500 there). Query params:
       token — optional JWT access token (EventSource can't set custom headers)
     """
     if request.method != "GET":
@@ -145,7 +145,7 @@ async def content_stream(request):
         return HttpResponse("Unauthorized", status=401)
 
     response = StreamingHttpResponse(
-        _async_event_stream(),
+        _event_stream(),
         content_type="text/event-stream",
     )
     response["Cache-Control"] = "no-cache, no-transform"

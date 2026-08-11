@@ -127,9 +127,9 @@ jobs:
       - name: Migrate database
         working-directory: backend
         run: python manage.py migrate --noinput
-      - name: Run scrapers (hn github arxiv)
+      - name: Run scrapers (hn github arxiv youtube twitter)
         working-directory: backend
-        run: python manage.py run_scrapers --sources hn github arxiv
+        run: python manage.py run_scrapers --sources hn github arxiv youtube twitter
 
   reembed:
     name: Re-embed all content (03:00 UTC)
