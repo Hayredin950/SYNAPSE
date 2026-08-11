@@ -41,6 +41,22 @@ export function useLiveContent() {
       backoff.current = 3_000  // reset on successful connection
     })
 
+    // The backend sends an `init` snapshot with the CURRENT content counts
+    // the moment the stream connects (and on every reconnect). Treat that as a
+    // refresh trigger: it invalidates the home queries so a tab that was open
+    // before content existed (or missed a content_update while the stream was
+    // down) picks up the latest counts automatically.
+    const refreshHome = () => {
+      queryClient.invalidateQueries({ queryKey: ['articles', 'home'] })
+      queryClient.invalidateQueries({ queryKey: ['repos', 'home'] })
+      queryClient.invalidateQueries({ queryKey: ['papers', 'home'] })
+      queryClient.invalidateQueries({ queryKey: ['videos', 'home'] })
+      queryClient.invalidateQueries({ queryKey: ['tweets', 'home'] })
+      queryClient.invalidateQueries({ queryKey: ['briefing', 'today'] })
+    }
+    es.addEventListener('init', refreshHome)
+    es.addEventListener('open', refreshHome)
+
     es.addEventListener('content_update', (evt: MessageEvent) => {
       try {
         const { changed } = JSON.parse(evt.data) as {

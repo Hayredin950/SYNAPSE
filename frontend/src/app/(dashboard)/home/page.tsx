@@ -331,6 +331,7 @@ export default function Dashboard() {
     queryFn: () => api.get('/articles/', { params: { page_size: 12, ordering: '-scraped_at' } }).then(r => r.data),
     staleTime: 2 * 60_000,     // 2 min — don't re-fetch constantly
     gcTime:   10 * 60_000,
+    refetchOnMount: 'always',  // every visit gets fresh counts, never stale
   });
 
   const { data: repos, isLoading: reposLoading } = useQuery({
@@ -338,6 +339,7 @@ export default function Dashboard() {
     queryFn: () => api.get('/repos/', { params: { page_size: 3, ordering: '-scraped_at' } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
+    refetchOnMount: 'always',
   });
 
   const { data: papers, isLoading: papersLoading } = useQuery({
@@ -345,6 +347,7 @@ export default function Dashboard() {
     queryFn: () => api.get('/papers/', { params: { page_size: 10, ordering: '-fetched_at' } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
+    refetchOnMount: 'always',
   });
 
   const { data: videosData, isLoading: videosLoading } = useQuery({
@@ -352,6 +355,7 @@ export default function Dashboard() {
     queryFn: () => api.get('/videos/', { params: { page_size: 12, ordering: '-fetched_at' } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
+    refetchOnMount: 'always',
   });
 
   const { data: tweetsData, isLoading: tweetsLoading } = useQuery({
@@ -359,6 +363,7 @@ export default function Dashboard() {
     queryFn: () => api.get('/tweets/', { params: { page_size: 12, ordering: '-scraped_at' } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
+    refetchOnMount: 'always',
   });
 
   // Derive counts from content queries — no extra network requests needed
