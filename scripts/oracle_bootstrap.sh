@@ -148,7 +148,7 @@ if [ ! -f /opt/synapse/.env.prod ]; then
   for K in SECRET_KEY DB_PASSWORD REDIS_PASSWORD FLOWER_PASSWORD JWT_SIGNING_KEY \
            EMAIL_HOST_PASSWORD EMAIL_HOST_USER DEFAULT_FROM_EMAIL ALLOWED_HOSTS \
            CSRF_TRUSTED_ORIGINS CORS_ALLOWED_ORIGINS FRONTEND_URL \
-           GROQ_API_KEY NVIDIA_API_KEY GEMINI_API_KEY; do
+           GROQ_API_KEY NVIDIA_API_KEY GEMINI_API_KEY DATABASE_URL REDIS_URL; do
     grep -q "^${K}=" /opt/synapse/.env.prod || echo "${K}=" >> /opt/synapse/.env.prod
   done
 
@@ -162,6 +162,12 @@ if [ ! -f /opt/synapse/.env.prod ]; then
   sed -i "s|^CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=${APP_URL}|" /opt/synapse/.env.prod
   sed -i "s|^FRONTEND_URL=.*|FRONTEND_URL=${APP_URL}|"                /opt/synapse/.env.prod
   sed -i "s|^DEFAULT_FROM_EMAIL=.*|DEFAULT_FROM_EMAIL=SYNAPSE <noreply@synapse.ai>|" /opt/synapse/.env.prod
+
+  # The box runs its OWN Postgres + Redis in Docker — never use the cloud
+  # (Neon/Upstash) URLs carried over from a laptop .env.prod. production.py
+  # falls back to the local DB_*/REDIS_* vars when these are empty.
+  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=|" /opt/synapse/.env.prod
+  sed -i "s|^REDIS_URL=.*|REDIS_URL=|"         /opt/synapse/.env.prod
 
   echo "  → /opt/synapse/.env.prod created. EDIT IT to add:"
   echo "    • EMAIL_HOST_USER / EMAIL_HOST_PASSWORD (Brevo SMTP)"
