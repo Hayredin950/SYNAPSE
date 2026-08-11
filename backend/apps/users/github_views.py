@@ -30,6 +30,26 @@ GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "")
 FRONTEND_URL = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
 
+def _is_frontend_proxy_host(host: str) -> bool:
+    """
+    True when the request host is a frontend proxy rather than the backend.
+
+    The Vercel frontend rewrites /api/v1/* to the Django backend, so requests
+    that arrive through it carry X-Forwarded-Host = the Vercel origin (e.g.
+    synapse-one-blond.vercel.app). Deriving the OAuth redirect URI from that
+    host produces a callback URL the provider will reject with
+    redirect_uri_mismatch. Skip it and fall through to the backend's own
+    hostname (RENDER_EXTERNAL_HOSTNAME / env var) instead.
+    """
+    host = (host or "").strip().lower()
+    if not host:
+        return True
+    if host.endswith(".vercel.app") or host.endswith(".vercel.com"):
+        return True
+    frontend_host = urllib.parse.urlparse(FRONTEND_URL).netloc.lower()
+    return bool(frontend_host) and host == frontend_host
+
+
 def _github_redirect_uri(request=None) -> str:
     """
     Production-safe GitHub callback URL.
@@ -37,11 +57,12 @@ def _github_redirect_uri(request=None) -> str:
     Priority:
       1. Explicit GITHUB_REDIRECT_URI env var (best — matches the callback
          URL you registered in GitHub's OAuth App settings).
-      2. Derive from the request host (works on Render, Vercel proxies,
-         DuckDNS, or the future Oracle box) — built straight from the
-         X-Forwarded-Host / Host headers so it bypasses ALLOWED_HOSTS
-         validation (which would reject unregistered hosts).
-      3. Old localhost default (dev only).
+      2. Derive from the request host (works on Render, DuckDNS, or the
+         future Oracle box) — built straight from the X-Forwarded-Host / Host
+         headers so it bypasses ALLOWED_HOSTS validation (which would reject
+         unregistered hosts). SKIPS frontend proxy hosts (Vercel rewrites
+         /api/* → backend, so the forwarded host is the Vercel origin).
+      3. RENDER_EXTERNAL_HOSTNAME fallback.
     """
     env_uri = os.environ.get("GITHUB_REDIRECT_URI", "").strip()
     if env_uri and "localhost" not in env_uri and "127.0.0.1" not in env_uri:
@@ -56,7 +77,12 @@ def _github_redirect_uri(request=None) -> str:
                 or ""
             )
             scheme = request.META.get("HTTP_X_FORWARDED_PROTO", "https")
-            if host and "localhost" not in host and "127.0.0.1" not in host:
+            if (
+                host
+                and "localhost" not in host
+                and "127.0.0.1" not in host
+                and not _is_frontend_proxy_host(host)
+            ):
                 return f"{scheme}://{host}/api/v1/auth/github/callback/"
         except Exception:
             pass
@@ -259,7 +285,16 @@ def github_callback(request):
         logger.info("Created new user via GitHub OAuth: %s", user.email)
 
     # ── Sync GitHub starred repos to knowledge base (TASK-202-1) ─────────
-    _sync_github_starred_repos.delay(gh_username, github_access_token)
+    # Fire-and-forget, but NEVER let a broker outage break the login: if the
+    # Celery broker is unreachable, .delay() raises and would turn this
+    # callback into a 500. Wrap it — the sync is a nice-to-have, the login is
+    # not.
+    try:
+        _sync_github_starred_repos.delay(gh_username, github_access_token)
+    except Exception as exc:
+        logger.warning(
+            "GitHub starred-repos sync skipped (broker unavailable): %s", exc
+        )
 
     # ── Return JWT tokens via frontend redirect ───────────────────────────
     tokens = _get_tokens_for_user(user)

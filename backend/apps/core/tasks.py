@@ -62,10 +62,15 @@ def _ensure_dedup_ttl() -> None:
         from django.conf import settings
 
         redis_url = getattr(settings, "REDIS_URL", "redis://localhost:6379/0")
-        # Dedup sets live in db 0
-        r = redis_lib.from_url(
-            redis_url.rsplit("/", 1)[0] + "/0", decode_responses=True
-        )
+        # Dedup sets live in db 0. MUST normalize with urlparse: a naive
+        # rsplit("/", 1)[0] + "/0" corrupts path-less URLs like
+        # rediss://user:pass@host:6379 into "rediss://0" (the split lands on
+        # the "//"), silently breaking every Redis connection.
+        from urllib.parse import urlparse, urlunparse
+
+        _parsed = urlparse(redis_url)
+        _db0_url = urlunparse((_parsed.scheme, _parsed.netloc, "/0", "", "", ""))
+        r = redis_lib.from_url(_db0_url, decode_responses=True)
         for key in [
             "synapse:seen_urls",
             "synapse:seen_github_ids",

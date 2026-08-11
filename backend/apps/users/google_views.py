@@ -44,6 +44,26 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
+def _is_frontend_proxy_host(host: str) -> bool:
+    """
+    True when the request host is a frontend proxy rather than the backend.
+
+    The Vercel frontend rewrites /api/v1/* to the Django backend, so requests
+    that arrive through it carry X-Forwarded-Host = the Vercel origin (e.g.
+    synapse-one-blond.vercel.app). Deriving the OAuth redirect URI from that
+    host produces a callback URL the provider will reject with
+    redirect_uri_mismatch. Skip it and fall through to the backend's own
+    hostname (RENDER_EXTERNAL_HOSTNAME / env var) instead.
+    """
+    host = (host or "").strip().lower()
+    if not host:
+        return True
+    if host.endswith(".vercel.app") or host.endswith(".vercel.com"):
+        return True
+    frontend_host = urllib.parse.urlparse(FRONTEND_URL).netloc.lower()
+    return bool(frontend_host) and host == frontend_host
+
+
 def _google_redirect_uri(request=None) -> str:
     """
     Production-safe Google callback URL — mirrors _github_redirect_uri.
@@ -51,9 +71,9 @@ def _google_redirect_uri(request=None) -> str:
     Priority:
       1. Explicit GOOGLE_REDIRECT_URI env var (matches what you registered in
          the Google Cloud console as an Authorized redirect URI).
-      2. Derive from X-Forwarded-Host / Host headers (works on Render,
-         Vercel proxies, DuckDNS, or the future Oracle box) — bypasses
-         ALLOWED_HOSTS validation by building from the raw headers.
+      2. Derive from X-Forwarded-Host / Host headers — but SKIP frontend
+         proxy hosts (Vercel rewrites /api/* → backend, so the forwarded host
+         is the Vercel origin, not the backend).
       3. RENDER_EXTERNAL_HOSTNAME fallback.
     """
     env_uri = os.environ.get("GOOGLE_REDIRECT_URI", "").strip()
@@ -68,7 +88,12 @@ def _google_redirect_uri(request=None) -> str:
                 or ""
             )
             scheme = request.META.get("HTTP_X_FORWARDED_PROTO", "https")
-            if host and "localhost" not in host and "127.0.0.1" not in host:
+            if (
+                host
+                and "localhost" not in host
+                and "127.0.0.1" not in host
+                and not _is_frontend_proxy_host(host)
+            ):
                 return f"{scheme}://{host}/api/v1/auth/google/callback/"
         except Exception:
             pass

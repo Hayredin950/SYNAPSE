@@ -13,6 +13,7 @@ Best practices applied:
 """
 
 import os
+from urllib.parse import parse_qs, urlparse, urlunparse
 
 from .base import *  # noqa: F401, F403
 
@@ -194,8 +195,6 @@ PASSWORD_HASHERS = [
 # ── Database — parse DATABASE_URL for managed providers (Neon, Supabase, etc.) ─
 _database_url = os.environ.get("DATABASE_URL", "")
 if _database_url:
-    from urllib.parse import parse_qs, urlparse
-
     _parsed = urlparse(_database_url)
     DATABASES = {
         "default": {
@@ -220,10 +219,21 @@ else:
 # When using rediss:// URLs, Celery and django-redis need explicit SSL config.
 import ssl as _ssl  # noqa: E402
 
+
+# Normalize ANY redis/rediss URL to database 0 (Upstash free tier only
+# supports DB 0). MUST use urlparse: a naive rsplit("/", 1)[0] + "/0"
+# corrupts path-less URLs like rediss://user:pass@host:6379 into
+# "rediss://0" (the split lands on the "//"), which silently breaks
+# CELERY_BROKER_URL and makes every Celery .delay() raise — that turned
+# the GitHub OAuth callback into a 500.
+def _redis_db0(url: str) -> str:
+    _p = urlparse(url)
+    return urlunparse((_p.scheme, _p.netloc, "/0", "", "", ""))
+
+
 _redis_url = os.environ.get("REDIS_URL", "")
 if _redis_url.startswith("rediss://"):
-    # Upstash free tier only supports DB 0 — normalize all Redis URLs to /0
-    _redis_url_db0 = _redis_url.rsplit("/", 1)[0] + "/0"
+    _redis_url_db0 = _redis_db0(_redis_url)
     CELERY_BROKER_URL = _redis_url_db0
     CELERY_RESULT_BACKEND = _redis_url_db0
     # Also override env vars so Celery worker picks up the corrected URLs
@@ -244,7 +254,7 @@ else:
     for _env_key in ("CELERY_BROKER_URL", "CELERY_RESULT_BACKEND"):
         _val = os.environ.get(_env_key, "")
         if _val and _val.startswith("redis://") and not _val.endswith("/0"):
-            _val_db0 = _val.rsplit("/", 1)[0] + "/0"
+            _val_db0 = _redis_db0(_val)
             os.environ[_env_key] = _val_db0
             if _env_key == "CELERY_BROKER_URL":
                 CELERY_BROKER_URL = _val_db0

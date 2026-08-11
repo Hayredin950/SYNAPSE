@@ -118,10 +118,14 @@ services:
       # ── OAuth (Google + GitHub social login) ────────────────────────────────
       # GOOGLE_CLIENT_ID / SECRET: create a Web OAuth client in Google Cloud
       # Console with authorized JS origin https://synapse-one-blond.vercel.app
+      # and authorized redirect URI
+      # https://synapse-backend-z9bb.onrender.com/api/v1/auth/google/callback/
       # GITHUB_CLIENT_ID / SECRET: create an OAuth App in GitHub Developer
       # Settings; Authorization callback URL must match GITHUB_REDIRECT_URI.
-      # The code derives GITHUB_REDIRECT_URI from the request host if unset,
-      # but set it explicitly here for GitHub's app registration.
+      # The code derives the redirect URIs from the request host if unset
+      # (skipping the Vercel proxy host, falling back to
+      # RENDER_EXTERNAL_HOSTNAME) — set them explicitly only to pin a value
+      # (e.g. for the Oracle box behind DuckDNS).
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -129,6 +133,8 @@ services:
       - key: GITHUB_CLIENT_ID
         sync: false
       - key: GITHUB_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
         sync: false
       - key: GITHUB_REDIRECT_URI
         sync: false
