@@ -23,6 +23,10 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   github_token_failed:   'GitHub authentication failed. Please try again.',
   github_profile_failed: 'Could not fetch your GitHub profile. Please try again.',
   github_no_token:       'GitHub did not return an access token. Please try again.',
+  google_denied:         'Google access was denied. Please try again.',
+  google_no_email:       'Could not retrieve your Google email address.',
+  google_token_failed:   'Google authentication failed. Please try again.',
+  google_profile_failed: 'Could not fetch your Google profile. Please try again.',
 }
 
 function LoginContent() {

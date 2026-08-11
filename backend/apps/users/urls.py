@@ -2,7 +2,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from django.urls import path
 
-from . import github_views, mfa_views, onboarding_views, views
+from . import github_views, google_views, mfa_views, onboarding_views, views
 from .api_key_views import APIKeyListCreateView, APIKeyRevokeView
 
 urlpatterns = [
@@ -35,6 +35,10 @@ urlpatterns = [
     ),
     # ── Google OAuth ────────────────────────────────────────────────────────────
     path("google/", views.google_auth, name="google-auth"),
+    # Server-side redirect flow (no GSI client script needed — works on
+    # networks where accounts.google.com/gsi/client is blocked or dropped).
+    path("google/redirect/", google_views.google_auth_redirect, name="google-redirect"),
+    path("google/callback/", google_views.google_callback, name="google-callback"),
     # ── GitHub OAuth ────────────────────────────────────────────────────────────
     path("github/", github_views.github_auth, name="github-auth"),
     path("github/callback/", github_views.github_callback, name="github-callback"),
