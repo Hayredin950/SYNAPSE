@@ -22,7 +22,11 @@ class ArticleListView(ListAPIView):
     serializer_class = ArticleListSerializer
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["topic", "source__source_type"]
+    # NOTE: "topic" must NOT be in filterset_fields. DjangoFilterBackend would
+    # apply its own case-sensitive topic__exact on top of the case-insensitive
+    # alias filtering below and zero out the results. Topic filtering is fully
+    # handled in get_queryset().
+    filterset_fields = ["source__source_type"]
     search_fields = ["title", "summary", "author", "topic"]
     ordering_fields = ["published_at", "trending_score", "view_count", "scraped_at"]
     ordering = ["-published_at"]
