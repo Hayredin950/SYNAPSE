@@ -13,7 +13,7 @@ import { cn } from '@/utils/helpers';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { ScrollSentinel } from '@/components/ui/ScrollSentinel';
 
-const TOPICS = ['All', 'AI', 'Web Dev', 'Security', 'Cloud', 'Research', 'DevOps'];
+const TOPICS = ['All', 'AI', 'Web Dev', 'Security', 'Cloud', 'DevOps', 'Research', 'Programming', 'Open Source'];
 const SORT_OPTIONS = ['Latest', 'Trending'];
 
 // Poll every 15 s while any article is still missing a summary.

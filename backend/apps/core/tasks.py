@@ -366,6 +366,7 @@ def scrape_hackernews(
 
     try:
         from apps.articles.models import Article, Source
+        from apps.articles.topic_utils import classify_topic_keywords  # noqa: PLC0415
 
         # Get or create the HN source
         hn_source, _ = Source.objects.get_or_create(
@@ -433,7 +434,9 @@ def scrape_hackernews(
                             if item.get("time")
                             else None
                         ),
-                        "topic": "tech",
+                        # Meaningful topic (AI/Web Dev/Security/...) from the
+                        # title — free keyword classifier, makes feed filters work
+                        "topic": classify_topic_keywords(title),
                         "tags": ["hackernews", story_type],
                         "metadata": {
                             "hn_id": sid,

@@ -25,6 +25,8 @@ from typing import Dict, Optional
 
 from celery import shared_task
 
+from .topic_utils import classify_topic_keywords, is_meaningful_topic
+
 logger = logging.getLogger(__name__)
 
 # Sentinel value written to Article.summary when all summarization attempts fail.
@@ -241,7 +243,15 @@ def _run_nlp(text: str, title: str = "") -> Optional[object]:
 
         from ai_engine.nlp.pipeline import run_pipeline  # noqa: PLC0415
 
-        return run_pipeline(text=text, title=title)
+        # run_topic/run_summarization are handled locally by the article tasks
+        # (free keyword classifier / gated LLM) — skip the pipeline's own topic
+        # call, which uses the paid LLM in lite mode.
+        return run_pipeline(
+            text=text,
+            title=title,
+            run_topic=False,
+            run_summarization=False,
+        )
     except ImportError as exc:
         logger.error(
             "NLP pipeline import failed (is ai_engine on PYTHONPATH?): %s", exc
@@ -327,6 +337,10 @@ def process_article_nlp(self, article_id: str) -> Dict:
                 "reason": result.skip_reason,
                 "article_id": article_id,
             }
+
+        # Local (free) topic classification — canonical pill vocabulary, no LLM.
+        result.topic = classify_topic_keywords(title, text)
+        result.topic_confidence = 0.9
 
         # Persist extracted fields
         update_fields = ["updated_at"]
@@ -714,6 +728,18 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
             if structured:
                 meta["excerpt_structured"] = structured
             article.metadata = meta
+
+            # Meaningful topic for free: classify from the fetched content.
+            # Only upgrades generic topics (tech/Technology/empty) so real
+            # topics set elsewhere are preserved.
+            save_fields = ["metadata", "updated_at"]
+            topic_text = structured or excerpt
+            new_topic = classify_topic_keywords(article.title or "", topic_text)
+            if is_meaningful_topic(new_topic) and not is_meaningful_topic(
+                article.topic or ""
+            ):
+                article.topic = new_topic
+                save_fields.append("topic")
             # Sanitise metadata — remove null bytes and invalid Unicode
             # that PostgreSQL JSON rejects.
             try:
@@ -727,14 +753,15 @@ def fetch_article_excerpt(self, article_id: str) -> dict:
                 article.metadata = _json.loads(raw)
             except Exception:
                 article.metadata = {}
-            article.save(update_fields=["metadata", "updated_at"])
+            article.save(update_fields=save_fields)
             logger.info(
                 "[%s] fetch_article_excerpt: saved %d chars (structured=%d) "
-                "for article %s",
+                "for article %s topic=%s",
                 task_id,
                 len(structured or excerpt),
                 len(structured),
                 article_id,
+                article.topic or "",
             )
             return {
                 "status": "success",

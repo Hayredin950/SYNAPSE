@@ -38,10 +38,14 @@ class ArticleListView(ListAPIView):
         tag = self.request.GET.get("tag")
         if tag:
             qs = qs.filter(tags__icontains=tag)
-        # Topic filtering
+        # Topic filtering — canonical pill values plus synonyms, so legacy
+        # stored topics (e.g. "Artificial Intelligence") still match "AI".
         topic = self.request.GET.get("topic")
         if topic and topic != "All":
-            qs = qs.filter(topic__iexact=topic)
+            from .topic_utils import TOPIC_ALIASES  # noqa: PLC0415
+
+            aliases = TOPIC_ALIASES.get(topic.lower(), [topic])
+            qs = qs.filter(topic__in=aliases)
         # Full-text search
         q = self.request.GET.get("q", "").strip()
         if q:

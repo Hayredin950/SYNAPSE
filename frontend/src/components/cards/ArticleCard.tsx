@@ -62,6 +62,18 @@ interface ArticleCardProps {
   onBookmark?: (id: string) => void;
 }
 
+const TOPIC_STYLES: Record<string, string> = {
+  'AI':          'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-700/40',
+  'Web Dev':     'bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300 border-cyan-200 dark:border-cyan-700/40',
+  'Security':    'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700/40',
+  'Cloud':       'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-700/40',
+  'DevOps':      'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/40',
+  'Research':    'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-700/40',
+  'Programming': 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/40',
+  'Open Source': 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700/40',
+  default:       'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-600/50',
+};
+
 const getSourceColor = (sourceType: string) => {
   const colors: Record<string, string> = {
     hackernews: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-800/40',
@@ -109,12 +121,20 @@ export const ArticleCard = memo(function ArticleCard({ article }: ArticleCardPro
       {/* Subtle gradient accent top bar */}
       <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity rounded-t-2xl" />
 
-      {/* Top row: timestamp only */}
-      <div className="flex items-center justify-start gap-2 mb-3">
+      {/* Top row: timestamp + meaningful topic badge */}
+      <div className="flex items-center justify-start gap-2 mb-3 flex-wrap">
         <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0">
           <Clock size={11} />
           {formatRelativeTime(article.scraped_at)}
         </span>
+        {article.topic && article.topic !== 'tech' && article.topic !== 'Technology' && (
+          <span className={cn(
+            'text-[10px] px-2 py-0.5 rounded-full font-semibold border whitespace-nowrap',
+            TOPIC_STYLES[article.topic] || TOPIC_STYLES.default
+          )}>
+            {article.topic}
+          </span>
+        )}
       </div>
 
       {/* Title */}
