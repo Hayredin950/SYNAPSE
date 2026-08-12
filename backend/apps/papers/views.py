@@ -48,13 +48,18 @@ class PaperListView(generics.ListAPIView):
     ordering = ["-fetched_at"]
 
     def get_queryset(self):
-        pass
-
         qs = ResearchPaper.objects.all()
         # ── Saved feed: only filter to bookmarked papers when ?saved=1 ──
         saved = self.request.GET.get("saved") == "1"
         if saved and self.request.user and self.request.user.is_authenticated:
             qs = qs.filter(user_papers__user=self.request.user)
+        # ── Personalized feed: ?for_you=1 filters by interest slugs ──
+        if self.request.GET.get("for_you") == "1":
+            from apps.users.interests import apply_for_you_filter  # noqa: PLC0415
+
+            qs = apply_for_you_filter(
+                qs, self.request, text_fields=("title", "abstract"), topic_field=None
+            )
         return qs
 
 

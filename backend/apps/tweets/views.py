@@ -38,6 +38,13 @@ class TweetListView(ListAPIView):
         saved = self.request.GET.get("saved", "").lower() in ("true", "1")
         if saved and self.request.user and self.request.user.is_authenticated:
             qs = qs.filter(user_tweets__user=self.request.user)
+        # ── Personalized feed: ?for_you=1 filters by interest slugs ──
+        if self.request.GET.get("for_you") == "1":
+            from apps.users.interests import apply_for_you_filter  # noqa: PLC0415
+
+            qs = apply_for_you_filter(
+                qs, self.request, text_fields=("text",), topic_field=None
+            )
         tag = self.request.GET.get("tag")
         if tag:
             qs = qs.filter(hashtags__icontains=tag)

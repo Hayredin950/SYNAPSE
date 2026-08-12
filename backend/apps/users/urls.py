@@ -15,6 +15,7 @@ urlpatterns = [
     path("token/refresh/", TokenRefreshView.as_view(), name="auth-token-refresh"),
     path("me/", views.MeView.as_view(), name="auth-me"),
     path("me/preferences/", views.update_preferences, name="auth-preferences"),
+    path("me/interests/", views.interest_profile, name="auth-interest-profile"),
     path("me/digest/", views.digest_preferences, name="auth-digest"),
     path("ai-keys/", views.ai_keys_view, name="user-ai-keys"),
     # ── Password Reset ──────────────────────────────────────────────────────────

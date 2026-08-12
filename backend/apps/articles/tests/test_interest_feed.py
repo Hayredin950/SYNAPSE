@@ -253,3 +253,74 @@ class TestInterestFeedFiltering(TestCase):
             self.assertIn(
                 "security", topic, f"Expected only security articles: {topic}"
             )
+
+    # ── Production interest slugs (onboarding stores ai_ml, web_dev, ...) ────
+
+    def test_for_you_filters_by_production_slugs(self):
+        """
+        REGRESSION: the onboarding wizard stores interest SLUGS ("ai_ml",
+        "web_dev") — the old filter searched title__icontains="ai_ml" which
+        never matched, so EVERY user silently got the identical unfiltered
+        feed. Slugs must map to real topics/keywords.
+        """
+        user = _make_user()
+        _make_onboarding_prefs(user, interests=["ai_ml"], completed=True)
+        self.client.force_authenticate(user=user)
+
+        resp = self.client.get("/api/v1/articles/?for_you=1")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.data.get("data", resp.data.get("results", []))
+        titles = [a.get("title", "").lower() for a in data]
+
+        # The AI articles must be present and no security-only article leaks in
+        self.assertTrue(
+            any("gpt" in t for t in titles), f"Missing AI article: {titles}"
+        )
+        self.assertTrue(
+            any("transformers" in t for t in titles),
+            f"Missing AI article: {titles}",
+        )
+        self.assertFalse(
+            any("cve" in t for t in titles),
+            f"Security article leaked into ai_ml feed: {titles}",
+        )
+
+    def test_for_you_webdev_slug_filters(self):
+        """User with web_dev slug sees web articles, not AI/security ones."""
+        user = _make_user()
+        _make_onboarding_prefs(user, interests=["web_dev"], completed=True)
+        self.client.force_authenticate(user=user)
+
+        resp = self.client.get("/api/v1/articles/?for_you=1")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.data.get("data", resp.data.get("results", []))
+        titles = [a.get("title", "").lower() for a in data]
+
+        self.assertTrue(
+            any("react" in t for t in titles), f"Missing web article: {titles}"
+        )
+        self.assertFalse(
+            any("cve" in t for t in titles),
+            f"Security article leaked into web_dev feed: {titles}",
+        )
+
+    def test_for_you_uses_interest_profile_builder_topics(self):
+        """
+        InterestProfileBuilder topic ids ("ai", "web", "rust", ...) must also
+        personalize the feed — they are mirrored into onboarding slugs.
+        """
+        user = _make_user()
+        _make_onboarding_prefs(user, interests=[], completed=True)
+        # Simulate what PUT /users/me/interests/ stores
+        user.preferences = {"interest_profile": {"topics": ["ai"]}}
+        user.save(update_fields=["preferences"])
+        self.client.force_authenticate(user=user)
+
+        resp = self.client.get("/api/v1/articles/?for_you=1")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        data = resp.data.get("data", resp.data.get("results", []))
+        titles = [a.get("title", "").lower() for a in data]
+
+        self.assertTrue(
+            any("gpt" in t for t in titles), f"Missing AI article: {titles}"
+        )

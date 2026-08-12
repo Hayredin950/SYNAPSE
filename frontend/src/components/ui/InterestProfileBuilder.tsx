@@ -74,6 +74,16 @@ export function InterestProfileBuilder({ onClose }: { onClose?: () => void }) {
     const profile = { topics: [...selected], experience: expLevel, goals: [...goals], version: 1 }
     localStorage.setItem('synapse_interest_profile', JSON.stringify(profile))
     localStorage.setItem('synapse_profile_built', '1')
+    // Persist to the backend so the For You feed, home sections and daily
+    // briefings actually personalize — localStorage alone never reached the
+    // server, so the old modal was cosmetic.
+    try {
+      import('@/utils/api').then(({ api }) => {
+        api.put('/users/me/interests/', profile).catch(() => {})
+      })
+    } catch {
+      // offline-tolerant — the profile stays in localStorage
+    }
     setDone(true)
     setTimeout(() => onClose?.(), 2000)
   }

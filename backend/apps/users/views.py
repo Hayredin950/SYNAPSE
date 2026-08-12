@@ -259,6 +259,72 @@ def update_preferences(request):
     return Response({"success": True, "data": serializer.data})
 
 
+@api_view(["GET", "PUT"])
+@permission_classes([IsAuthenticated])
+def interest_profile(request):
+    """
+    GET /api/v1/users/me/interests/   — current interest profile
+    PUT /api/v1/users/me/interests/   — save InterestProfileBuilder answers
+
+    Body: {"topics": ["ai", "web", ...], "experience": "mid", "goals": ["learn"]}
+
+    Stores the profile under user.preferences["interest_profile"] (merged — never
+    wipes API keys etc. stored in the same JSON field) and mirrors the topic ids
+    into OnboardingPreferences.interests so the "For You" feed, home sections and
+    daily briefings personalize immediately.
+    """
+    if request.method == "GET":
+        prefs = getattr(request.user, "preferences", {}) or {}
+        return Response({"success": True, "data": prefs.get("interest_profile", {})})
+
+    from apps.users.interests import normalize_interest  # noqa: PLC0415
+
+    topics = request.data.get("topics", [])
+    if not isinstance(topics, list) or not topics:
+        return Response(
+            {"success": False, "error": "topics must be a non-empty list."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    experience = str(request.data.get("experience", "") or "")[:30]
+    goals = request.data.get("goals", []) or []
+    if not isinstance(goals, list):
+        goals = []
+    goals = [str(g)[:50] for g in goals[:10]]
+
+    profile = {
+        "topics": [str(t)[:30] for t in topics[:15]],
+        "experience": experience,
+        "goals": goals,
+        "version": 1,
+    }
+
+    # Merge into preferences without clobbering API keys etc.
+    prefs = getattr(request.user, "preferences", None) or {}
+    if not isinstance(prefs, dict):
+        prefs = {}
+    prefs["interest_profile"] = profile
+    request.user.preferences = prefs
+    request.user.save(update_fields=["preferences"])
+
+    # Mirror to OnboardingPreferences.interests so feed filters pick them up.
+    try:
+        from apps.users.models import OnboardingPreferences  # noqa: PLC0415
+
+        ob_prefs, _ = OnboardingPreferences.objects.get_or_create(user=request.user)
+        merged = list(ob_prefs.interests or [])
+        for t in topics:
+            slug = normalize_interest(t)
+            if slug and slug not in merged:
+                merged.append(slug)
+        ob_prefs.interests = merged
+        ob_prefs.save(update_fields=["interests", "updated_at"])
+    except Exception:
+        pass  # non-critical — the preferences profile is the source of truth
+
+    return Response({"success": True, "data": profile})
+
+
 @api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def ai_keys_view(request):

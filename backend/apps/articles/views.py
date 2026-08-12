@@ -64,27 +64,24 @@ class ArticleListView(ListAPIView):
                 | Q(author__icontains=q)
                 | Q(topic__icontains=q)
             )
-        # Interest-based filtering: applied when ?for_you=1 and user has onboarding prefs
+        # Interest-based filtering: applied when ?for_you=1 and the user has
+        # personalization data (onboarding interests and/or InterestProfileBuilder
+        # topics). Slugs are mapped to real topics/keywords via the shared map —
+        # searching for the raw slug (e.g. title__icontains="ai_ml") never matched
+        # anything, so every user silently got the same unfiltered feed.
         for_you = self.request.GET.get("for_you") == "1"
         if for_you and self.request.user and self.request.user.is_authenticated:
             try:
-                from apps.users.models import OnboardingPreferences
-
-                prefs = OnboardingPreferences.objects.get(
-                    user=self.request.user, completed=True
+                from apps.users.interests import (  # noqa: PLC0415
+                    build_interest_q,
+                    user_interest_slugs,
                 )
-                interests = (
-                    prefs.interests
-                )  # list of topic strings e.g. ["AI", "Python"]
+
+                interests = user_interest_slugs(self.request.user)
                 if interests:
-                    # Match by title, summary, topic, or tags — since HN articles
-                    # all have generic topic="tech", title-matching is most effective.
-                    interest_q = Q()
-                    for interest in interests:
-                        interest_q |= Q(title__icontains=interest)
-                        interest_q |= Q(summary__icontains=interest)
-                        interest_q |= Q(topic__icontains=interest)
-                        interest_q |= Q(tags__icontains=interest.lower())
+                    interest_q = build_interest_q(
+                        interests, text_fields=("title", "summary", "content")
+                    )
                     personalized = qs.filter(interest_q)
                     # Only apply filter if it returns results — otherwise fall back to all
                     if personalized.exists():

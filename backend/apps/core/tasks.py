@@ -1793,21 +1793,48 @@ def generate_daily_briefings(self) -> Dict:
             continue
 
         try:
-            # ── gather recent content ────────────────────────────────────
-            articles = list(
-                Article.objects.filter(scraped_at__gte=cutoff)
-                .order_by("-scraped_at")
-                .values("title", "url", "summary")[:10]
+            # ── gather recent content (personalized per user) ────────────
+            # Each user's briefing is built from content linked to them by
+            # their own workflows/scrapes, falling back to their interest
+            # keywords, and finally to the global recent feed when they have
+            # no personalization data yet — so no two users get identical
+            # briefings, and new users still get a useful one.
+            from apps.users.interests import (  # noqa: PLC0415
+                apply_for_you_filter,
             )
-            papers = list(
-                ResearchPaper.objects.filter(fetched_at__gte=cutoff)
-                .order_by("-fetched_at")
-                .values("title", "url", "abstract")[:5]
+
+            articles_qs = Article.objects.filter(scraped_at__gte=cutoff).order_by(
+                "-scraped_at"
+            )
+            articles_qs = apply_for_you_filter(
+                articles_qs,
+                user=user,
+                text_fields=("title", "summary", "content"),
+            )
+            articles = list(articles_qs.values("title", "url", "summary")[:10])
+
+            papers_qs = ResearchPaper.objects.filter(fetched_at__gte=cutoff).order_by(
+                "-fetched_at"
+            )
+            papers_qs = apply_for_you_filter(
+                papers_qs,
+                user=user,
+                text_fields=("title", "abstract"),
+                topic_field=None,
+            )
+            papers = list(papers_qs.values("title", "url", "abstract")[:5])
+
+            repos_qs = Repository.objects.filter(scraped_at__gte=cutoff).order_by(
+                "-stars"
+            )
+            repos_qs = apply_for_you_filter(
+                repos_qs,
+                user=user,
+                text_fields=("full_name", "description"),
+                topic_field=None,
             )
             repos = list(
-                Repository.objects.filter(scraped_at__gte=cutoff)
-                .order_by("-stars")
-                .values("full_name", "url", "description", "stars")[:5]
+                repos_qs.values("full_name", "url", "description", "stars")[:5]
             )
 
             sources: list = []

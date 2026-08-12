@@ -326,9 +326,14 @@ export default function Dashboard() {
 
   // Latest content for the home sections — ordered by scraped_at so newly
   // fetched items always appear at the top immediately after a workflow run.
+  // for_you=1 makes every section personalized to the user's interest slugs
+  // (falling back to the global feed when they have no profile yet), so two
+  // users no longer see identical dashboards.
+  const personalParams = { for_you: 1 };
+
   const { data: articles, isLoading: articlesLoading } = useQuery({
     queryKey: ['articles', 'home'],
-    queryFn: () => api.get('/articles/', { params: { page_size: 12, ordering: '-scraped_at' } }).then(r => r.data),
+    queryFn: () => api.get('/articles/', { params: { page_size: 12, ordering: '-scraped_at', ...personalParams } }).then(r => r.data),
     staleTime: 2 * 60_000,     // 2 min — don't re-fetch constantly
     gcTime:   10 * 60_000,
     refetchOnMount: 'always',  // every visit gets fresh counts, never stale
@@ -336,7 +341,7 @@ export default function Dashboard() {
 
   const { data: repos, isLoading: reposLoading } = useQuery({
     queryKey: ['repos', 'home'],
-    queryFn: () => api.get('/repos/', { params: { page_size: 3, ordering: '-scraped_at' } }).then(r => r.data),
+    queryFn: () => api.get('/repos/', { params: { page_size: 3, ordering: '-scraped_at', ...personalParams } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
     refetchOnMount: 'always',
@@ -344,7 +349,7 @@ export default function Dashboard() {
 
   const { data: papers, isLoading: papersLoading } = useQuery({
     queryKey: ['papers', 'home'],
-    queryFn: () => api.get('/papers/', { params: { page_size: 10, ordering: '-fetched_at' } }).then(r => r.data),
+    queryFn: () => api.get('/papers/', { params: { page_size: 10, ordering: '-fetched_at', ...personalParams } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
     refetchOnMount: 'always',
@@ -352,7 +357,7 @@ export default function Dashboard() {
 
   const { data: videosData, isLoading: videosLoading } = useQuery({
     queryKey: ['videos', 'home'],
-    queryFn: () => api.get('/videos/', { params: { page_size: 12, ordering: '-fetched_at' } }).then(r => r.data),
+    queryFn: () => api.get('/videos/', { params: { page_size: 12, ordering: '-fetched_at', ...personalParams } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
     refetchOnMount: 'always',
@@ -360,7 +365,7 @@ export default function Dashboard() {
 
   const { data: tweetsData, isLoading: tweetsLoading } = useQuery({
     queryKey: ['tweets', 'home'],
-    queryFn: () => api.get('/tweets/', { params: { page_size: 12, ordering: '-scraped_at' } }).then(r => r.data),
+    queryFn: () => api.get('/tweets/', { params: { page_size: 12, ordering: '-scraped_at', ...personalParams } }).then(r => r.data),
     staleTime: 2 * 60_000,
     gcTime:   10 * 60_000,
     refetchOnMount: 'always',

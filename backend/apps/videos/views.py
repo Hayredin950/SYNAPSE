@@ -31,6 +31,13 @@ class VideoListView(generics.ListAPIView):
         saved = self.request.query_params.get("saved", "").lower() in ("true", "1")
         if saved and self.request.user and self.request.user.is_authenticated:
             qs = qs.filter(user_videos__user=self.request.user)
+        # ── Personalized feed: ?for_you=1 filters by interest slugs ──
+        if self.request.query_params.get("for_you") == "1":
+            from apps.users.interests import apply_for_you_filter  # noqa: PLC0415
+
+            qs = apply_for_you_filter(
+                qs, self.request, text_fields=("title", "description"), topic_field=None
+            )
         return qs
 
 
