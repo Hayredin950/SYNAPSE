@@ -13,6 +13,8 @@
  *                                 after signup/login succeeds, then clears it.
  */
 
+import api from '@/utils/api'
+
 const PENDING_REF_KEY = 'synapse_pending_ref'
 
 /** Store a referral code so it can be applied after signup completes. */
@@ -47,22 +49,34 @@ export function withReferralParam(url: string): string {
 /**
  * Apply the pending referral code to the authenticated user.
  * Best-effort: failures are silent — a wrong/expired code must never block
- * the user's first-run experience. Clears the stash once applied.
+ * the user's first-run experience.
+ *
+ * Clears the stash only on a definitive 4xx (invalid / already-used code,
+ * or not authenticated yet) so a transient network blip doesn't permanently
+ * lose the referral — it will be retried on the next login/signup.
  */
 export async function applyPendingReferral(): Promise<void> {
   const code = getPendingReferralCode()
   if (!code) return
 
   try {
-    const { api } = await import('@/utils/api')
     await api.post('/growth/referral/', { code })
-  } catch {
-    // Referral bonus is a nice-to-have — never surface an error for it.
-  } finally {
-    try {
-      localStorage.removeItem(PENDING_REF_KEY)
-    } catch {
-      /* ignore */
+    clearStash()
+  } catch (err) {
+    const status = (err as { response?: { status?: number } })?.response?.status
+    // A 400 means the code itself was rejected (invalid or already used) —
+    // stop retrying. 401 (auth hiccup), 5xx and network errors keep the stash
+    // so the referral is retried on the next successful sign-in.
+    if (status === 400) {
+      clearStash()
     }
+  }
+}
+
+function clearStash(): void {
+  try {
+    localStorage.removeItem(PENDING_REF_KEY)
+  } catch {
+    /* ignore */
   }
 }
