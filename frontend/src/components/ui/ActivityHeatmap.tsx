@@ -6,7 +6,7 @@ import { api } from '@/utils/api'
 import { cn } from '@/utils/helpers'
 import { Flame } from 'lucide-react'
 
-const WEEKS = 16
+const WEEKS = 26
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', '']
 
 function getColor(count: number): string {
@@ -97,7 +97,7 @@ export function ActivityHeatmap() {
     return (
       <div className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-5 animate-pulse">
         <div className="h-4 w-40 bg-slate-200 dark:bg-slate-700 rounded mb-4" />
-        <div className="h-24 bg-slate-100 dark:bg-slate-700/50 rounded-xl" />
+        <div className="h-28 bg-slate-100 dark:bg-slate-700/50 rounded-xl" />
       </div>
     )
   }
@@ -123,7 +123,7 @@ export function ActivityHeatmap() {
       </div>
 
       {/* Grid */}
-      <div className="flex gap-1">
+      <div className="flex gap-1 justify-center">
         {/* Day labels */}
         <div className="flex flex-col gap-1 mr-1 justify-around">
           {DAY_LABELS.map((label, i) => (
@@ -133,12 +133,14 @@ export function ActivityHeatmap() {
           ))}
         </div>
 
-        {/* Heatmap cells */}
+        {/* Heatmap cells — fixed-size GitHub-style squares that scale with
+            the viewport but stay capped, so the graph stays compact on any
+            screen instead of ballooning to fill the width. */}
         <div
-          className="grid gap-1 flex-1"
+          className="grid gap-1"
           style={{
-            gridTemplateColumns: `repeat(${WEEKS}, minmax(0, 1fr))`,
-            gridTemplateRows:    'repeat(7, minmax(0, 1fr))',
+            gridTemplateColumns: `repeat(${WEEKS}, clamp(8px, 1.4vw, 16px))`,
+            gridTemplateRows:    'repeat(7, clamp(8px, 1.4vw, 16px))',
           }}
         >
           {grid.map(cell => (
@@ -146,7 +148,7 @@ export function ActivityHeatmap() {
               key={cell.date}
               title={`${cell.date}: ${cell.count} item${cell.count !== 1 ? 's' : ''}`}
               className={cn(
-                'aspect-square rounded-[3px] cursor-default transition-colors',
+                'rounded-[3px] cursor-default transition-colors',
                 getColor(cell.count)
               )}
               style={{ gridColumn: cell.col + 1, gridRow: cell.row + 1 }}
