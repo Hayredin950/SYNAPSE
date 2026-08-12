@@ -371,12 +371,31 @@ export default function Dashboard() {
     refetchOnMount: 'always',
   });
 
-  // Derive counts from content queries — no extra network requests needed
-  const articleCount = articles;
-  const paperCount   = papers;
-  const repoCount    = repos;
-  const videoCount   = videosData;
-  const tweetCount   = tweetsData;
+  // Global catalog counts for the stat cards (the personal lists above are
+  // filtered to the user's interests, so their meta.total would show a small
+  // personalized number next to a "View all" link pointing at the global
+  // feed — confusing. These stay global and are only used for the cards.)
+  const { data: globalCounts } = useQuery({
+    queryKey: ['home', 'global-counts'],
+    queryFn: async () => {
+      const [a, r, p, v, t] = await Promise.all([
+        api.get('/articles/', { params: { page_size: 1 } }),
+        api.get('/repos/', { params: { page_size: 1 } }),
+        api.get('/papers/', { params: { page_size: 1 } }),
+        api.get('/videos/', { params: { page_size: 1 } }),
+        api.get('/tweets/', { params: { page_size: 1 } }),
+      ])
+      return {
+        articles: a.data?.meta?.total ?? 0,
+        repos: r.data?.meta?.total ?? 0,
+        papers: p.data?.meta?.total ?? 0,
+        videos: v.data?.meta?.total ?? 0,
+        tweets: t.data?.meta?.total ?? 0,
+      }
+    },
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
+  });
 
   const extractList = (d: any, n: number) =>
     Array.isArray(d?.results) ? d.results.slice(0, n)
@@ -435,11 +454,11 @@ export default function Dashboard() {
 
           {/* ── Stats Row ─────────────────────────────────────────── */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <StatCard icon={BarChart3} label="Articles"      value={articleCount?.meta?.total ?? 0} gradient="bg-gradient-to-br from-indigo-500 to-indigo-700"  href="/feed"     />
-            <StatCard icon={BookOpen}  label="Papers"        value={paperCount?.meta?.total ?? 0}   gradient="bg-gradient-to-br from-violet-500 to-violet-700"   href="/research" />
-            <StatCard icon={GitBranch} label="Repositories"  value={repoCount?.meta?.total ?? 0}    gradient="bg-gradient-to-br from-emerald-500 to-emerald-700" href="/github"   />
-            <StatCard icon={Youtube}   label="Videos"        value={videoCount?.meta?.total ?? 0}   gradient="bg-gradient-to-br from-red-500 to-red-700"         href="/videos"   />
-            <StatCard icon={Twitter}   label="Tweets"        value={tweetCount?.meta?.total ?? 0}   gradient="bg-gradient-to-br from-sky-500 to-sky-700"         href="/tweets"   />
+            <StatCard icon={BarChart3} label="Articles"      value={globalCounts?.articles ?? 0} gradient="bg-gradient-to-br from-indigo-500 to-indigo-700"  href="/feed"     />
+            <StatCard icon={BookOpen}  label="Papers"        value={globalCounts?.papers ?? 0}   gradient="bg-gradient-to-br from-violet-500 to-violet-700"   href="/research" />
+            <StatCard icon={GitBranch} label="Repositories"  value={globalCounts?.repos ?? 0}    gradient="bg-gradient-to-br from-emerald-500 to-emerald-700" href="/github"   />
+            <StatCard icon={Youtube}   label="Videos"        value={globalCounts?.videos ?? 0}   gradient="bg-gradient-to-br from-red-500 to-red-700"         href="/videos"   />
+            <StatCard icon={Twitter}   label="Tweets"        value={globalCounts?.tweets ?? 0}   gradient="bg-gradient-to-br from-sky-500 to-sky-700"         href="/tweets"   />
           </div>
 
           {/* ── Latest Articles + GitHub ───────────────────────────── */}

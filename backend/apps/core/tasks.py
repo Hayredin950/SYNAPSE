@@ -1782,9 +1782,11 @@ def generate_daily_briefings(self) -> Dict:
 
     cutoff = tz.now() - timedelta(hours=24)
     today = tz.localdate()
-    users = User.objects.filter(is_active=True).only("id", "email", "first_name")
+    users = User.objects.filter(is_active=True).select_related("onboarding_prefs")
     created = 0
     skipped = 0
+
+    from apps.users.interests import apply_for_you_filter  # noqa: PLC0415
 
     for user in users:
         # Skip if briefing already exists for today
@@ -1799,10 +1801,6 @@ def generate_daily_briefings(self) -> Dict:
             # keywords, and finally to the global recent feed when they have
             # no personalization data yet — so no two users get identical
             # briefings, and new users still get a useful one.
-            from apps.users.interests import (  # noqa: PLC0415
-                apply_for_you_filter,
-            )
-
             articles_qs = Article.objects.filter(scraped_at__gte=cutoff).order_by(
                 "-scraped_at"
             )

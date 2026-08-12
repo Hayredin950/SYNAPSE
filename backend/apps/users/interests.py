@@ -350,7 +350,7 @@ def apply_for_you_filter(
     Args:
         qs:           base queryset
         request:      optional DRF request — enables the ?for_you=1 gate
-        text_fields:  model fields to run keyword icontains matches on
+        text_fields:  model fields to run keyword matches on
         topic_field:  name of a simple topic string field, or None if the
                       model has no such field (JSON arrays, etc.)
         user:         explicit user (used when there is no request, e.g. tasks)
@@ -400,18 +400,25 @@ def build_interest_q(
     Matching strategy per slug:
       1. Canonical topic match (topic__iexact via TOPIC_ALIASES) — precise and
          fast, e.g. "AI" matches stored topic "AI".
-      2. Keyword phrases via case-insensitive icontains on the given text
-         fields (title/summary/...) plus the tags field if present.
+      2. Keyword phrases via word-boundary case-insensitive regex on the given
+         text fields. Boundaries matter: a plain icontains for short keywords
+         like "rag" / "ui" / "api" / "git" matches unrelated words
+         ("storage", "equipment", "capital", "digit"), which would flood the
+         personalized feed with false positives. `\b…\b` keeps matches
+         meaningful ("react" still matches "React" / "react-hooks").
 
     Args:
         slugs:        canonical interest slugs (or raw ids — normalized here).
-        text_fields:  model fields to run icontains keyword matches on
+        text_fields:  model fields to run keyword matches on
                       (e.g. ("title", "summary")).
-        topic_field:  name of the topic field ("topic" for articles).
+        topic_field:  name of the topic field ("topic" for articles), or None
+                      for models without a simple topic field.
 
     Returns:
         django.db.models.Q — empty Q() (matches nothing) when no slugs given.
     """
+    import re  # noqa: PLC0415
+
     from apps.articles.topic_utils import TOPIC_ALIASES  # noqa: PLC0415
 
     from django.db.models import Q  # noqa: PLC0415
@@ -429,9 +436,13 @@ def build_interest_q(
                 for alias in aliases:
                     combined |= Q(**{f"{topic_field}__iexact": alias})
 
-        # 2. Keyword phrase matches across text fields
-        for kw in INTEREST_KEYWORDS.get(slug, []):
-            for field in text_fields:
-                combined |= Q(**{f"{field}__icontains": kw})
+        # 2. Keyword phrase matches — one word-boundary regex per field
+        #    (far fewer OR branches than per-keyword icontains).
+        keywords = [k for k in INTEREST_KEYWORDS.get(slug, []) if k]
+        if not keywords:
+            continue
+        pattern = r"\b(?:{})\b".format("|".join(re.escape(k) for k in keywords))
+        for field in text_fields:
+            combined |= Q(**{f"{field}__iregex": pattern})
 
     return combined
