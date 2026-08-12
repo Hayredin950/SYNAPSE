@@ -470,11 +470,11 @@ export default function Dashboard() {
               <SectionHeader title="Latest from Tech Feed" subtitle="Curated articles from around the web" href="/feed" />
               {articlesLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Array.from({ length: 8 }).map((_, i) => <ArticleSkeleton key={i} />)}
+                  {Array.from({ length: 6 }).map((_, i) => <ArticleSkeleton key={i} />)}
                 </div>
               ) : trendingArticles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {trendingArticles.slice(0, 8).map((article: any) => (
+                  {trendingArticles.slice(0, 6).map((article: any) => (
                     <ArticleCard key={article.id} article={article} />
                   ))}
                 </div>
@@ -505,13 +505,11 @@ export default function Dashboard() {
 
               {/* ── Reading Goals Widget ─────────────────────────────── */}
               <ReadingGoals />
-
-              {/* ── What My Network Is Reading ───────────────────────── */}
-              <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
-                <NetworkReading />
-              </div>
             </div>
           </div>
+
+          {/* ── Trending in Community — full-width strip ─────────────── */}
+          <NetworkReading />
 
           {/* ── Videos ───────────────────────────────────────────── */}
           <div className="flex flex-col gap-4">
