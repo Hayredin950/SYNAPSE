@@ -10,6 +10,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { LogoMark } from '@/components/ui/Logo';
 import Link from 'next/link';
 import { Building2, CheckCircle, XCircle, Loader2, LogIn } from 'lucide-react';
 import { api } from '@/utils/api';
@@ -95,9 +96,7 @@ export default function InviteAcceptPage() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 max-w-sm w-full">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg">
-            <span className="text-white font-black text-lg">S</span>
-          </div>
+          <LogoMark size={48} className="rounded-xl shadow-lg" />
         </div>
 
         {/* Content */}

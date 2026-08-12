@@ -3,7 +3,7 @@
  * No sidebar, no navbar, just centered content on a gradient background.
  */
 import type { Metadata } from 'next';
-import Image from 'next/image';
+import { LogoMark } from '@/components/ui/Logo';
 
 export const metadata: Metadata = {
   title: 'Welcome to SYNAPSE',
@@ -17,14 +17,7 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-block mb-3">
-            <Image
-              src="/icons/logo.png"
-              alt="SYNAPSE"
-              width={48}
-              height={48}
-              priority
-              className="rounded-xl shadow-lg shadow-indigo-500/30"
-            />
+            <LogoMark size={48} className="rounded-xl shadow-lg shadow-indigo-500/30" priority />
           </div>
           <span className="text-3xl font-black tracking-tight bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
             SYNAPSE
