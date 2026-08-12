@@ -32,7 +32,7 @@ export function NetworkReading() {
   const articles: NetworkArticle[] = Array.isArray(data) ? data : []
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col h-full space-y-3">
       <div className="flex items-center gap-2">
         <Users size={16} className="text-indigo-500" />
         <h3 className="font-semibold text-sm text-slate-700 dark:text-slate-200">Trending in Community</h3>
@@ -40,11 +40,11 @@ export function NetworkReading() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 py-4 text-sm text-slate-400">
+        <div className="flex-1 flex items-center justify-center gap-2 py-4 text-sm text-slate-400">
           <Loader2 size={14} className="animate-spin" /> Loading…
         </div>
       ) : articles.length === 0 ? (
-        <p className="text-sm text-slate-400 py-4 text-center">No trending content yet. Upvote articles to show them here!</p>
+        <p className="flex-1 flex items-center justify-center text-sm text-slate-400 py-4 text-center">No trending content yet. Upvote articles to show them here!</p>
       ) : (
         <div className="space-y-2">
           {articles.slice(0, 8).map((a, i) => (

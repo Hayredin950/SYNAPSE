@@ -470,11 +470,11 @@ export default function Dashboard() {
               <SectionHeader title="Latest from Tech Feed" subtitle="Curated articles from around the web" href="/feed" />
               {articlesLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => <ArticleSkeleton key={i} />)}
+                  {Array.from({ length: 8 }).map((_, i) => <ArticleSkeleton key={i} />)}
                 </div>
               ) : trendingArticles.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {trendingArticles.slice(0, 6).map((article: any) => (
+                  {trendingArticles.slice(0, 8).map((article: any) => (
                     <ArticleCard key={article.id} article={article} />
                   ))}
                 </div>
