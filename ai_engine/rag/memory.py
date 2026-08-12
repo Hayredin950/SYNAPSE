@@ -78,20 +78,33 @@ def _get_redis_client() -> redis.Redis:
     """
     Return a connected Redis client. Raises RuntimeError if Redis is unreachable
     or the circuit breaker is OPEN.
+
+    Connection config is read from REDIS_URL first (e.g. Upstash/Render:
+    ``rediss://user:pass@host:port``). Falls back to REDIS_HOST/REDIS_PORT/REDIS_CHAT_DB
+    for self-hosted deployments. The conversation DB index is only forced when
+    connecting via host/port — REDIS_URL keeps whatever db the URL specifies.
     """
     if _cb_is_open():
         raise RuntimeError(
             "Redis circuit breaker is OPEN — skipping connection attempt. "
             f"Will retry in {_CB_RECOVERY_TIMEOUT}s."
         )
+    redis_url = os.environ.get("REDIS_URL", "").strip()
     try:
-        client = redis.Redis(
-            host=os.environ.get("REDIS_HOST", "localhost"),
-            port=int(os.environ.get("REDIS_PORT", 6379)),
-            db=int(os.environ.get("REDIS_CHAT_DB", 3)),
-            decode_responses=True,
-            socket_connect_timeout=2,
-        )
+        if redis_url:
+            client = redis.Redis.from_url(
+                redis_url,
+                decode_responses=True,
+                socket_connect_timeout=3,
+            )
+        else:
+            client = redis.Redis(
+                host=os.environ.get("REDIS_HOST", "localhost"),
+                port=int(os.environ.get("REDIS_PORT", 6379)),
+                db=int(os.environ.get("REDIS_CHAT_DB", 3)),
+                decode_responses=True,
+                socket_connect_timeout=2,
+            )
         client.ping()
         _cb_record_success()
         return client
@@ -99,13 +112,14 @@ def _get_redis_client() -> redis.Redis:
         _cb_record_failure()
         logger.critical(
             "Redis connection failed — conversation history unavailable. "
-            "Ensure Redis is running and REDIS_HOST/REDIS_PORT are set correctly. "
-            "Error: %s",
+            "Ensure Redis is reachable and REDIS_URL (or REDIS_HOST/REDIS_PORT) "
+            "is set correctly. Error: %s",
             exc,
         )
         raise RuntimeError(
             f"Redis connection failed — conversation history disabled. "
-            f"Check REDIS_HOST and REDIS_PORT environment variables. Original error: {exc}"
+            f"Check REDIS_URL / REDIS_HOST and REDIS_PORT environment variables. "
+            f"Original error: {exc}"
         ) from exc
 
 

@@ -35,9 +35,12 @@ class RAGPipeline:
         max_tokens: int = 1024,
     ) -> None:
         self.retrieval_k = retrieval_k
+        # Empty model means the LLM factory picks the configured provider's own
+        # default (e.g. GROQ_MODEL on a Groq server). Hardcoding a Gemini ID
+        # here made every RAG chat 404 on Groq-only deployments.
         self.model_name = model_name or os.environ.get(
             "OPENROUTER_MODEL",
-            os.environ.get("GEMINI_MODEL", "google/gemini-2.0-flash-001"),
+            os.environ.get("GEMINI_MODEL", ""),
         )
         self.temperature = temperature
         self.max_tokens = max_tokens

@@ -25,7 +25,23 @@ logger = logging.getLogger(__name__)
 
 
 def _build_connection_string() -> str:
-    """Build PostgreSQL connection string from environment variables."""
+    """Build PostgreSQL connection string from environment variables.
+
+    Prefers DATABASE_URL (used by Neon/Render/Heroku) and converts it to the
+    SQLAlchemy form PGVector expects (``postgresql+psycopg2://``). Falls back
+    to individual DB_* variables for self-hosted deployments.
+    """
+    database_url = os.environ.get("DATABASE_URL", "").strip()
+    if database_url:
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace(
+                "postgres://", "postgresql+psycopg2://", 1
+            )
+        elif database_url.startswith("postgresql://"):
+            database_url = database_url.replace(
+                "postgresql://", "postgresql+psycopg2://", 1
+            )
+        return database_url
     return (
         f"postgresql+psycopg2://"
         f"{os.environ.get('DB_USER', 'synapse_user')}:"
@@ -78,6 +94,16 @@ COLLECTION_NAMES = {
     "papers": "researchpaper_embeddings",
     "repositories": "repository_embeddings",
     "videos": "video_embeddings",
+}
+
+# The hybrid/BM25 search engine (apps/core/search.py) uses the short key
+# "repos" for repositories, while the retriever's content_types use the model
+# name "repositories". Map between them so filters flow through correctly.
+_SEARCH_ENGINE_CONTENT_TYPE = {
+    "repositories": "repos",
+    "articles": "articles",
+    "papers": "papers",
+    "videos": "videos",
 }
 
 ALL_COLLECTIONS = list(COLLECTION_NAMES.values())
@@ -215,7 +241,10 @@ class SynapseRetriever(BaseRetriever):
 
             from apps.core.search import bm25_search
 
-            raw = bm25_search(query, self.content_types, self.k)
+            search_types = [
+                _SEARCH_ENGINE_CONTENT_TYPE.get(ct, ct) for ct in self.content_types
+            ]
+            raw = bm25_search(query, search_types, self.k)
 
             for ct, results in raw.items():
                 for r in results:
@@ -258,10 +287,15 @@ class SynapseRetriever(BaseRetriever):
             embedder = _get_lc_embeddings()
             query_vector = embedder.embed_query(query)
 
+            # hybrid_search expects "repos" while the retriever uses
+            # "repositories" — map before calling so repos aren't dropped.
+            search_types = [
+                _SEARCH_ENGINE_CONTENT_TYPE.get(ct, ct) for ct in self.content_types
+            ]
             raw = hybrid_search(
                 query=query,
                 query_vector=query_vector,
-                content_types=self.content_types,
+                content_types=search_types,
                 limit=self.k,
                 use_reranker=self.use_reranker,
             )

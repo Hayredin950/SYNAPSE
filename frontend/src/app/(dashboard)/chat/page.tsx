@@ -45,23 +45,33 @@ import Link from 'next/link';
 
 // ─── Available models (server-provided — Groq by default) ──────────────────
 // The backend routes chat through its configured provider (Groq on Render).
-// Groq serves Llama/Gemma models; OpenAI IDs like "gpt-4o-mini" only work
-// when a user adds their own OpenRouter key in Settings.
-const GEMINI_MODELS = [
-  // ── Server-provided (no key needed) ─────────────────────────────────────
+// Only models the server can actually serve are listed here (verified against
+// the live provider). gemma2-9b-it was removed — Groq decommissioned it.
+const SERVER_MODELS = [
   { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B', badge: '⚡ Default' },
   { id: 'llama-3.1-8b-instant',    label: 'Llama 3.1 8B',  badge: '🧠 Fast' },
-  { id: 'gemma2-9b-it',            label: 'Gemma 2 9B',    badge: '🔬 Light' },
-  // ── Models available with your own OpenRouter key (add in Settings) ──────
-  { id: 'google/gemini-2.0-flash-001',            label: 'Gemini 2.0 Flash',        badge: '🔑 Key needed' },
-  { id: 'google/gemini-2.5-flash-preview',        label: 'Gemini 2.5 Flash Preview', badge: '🔑 Key needed' },
-  { id: 'meta-llama/llama-3.3-70b-instruct',     label: 'Llama 3.3 70B',           badge: '🔑 Key needed' },
-  { id: 'deepseek/deepseek-r1',                  label: 'DeepSeek R1 (Reasoning)',  badge: '🔑 Key needed' },
-  { id: 'anthropic/claude-3.5-sonnet',           label: 'Claude 3.5 Sonnet',        badge: '🔑 Key needed' },
-  { id: 'openai/gpt-4o',                         label: 'GPT-4o (OpenRouter)',       badge: '🔑 Key needed' },
-  { id: 'openai/gpt-4o-mini',                    label: 'GPT-4o Mini (OpenRouter)',  badge: '🔑 Key needed' },
+  { id: 'openai/gpt-oss-20b',      label: 'GPT-OSS 20B',   badge: '🔬 Light' },
 ];
+
+// ── Models available ONLY with your own OpenRouter/Gemini key in Settings ──
+// These are hidden unless the user has actually configured a key — showing
+// them as "Key needed" entries is misleading when no key exists.
+const PERSONAL_KEY_MODELS = [
+  { id: 'google/gemini-2.0-flash-001',     label: 'Gemini 2.0 Flash',        badge: '🔑 Key needed' },
+  { id: 'google/gemini-2.5-flash-preview', label: 'Gemini 2.5 Flash Preview', badge: '🔑 Key needed' },
+  { id: 'deepseek/deepseek-r1',            label: 'DeepSeek R1 (Reasoning)',  badge: '🔑 Key needed' },
+  { id: 'anthropic/claude-3.5-sonnet',     label: 'Claude 3.5 Sonnet',        badge: '🔑 Key needed' },
+  { id: 'openai/gpt-4o',                   label: 'GPT-4o (OpenRouter)',       badge: '🔑 Key needed' },
+  { id: 'openai/gpt-4o-mini',              label: 'GPT-4o Mini (OpenRouter)',  badge: '🔑 Key needed' },
+];
+
 const DEFAULT_MODEL = 'llama-3.3-70b-versatile';
+
+// All models shown in the dropdown (server models + personal-key models when
+// the user has a key configured).
+function getAvailableModels(hasKey: boolean) {
+  return hasKey ? [...SERVER_MODELS, ...PERSONAL_KEY_MODELS] : SERVER_MODELS;
+}
 
 // ─── Suggested prompts shown on empty chat ────────────────────────────────────
 const SUGGESTED_PROMPTS = [
@@ -788,7 +798,7 @@ export default function ChatPage() {
             >
               <Zap size={11} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span className="max-w-[110px] sm:max-w-[140px] truncate font-medium">
-                {GEMINI_MODELS.find((m) => m.id === selectedModel)?.label ?? 'Select model'}
+                {getAvailableModels(!!apiKeyStatus?.openrouter_configured || !!apiKeyStatus?.gemini_configured).find((m) => m.id === selectedModel)?.label ?? 'Select model'}
               </span>
               <ChevronDown size={11} className={cn('transition-transform shrink-0 text-slate-500 dark:group-hover:text-slate-300', modelDropdownOpen && 'rotate-180')} />
             </button>
@@ -810,68 +820,46 @@ export default function ChatPage() {
                     <p className="text-[10px] text-slate-500 mt-0.5">Choose the model for this conversation</p>
                   </div>
                   <div className="max-h-80 overflow-y-auto py-1.5">
-                    {/* Group: Built-in (no key needed) */}
-                    <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-500/70">⚡ Built-in</p>
-                    {GEMINI_MODELS.filter(m => !m.badge?.includes('Key needed')).map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => { setSelectedModel(m.id); setModelDropdownOpen(false); }}
-                        className={cn(
-                          'w-full flex items-center justify-between px-3 py-2 text-xs transition-all text-left group/item rounded-lg mx-1.5 mb-0.5 w-[calc(100%-12px)]',
-                          selectedModel === m.id
-                            ? 'bg-indigo-600/15 dark:bg-indigo-600/25 border border-indigo-300 dark:border-indigo-500/30 text-indigo-700 dark:text-white'
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent'
+                    {getAvailableModels(!!apiKeyStatus?.openrouter_configured || !!apiKeyStatus?.gemini_configured).map((m, i) => (
+                      <div key={m.id}>
+                        {i === 0 && (
+                          <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-500/70">⚡ Server-provided</p>
                         )}
-                      >
-                        <span className="flex items-center gap-2 min-w-0">
-                          {selectedModel === m.id
-                            ? <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 shrink-0" />
-                            : <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
-                          }
-                          <span className="truncate font-medium">{m.label}</span>
-                        </span>
-                        {m.badge && (
+                        {i === SERVER_MODELS.length && (
+                          <p className="px-3 pt-2 pb-1.5 text-[9px] font-black uppercase tracking-widest text-amber-500/70">🔑 Your key (Settings → AI Engine)</p>
+                        )}
+                        <button
+                          onClick={() => { setSelectedModel(m.id); setModelDropdownOpen(false); }}
+                          className={cn(
+                            'w-full flex items-center justify-between px-3 py-2 text-xs transition-all text-left group/item rounded-lg mx-1.5 mb-0.5 w-[calc(100%-12px)]',
+                            selectedModel === m.id
+                              ? 'bg-indigo-600/15 dark:bg-indigo-600/25 border border-indigo-300 dark:border-indigo-500/30 text-indigo-700 dark:text-white'
+                              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent'
+                          )}
+                        >
+                          <span className="flex items-center gap-2 min-w-0">
+                            {selectedModel === m.id
+                              ? <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 shrink-0" />
+                              : <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
+                            }
+                            <span className="truncate font-medium">{m.label}</span>
+                          </span>
                           <span className={cn(
                             'text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ml-2 border',
                             m.badge.includes('Default') ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-500/30' :
-                            m.badge.includes('Smart')   ? 'bg-violet-100 dark:bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/30' :
-                            m.badge.includes('Reason')  ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 border-cyan-500/30' :
+                            m.badge.includes('Light')   ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' :
+                            m.badge.includes('Key needed') ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-500/25' :
                             'bg-slate-100 dark:bg-slate-700/80 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600/50'
                           )}>
                             {m.badge}
                           </span>
-                        )}
-                      </button>
-                    ))}
-                    {/* Group: Bring your own key */}
-                    <p className="px-3 pt-2 pb-1.5 text-[9px] font-black uppercase tracking-widest text-amber-500/70">🔑 Your key (Settings → AI Engine)</p>
-                    {GEMINI_MODELS.filter(m => m.badge?.includes('Key needed')).map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => { setSelectedModel(m.id); setModelDropdownOpen(false); }}
-                        className={cn(
-                          'w-full flex items-center justify-between px-3 py-2 text-xs transition-all text-left rounded-lg mx-1.5 mb-0.5 w-[calc(100%-12px)]',
-                          selectedModel === m.id
-                            ? 'bg-indigo-600/15 dark:bg-indigo-600/25 border border-indigo-300 dark:border-indigo-500/30 text-indigo-700 dark:text-white'
-                            : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white border border-transparent'
-                        )}
-                      >
-                        <span className="flex items-center gap-2 min-w-0">
-                          {selectedModel === m.id
-                            ? <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 shrink-0" />
-                            : <div className="w-1.5 h-1.5 rounded-full bg-transparent shrink-0" />
-                          }
-                          <span className="truncate font-medium">{m.label}</span>
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold shrink-0 ml-2 border bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-200 dark:border-amber-500/25">
-                          {m.badge}
-                        </span>
-                      </button>
+                        </button>
+                      </div>
                     ))}
                   </div>
                   {/* Footer */}
                   <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-700/60 bg-slate-50 dark:bg-slate-800/40">
-                    <p className="text-[9px] text-slate-500 dark:text-slate-600">Powered by OpenRouter · Requires your API key in Settings</p>
+                    <p className="text-[9px] text-slate-500 dark:text-slate-600">Server-provided models work instantly · Bring-your-own-key models appear once you save a key in Settings</p>
                   </div>
                 </motion.div>
               )}

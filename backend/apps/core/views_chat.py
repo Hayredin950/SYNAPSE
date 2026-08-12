@@ -460,17 +460,26 @@ def _get_pipeline(model: str = None, user=None):
         bool(user and user.is_authenticated),
     )
 
-    # Try the full RAG pipeline first (pgvector + embeddings + retrieval)
-    # Only use RAG when no user-specific model override and no per-user key
-    # (RAG pipeline is a singleton that cannot easily be keyed per user)
+    # Try the full RAG pipeline first (pgvector + embeddings + retrieval).
+    # The pipeline handles a per-request model override through the chain, so
+    # we use it even when the client sends a model — that way chat is grounded
+    # in the knowledge base instead of silently dropping to a training-data-only
+    # answer. Only skip it when the user brings their own API key (the RAG
+    # pipeline is a singleton that cannot easily be keyed per user).
     user_scitely, user_openrouter, user_gemini = _get_user_keys(user)
     has_user_key = bool(user_scitely or user_openrouter or user_gemini)
 
-    if not model and not has_user_key:
+    if not has_user_key:
         try:
             from ai_engine.rag import get_rag_pipeline
 
-            return get_rag_pipeline()
+            pipeline = get_rag_pipeline()
+            # Return a thin adapter that forwards the requested model to the
+            # RAG chain (provider failover handled by llm_factory).
+            return _RAGPipelineAdapter(
+                pipeline,
+                model=_normalize_model_for_provider(model, _primary_provider()),
+            )
         except Exception as exc:
             logger.warning(
                 "Full RAG pipeline unavailable (%s). Falling back to direct LLM.", exc
@@ -531,6 +540,95 @@ def _get_pipeline(model: str = None, user=None):
     return _GeminiDirectPipeline(
         api_key=api_key, model=resolved_model, all_keys=gemini_keys
     )
+
+
+def _filter_servable_model(model: str) -> str:
+    """
+    Return the model override only if the server's primary provider can serve it.
+
+    A bare ID (llama-3.3-70b-versatile, gpt-4o-mini) is passed through — the
+    RAG chain's provider-aware normalization handles it. A provider-prefixed ID
+    (google/…, anthropic/…, openai/…) is kept only when the prefix matches the
+    server's primary provider; otherwise it is dropped so the server default
+    (which its provider definitely serves) is used.
+    """
+    if not model:
+        return ""
+    primary = _primary_provider()
+    if "/" not in model:
+        return model
+    prefix = model.split("/", 1)[0].lower()
+    allowed_prefixes = {
+        "gateway": {"openai", "anthropic", "google", "meta-llama", "mistralai"},
+        "groq": {"openai", "meta-llama", "qwen", "deepseek"},
+        "openrouter": {"openai", "anthropic", "google", "meta-llama", "deepseek"},
+        "replit": {"openai"},
+    }
+    if prefix in allowed_prefixes.get(primary, set()):
+        return model
+    logger.info(
+        "Dropping model override '%s' — not servable by primary provider '%s'.",
+        model,
+        primary,
+    )
+    return ""
+
+
+def _primary_provider() -> str:
+    """Best-effort guess at the server's primary chat provider for model
+    normalization (mirrors llm_factory's auto priority)."""
+    import os  # noqa: PLC0415
+
+    if _get_gateway_key():
+        return "gateway"
+    if _get_groq_key():
+        return "groq"
+    if os.environ.get("OPENROUTER_API_KEY"):
+        return "openrouter"
+    if os.environ.get("SCITELY_API_KEY"):
+        return "scitely"
+    if os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL"):
+        return "replit"
+    return ""
+
+
+class _RAGPipelineAdapter:
+    """
+    Thin wrapper around the RAG pipeline that forwards a per-request model
+    override into every chat/stream call. Keeps ChatView/ChatStreamView code
+    unchanged while ensuring the RAG chain is used (grounded answers + sources)
+    even when the client sends a model ID.
+    """
+
+    def __init__(self, pipeline, model: str = "") -> None:
+        self._pipeline = pipeline
+        # A provider-prefixed model that belongs to a DIFFERENT provider than
+        # the server's primary one (e.g. "google/gemini-2.0-flash-001" sent to
+        # a Groq-backed server) would 404 through the chain's LLM factory.
+        # Drop the override so the server's provider-appropriate default is used.
+        self._model = _filter_servable_model(model)
+
+    def chat(self, question, conversation_id, content_types=None, files=None):
+        return self._pipeline.chat(
+            question=question,
+            conversation_id=conversation_id,
+            content_types=content_types,
+            model=self._model or "",
+        )
+
+    def stream_chat(self, question, conversation_id, content_types=None, files=None):
+        yield from self._pipeline.stream_chat(
+            question=question,
+            conversation_id=conversation_id,
+            content_types=content_types,
+            model=self._model or "",
+        )
+
+    def get_history(self, conversation_id):
+        return self._pipeline.get_history(conversation_id)
+
+    def delete_conversation(self, conversation_id):
+        return self._pipeline.delete_conversation(conversation_id)
 
 
 class _OpenRouterDirectPipeline:

@@ -312,10 +312,13 @@ export function AIAssistantPanel({ isOpen, onToggle, className }: AIAssistantPan
     setIsLoading(true)
 
     try {
+      // Use the server's default model (Groq on Render) — hardcoding a
+      // Google/Gemini ID here made every panel request 404 on Groq-only
+      // deployments, surfacing as "Connection error — please try again."
       const res = await api.post('/ai/chat/', {
         question: content.trim(),
         conversation_id: 'assistant-panel',
-        model: 'google/gemini-2.0-flash-001',
+        model: 'llama-3.3-70b-versatile',
         context: getPageContext(pathname),
       })
       const assistantMsg: Message = {
