@@ -23,6 +23,7 @@ Open <https://console.cloud.google.com/apis/credentials/consent>
 | Logo | upload `docs/branding/google-consent-logo.png` |
 | App domain → Authorized domain | `synapse-backend-z9bb.onrender.com` |
 | App homepage link | `https://synapse-one-blond.vercel.app` |
+| **Privacy policy link** | `https://synapse-one-blond.vercel.app/privacy` |
 | Audience | switch from **Testing** to **In production** |
 
 **2. Add the exact redirect URIs**

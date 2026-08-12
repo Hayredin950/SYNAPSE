@@ -8,7 +8,7 @@ import {
   Zap, Search, GitBranch, Bot, Workflow, BookOpen,
   Star, TrendingUp, FileText, ChevronRight,
   Menu, X, ArrowRight, Sparkles, Shield, Clock,
-  BarChart3, MessageSquare, Brain, Twitter
+  BarChart3, MessageSquare, Brain, Twitter, Github, ShieldCheck
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { api } from '@/utils/api'
@@ -97,13 +97,22 @@ function LandingNavbar() {
           </div>
 
           {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-7">
             {[['Features', '#features'], ['Trending', '#trending']].map(([label, href]) => (
               <a key={label} href={href}
                 className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 {label}
               </a>
             ))}
+            <Link href="/privacy"
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <ShieldCheck size={15} /> Privacy
+            </Link>
+            <a href="https://github.com/Hayredin950" target="_blank" rel="noopener noreferrer"
+              className="text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              aria-label="SYNAPSE on GitHub">
+              <Github size={17} />
+            </a>
           </div>
 
           {/* Desktop CTAs */}
@@ -137,12 +146,17 @@ function LandingNavbar() {
         {menuOpen && (
           <div className="md:hidden pb-4 pt-2 border-t border-slate-200 dark:border-slate-800 mt-1 bg-white dark:bg-slate-950">
             <div className="flex flex-col gap-1">
-              {[['Features', '#features'], ['Trending', '#trending']].map(([label, href]) => (
+              {[['Features', '#features'], ['Trending', '#trending'], ['Privacy', '/privacy']].map(([label, href]) => (
                 <a key={label} href={href} onClick={() => setMenuOpen(false)}
                   className="px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
                   {label}
                 </a>
               ))}
+              <a href="https://github.com/Hayredin950" target="_blank" rel="noopener noreferrer"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                <Github size={16} /> GitHub
+              </a>
               <div className="flex gap-2 mt-2 px-1">
                 {loggedIn ? (
                   <Link href="/home" className="flex-1 text-center text-sm font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 text-white py-2.5 rounded-xl shadow-lg shadow-indigo-500/25">Go to Dashboard</Link>
@@ -441,12 +455,17 @@ function Footer() {
             <span className="text-slate-500 text-sm ml-1">· AI-Powered Tech Intelligence</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {[['Features', '#features'], ['Trending', '#trending'], ['Log in', '/login'], ['Register', '/register']].map(([label, href]) => (
+            {[['Features', '#features'], ['Trending', '#trending'], ['Privacy', '/privacy'], ['Log in', '/login'], ['Register', '/register']].map(([label, href]) => (
               <a key={label} href={href}
                 className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
                 {label}
               </a>
             ))}
+            <a href="https://github.com/Hayredin950" target="_blank" rel="noopener noreferrer"
+              className="text-slate-500 hover:text-slate-300 transition-colors"
+              aria-label="SYNAPSE on GitHub">
+              <Github size={16} />
+            </a>
           </div>
         </div>
         <div className="mt-8 pt-6 border-t border-slate-800/60 text-center text-xs text-slate-600">
