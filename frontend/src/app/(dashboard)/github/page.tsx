@@ -207,15 +207,20 @@ const PAGE_STEP = 12; // how many repos to reveal per scroll
 export default function GitHubPage() {
   const [language, setLanguage] = useState('All');
   const [section, setSection]   = useState<'trending' | 'rising'>('trending');
+  const [savedOnly, setSavedOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_STEP);
   const [searchQuery, setSearchQuery] = useState('');
   const [showRadar, setShowRadar] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   const { data: trendingData, isLoading } = useQuery({
-    queryKey: ['github-trending-velocity', language],
+    queryKey: ['github-trending-velocity', language, savedOnly],
     queryFn:  () => api.get('/repos/trending-velocity/', {
-      params: { limit: 500, ...(language !== 'All' ? { language } : {}) },
+      params: {
+        limit: 500,
+        ...(language !== 'All' ? { language } : {}),
+        ...(savedOnly ? { saved: 1 } : {}),
+      },
     }).then(r => r.data?.data as Repo[]),
     staleTime: 0, // always refetch fresh data
   });
@@ -240,7 +245,7 @@ export default function GitHubPage() {
   const hasMore = visibleCount < allDisplayRepos.length;
 
   // Reset visible count when filter/section/search changes
-  useEffect(() => { setVisibleCount(PAGE_STEP); }, [language, section, searchQuery]);
+  useEffect(() => { setVisibleCount(PAGE_STEP); }, [language, section, searchQuery, savedOnly]);
 
   // IntersectionObserver to auto-reveal more repos
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -283,9 +288,34 @@ export default function GitHubPage() {
               <div>
                 <h1 className="text-base font-bold text-slate-900 dark:text-white leading-none">GitHub Radar</h1>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {repos.length > 0 ? `${repos.length.toLocaleString()} repositories tracked` : 'Trending repositories'}
+                  {repos.length > 0 ? `${repos.length.toLocaleString()} ${savedOnly ? 'saved' : ''} repositories tracked` : (savedOnly ? 'No saved repos yet — bookmark one below' : 'Trending repositories')}
                 </p>
               </div>
+            </div>
+
+            {/* All / Saved toggle */}
+            <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0">
+              <button
+                onClick={() => setSavedOnly(false)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  !savedOnly
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setSavedOnly(true)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  savedOnly
+                    ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                }`}
+              >
+                <Star size={11} />
+                Saved
+              </button>
             </div>
 
             {/* Search */}
