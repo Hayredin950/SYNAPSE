@@ -71,7 +71,7 @@ export function NetworkReading() {
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-slate-100 dark:border-slate-700/60 p-3 animate-pulse">
+            <div key={i} className="rounded-xl border border-slate-200 dark:border-slate-700/60 p-3 animate-pulse">
               <div className="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 mb-2" />
               <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded mb-1.5" />
               <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4" />
@@ -94,7 +94,7 @@ export function NetworkReading() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="group flex items-start gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700/60 bg-white dark:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-600/60 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 transition-all duration-200"
+              className="group flex items-start gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 bg-white dark:bg-slate-800 hover:border-indigo-300 dark:hover:border-indigo-600/60 hover:shadow-lg hover:shadow-indigo-500/5 hover:-translate-y-0.5 transition-all duration-200"
             >
               {/* Rank */}
               <div className={cn(
