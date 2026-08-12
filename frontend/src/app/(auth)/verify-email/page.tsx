@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Loader2, CheckCircle2, AlertCircle, Mail, ArrowRight, RefreshCw } from 'lucide-react'
 import { authApi } from '@/utils/api'
 import { useAuthStore } from '@/store/authStore'
+import { applyPendingReferral } from '@/utils/referral'
 
 function VerifyEmailContent() {
   const router      = useRouter()
@@ -28,6 +29,8 @@ function VerifyEmailContent() {
           if (tokens) {
             setTokens(tokens.access, tokens.refresh)
             await fetchUser()
+            // Apply any stashed referral code now that the account is active.
+            void applyPendingReferral()
           }
           setStatus('success')
           // Route new users to onboarding wizard; returning users go to /home

@@ -21,12 +21,13 @@
 'use client'
 
 import { GoogleIcon } from './GoogleIcon'
+import { withReferralParam } from '@/utils/referral'
 
 export function GoogleSignInButton() {
   return (
     <button
       type="button"
-      onClick={() => window.location.href = '/api/v1/auth/google/redirect/'}
+      onClick={() => window.location.href = withReferralParam('/api/v1/auth/google/redirect/')}
       className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-sm font-medium transition-all duration-200
         border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700
         dark:border-white/10 dark:hover:border-white/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-200

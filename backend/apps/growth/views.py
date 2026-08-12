@@ -8,11 +8,25 @@ Mounted at /api/v1/growth/.
 
 from __future__ import annotations
 
+from django.conf import settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+
+def _frontend_origin() -> str:
+    """
+    The frontend origin (no trailing slash) used to build shareable links.
+
+    Must be the frontend app (Vercel), NOT the request host — the request
+    arrives at the Render backend, so request.build_absolute_uri() would
+    produce https://synapse-backend-z9bb.onrender.com/register, a URL that
+    has no register page.
+    """
+    raw = getattr(settings, "FRONTEND_URL", "http://localhost:3000") or ""
+    return raw.rstrip("/")
 
 
 class UsageView(APIView):
@@ -67,9 +81,7 @@ class ReferralView(APIView):
                 "code": code,
                 "uses": ref_obj.uses,
                 "max_uses": ref_obj.max_uses,
-                "referral_url": (
-                    f"{request.build_absolute_uri('/')[:-1]}/register?ref={code}"
-                ),
+                "referral_url": f"{_frontend_origin()}/register?ref={code}",
                 "reward": (
                     f"Each signup raises your monthly quota ({bonus}), "
                     f"up to {MAX_BONUS_REFERRALS} referrals."

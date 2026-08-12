@@ -10,6 +10,11 @@ import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import {
+  applyPendingReferral,
+  captureReferralCode,
+  withReferralParam,
+} from '@/utils/referral'
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -54,6 +59,9 @@ function LoginContent() {
     if (errorCode) {
       setError(OAUTH_ERROR_MESSAGES[errorCode] ?? 'Sign-in failed. Please try again.')
     }
+    // A user may land on /login?ref=… (e.g. from a shared link while already
+    // having an account) — stash the code so it applies after sign-in.
+    captureReferralCode(searchParams?.get('ref'))
   }, [searchParams])
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
@@ -65,6 +73,8 @@ function LoginContent() {
     setError(null)
     try {
       await login({ email: data.email, password: data.password })
+      // Apply any stashed referral code now that the user is authenticated.
+      void applyPendingReferral()
       toast.success('Welcome back!')
       router.push('/home')
     } catch (err) {
@@ -168,7 +178,7 @@ function LoginContent() {
 
       <button
         type="button"
-        onClick={() => window.location.href = '/api/v1/auth/github/'}
+        onClick={() => window.location.href = withReferralParam('/api/v1/auth/github/')}
         className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-sm font-medium transition-all duration-200
           border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700
           dark:border-white/10 dark:hover:border-white/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-200

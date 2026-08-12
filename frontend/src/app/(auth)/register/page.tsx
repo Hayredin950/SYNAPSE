@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -10,6 +10,11 @@ import toast from 'react-hot-toast'
 import { Eye, EyeOff, Loader2, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
+import {
+  applyPendingReferral,
+  captureReferralCode,
+  withReferralParam,
+} from '@/utils/referral'
 
 const registerSchema = z.object({
   username:         z.string().min(3, 'Username must be at least 3 characters'),
@@ -28,12 +33,33 @@ const iconClass  = `absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-no
 const errClass   = `text-xs flex items-center gap-1 mt-1 text-red-500 dark:text-red-400`
 
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={24} className="animate-spin text-indigo-500 dark:text-indigo-400" />
+        </div>
+      }
+    >
+      <RegisterContent />
+    </Suspense>
+  )
+}
+
+function RegisterContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { register: registerUser } = useAuthStore()
   const [isLoading, setIsLoading]   = useState(false)
   const [error, setError]           = useState<string | null>(null)
   const [showPassword, setShowPw]   = useState(false)
   const [showConfirm, setShowCf]    = useState(false)
+
+  // Stash a referral code from the URL (e.g. /register?ref=ABCD1234) so it can
+  // be applied after the account is created, on any signup path.
+  useEffect(() => {
+    captureReferralCode(searchParams?.get('ref'))
+  }, [searchParams])
 
   const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -50,6 +76,9 @@ export default function RegisterPage() {
       })
       const { isAuthenticated } = useAuthStore.getState()
       if (isAuthenticated) {
+        // AUTO_VERIFY_EMAIL dev mode — user is already signed in; apply any
+        // referral code now (best-effort, fire-and-forget).
+        void applyPendingReferral()
         toast.success('Account created! Welcome to SYNAPSE')
         router.push('/wizard')
       } else {
@@ -162,7 +191,7 @@ export default function RegisterPage() {
 
       <button
         type="button"
-        onClick={() => window.location.href = '/api/v1/auth/github/'}
+        onClick={() => window.location.href = withReferralParam('/api/v1/auth/github/')}
         className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-sm font-medium transition-all duration-200
           border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700
           dark:border-white/10 dark:hover:border-white/20 dark:bg-white/5 dark:hover:bg-white/10 dark:text-slate-200

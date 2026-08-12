@@ -8,6 +8,10 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import {
+  applyPendingReferral,
+  captureReferralCode,
+} from '@/utils/referral';
 
 function GoogleSuccessContent() {
   const router       = useRouter();
@@ -20,6 +24,10 @@ function GoogleSuccessContent() {
     const refresh     = searchParams.get('refresh');
     const isOnboarded = searchParams.get('is_onboarded') === 'true';
     const errorParam  = searchParams.get('error');
+
+    // The backend echoes a referral code (if any) through the OAuth state
+    // param — stash it so it can be applied after auth completes.
+    captureReferralCode(searchParams.get('ref'));
 
     if (errorParam) {
       const messages: Record<string, string> = {
@@ -39,6 +47,8 @@ function GoogleSuccessContent() {
 
     setTokens(access, refresh);
     refreshUser?.().then(() => {
+      // Fire-and-forget: apply any stashed referral code now that we're in.
+      void applyPendingReferral();
       if (isOnboarded) {
         router.replace('/home');
       } else {

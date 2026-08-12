@@ -129,6 +129,8 @@ def google_auth_redirect(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
+    ref = (request.GET.get("ref") or "").strip()[:12]
+    state = f"synapse_google_oauth:{ref}" if ref else "synapse_google_oauth"
     params = urllib.parse.urlencode(
         {
             "client_id": GOOGLE_CLIENT_ID,
@@ -136,7 +138,7 @@ def google_auth_redirect(request):
             "response_type": "code",
             "scope": "openid email profile",
             "access_type": "online",
-            "state": "synapse_google_oauth",
+            "state": state,
         }
     )
     return django_redirect(f"{GOOGLE_AUTH_URL}?{params}")
@@ -152,6 +154,13 @@ def google_callback(request):
     """
     code = request.GET.get("code")
     error = request.GET.get("error")
+
+    # The referral code (if any) rides along in the OAuth `state` param so it
+    # survives the provider round-trip and reaches the frontend success page.
+    state = request.GET.get("state", "")
+    ref = ""
+    if state.startswith("synapse_google_oauth:"):
+        ref = state.split(":", 1)[1]
 
     if error:
         logger.info("Google OAuth error param: %s", error)
@@ -256,4 +265,6 @@ def google_callback(request):
         f"&refresh={tokens['refresh']}"
         f"&is_onboarded={str(user.is_onboarded).lower()}"
     )
+    if ref:
+        redirect_url += f"&ref={urllib.parse.quote(ref)}"
     return django_redirect(redirect_url)

@@ -117,12 +117,16 @@ def github_auth(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
+    # Referral code (if any) rides along in the OAuth `state` param so it
+    # survives the provider round-trip and reaches the frontend success page.
+    ref = (request.GET.get("ref") or "").strip()[:12]
+    state = f"synapse_github_oauth:{ref}" if ref else "synapse_github_oauth"
     params = urllib.parse.urlencode(
         {
             "client_id": GITHUB_CLIENT_ID,
             "redirect_uri": _github_redirect_uri(request),
             "scope": "user:email read:user",
-            "state": "synapse_github_oauth",  # In production, use a CSRF token
+            "state": state,
         }
     )
     github_auth_url = f"https://github.com/login/oauth/authorize?{params}"
@@ -143,6 +147,12 @@ def github_callback(request):
     """
     code = request.GET.get("code")
     error = request.GET.get("error")
+
+    # Referral code (if any) is echoed back from the OAuth `state` param.
+    state = request.GET.get("state", "")
+    ref = ""
+    if state.startswith("synapse_github_oauth:"):
+        ref = state.split(":", 1)[1]
 
     if error:
         frontend_error_url = f"{FRONTEND_URL}/login?error=github_denied"
@@ -304,6 +314,8 @@ def github_callback(request):
         f"&refresh={tokens['refresh']}"
         f"&is_onboarded={str(user.is_onboarded).lower()}"
     )
+    if ref:
+        redirect_url += f"&ref={urllib.parse.quote(ref)}"
     from django.shortcuts import redirect as django_redirect
 
     return django_redirect(redirect_url)
