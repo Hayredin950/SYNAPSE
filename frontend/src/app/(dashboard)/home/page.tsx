@@ -69,7 +69,7 @@ function TrendStrip() {
   const maxScore = Math.max(...trends.map((t: any) => t.trend_score), 1)
 
   return (
-    <div className="mb-6 bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-card dark:shadow-none">
+    <div className="bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl p-4 shadow-card dark:shadow-none">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <TrendingUp size={15} className="text-amber-500 dark:text-amber-400" />
@@ -272,7 +272,7 @@ function TodayBriefCard() {
 }
 
 const SectionHeader = ({ title, subtitle, href }: { title: string; subtitle?: string; href?: string }) => (
-  <div className="flex items-center justify-between mb-5">
+  <div className="flex items-center justify-between">
     <div>
       <h2 className="text-xl font-bold text-slate-900 dark:text-white">{title}</h2>
       {subtitle && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
@@ -417,7 +417,7 @@ export default function Dashboard() {
         {showProfileBuilder && <InterestProfileBuilder onClose={() => setShowProfileBuilder(false)} />}
 
         {/* ── Hero Banner ──────────────────────────────────────────── */}
-        <div className="relative bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-900 dark:via-indigo-950/80 dark:to-slate-900 px-4 sm:px-6 pt-6 sm:pt-8 pb-10 sm:pb-12 border-b border-indigo-100 dark:border-transparent">
+        <div className="relative bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-slate-900 dark:via-indigo-950/80 dark:to-slate-900 px-4 sm:px-6 pt-6 sm:pt-8 pb-8 sm:pb-10 border-b border-indigo-100 dark:border-transparent">
           {/* Decorative blobs live in their own clipped layer so the Watchlist
               dropdown below can overflow the hero without being cut off. */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -447,7 +447,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 space-y-10 mt-6">
+        <div className="px-4 sm:px-6 space-y-8 mt-5">
 
           {/* ── TASK-305-F1: Today's Brief ────────────────────────── */}
           <TodayBriefCard />
@@ -462,8 +462,8 @@ export default function Dashboard() {
           </div>
 
           {/* ── Latest Articles + GitHub ───────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 flex flex-col gap-4">
               {/* ── Top Trends strip ── */}
               <TrendStrip />
 
@@ -479,13 +479,13 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
                   <p className="text-slate-500 dark:text-slate-400">No articles yet</p>
                 </div>
               )}
             </div>
 
-            <div className="space-y-6">
+            <div className="flex flex-col gap-4">
               <SectionHeader title="Trending on GitHub" subtitle="Hot repos today" href="/github" />
               {reposLoading ? (
                 <div className="space-y-4">
@@ -498,7 +498,7 @@ export default function Dashboard() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
                   <p className="text-slate-500 dark:text-slate-400">No repos yet</p>
                 </div>
               )}
@@ -507,14 +507,14 @@ export default function Dashboard() {
               <ReadingGoals />
 
               {/* ── What My Network Is Reading ───────────────────────── */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
+              <div className="flex-1 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4">
                 <NetworkReading />
               </div>
             </div>
           </div>
 
           {/* ── Videos ───────────────────────────────────────────── */}
-          <div>
+          <div className="flex flex-col gap-4">
             <SectionHeader title="Latest Videos" subtitle="AI-curated tech & ML videos" href="/videos" />
             {videosLoading ? (
               <HorizontalScroller cardWidth={280}>
@@ -528,15 +528,14 @@ export default function Dashboard() {
                   <VideoCard key={video.id} video={video} onPlay={(v) => setPlayingVideo(v)} />
                 ))}
               </HorizontalScroller>
-            ) : (
-              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
-                <p className="text-slate-500 dark:text-slate-400">No videos yet</p>
+            ) : (                <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                  <p className="text-slate-500 dark:text-slate-400">No videos yet</p>
               </div>
             )}
           </div>
 
           {/* ── Research Papers ───────────────────────────────────── */}
-          <div>
+          <div className="flex flex-col gap-4">
             <SectionHeader title="Latest Research Papers" subtitle="New papers from arXiv (cs.AI, cs.LG, cs.CL)" href="/research" />
             {papersLoading ? (
               <HorizontalScroller cardWidth={340}>
@@ -548,15 +547,14 @@ export default function Dashboard() {
                   <PaperCard key={paper.id} paper={paper} />
                 ))}
               </HorizontalScroller>
-            ) : (
-              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
-                <p className="text-slate-500 dark:text-slate-400">No papers yet</p>
+            ) : (                <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                  <p className="text-slate-500 dark:text-slate-400">No papers yet</p>
               </div>
             )}
           </div>
 
           {/* ── X/Tweets ───────────────────────────────────────────── */}
-          <div>
+          <div className="flex flex-col gap-4">
             <SectionHeader title="Latest from X (Twitter)" subtitle="Curated tweets on AI, programming & tech" href="/tweets" />
             {tweetsLoading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -570,9 +568,8 @@ export default function Dashboard() {
                   <TweetCard key={tweet.id} tweet={tweet} />
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-12 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
-                <p className="text-slate-500 dark:text-slate-400">No tweets yet</p>
+            ) : (                <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700/60">
+                  <p className="text-slate-500 dark:text-slate-400">No tweets yet</p>
               </div>
             )}
           </div>

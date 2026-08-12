@@ -38,7 +38,7 @@ export const RepositoryCard = memo(function RepositoryCard({ repo }: RepositoryC
       style={{ contain: 'layout style' }}
       className={cn(
         'group relative bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/60',
-        'p-4 sm:p-5 cursor-pointer transition-all duration-200 overflow-hidden',
+        'p-4 sm:p-5 cursor-pointer transition-all duration-200 overflow-hidden flex flex-col',
         'hover:shadow-xl hover:shadow-emerald-500/10 hover:border-emerald-400/40 dark:hover:border-emerald-500/40',
         'hover:-translate-y-0.5 active:scale-[0.99]'
       )}
@@ -110,7 +110,7 @@ export const RepositoryCard = memo(function RepositoryCard({ repo }: RepositoryC
       )}
 
       {/* Bottom row */}
-      <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap">
+      <div className="mt-auto flex items-center justify-between gap-2 pt-2.5 border-t border-slate-100 dark:border-slate-700/50 flex-wrap">
         <div className="flex flex-col gap-0.5 min-w-0 shrink">
           {(repo.owner || repo.owner_name) && (
             <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[120px]">

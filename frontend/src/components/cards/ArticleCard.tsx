@@ -113,7 +113,7 @@ export const ArticleCard = memo(function ArticleCard({ article }: ArticleCardPro
       style={{ contain: 'layout style' }}
       className={cn(
         'group relative bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/60',
-        'p-4 sm:p-5 cursor-pointer transition-all duration-200 overflow-hidden',
+        'p-4 sm:p-5 cursor-pointer transition-all duration-200 overflow-hidden flex flex-col',
         'hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-400/50 dark:hover:border-indigo-500/50',
         'hover:-translate-y-0.5 active:scale-[0.99]'
       )}
@@ -164,7 +164,7 @@ export const ArticleCard = memo(function ArticleCard({ article }: ArticleCardPro
       ) : null}
 
       {/* Bottom row: Quick Read + Ask AI + Bookmark */}
-      <div className="flex items-center justify-between gap-1 pt-2.5 border-t border-slate-100 dark:border-slate-700/50">
+      <div className="mt-auto flex items-center justify-between gap-1 pt-2.5 border-t border-slate-100 dark:border-slate-700/50">
         <button
           onClick={handleQuickRead}
           title="Open reader view"
