@@ -1622,51 +1622,70 @@ def generate_user_briefing(self, user_id: str) -> Dict:
     from apps.users.interests import apply_for_you_filter  # noqa: PLC0415
 
     def _pick(qs_linked, qs_global, text_fields, topic_field):
-        """Pick 5 items: linked → interest-filtered → global."""
+        """Pick 5 items: linked → interest-filtered → global.
+
+        Returns (items, tier) where tier is one of "linked", "personalized",
+        "global" — the global tier is surfaced in the briefing so users can
+        see when nothing matched their interests yet.
+        """
         linked = list(qs_linked[:5])
         if linked:
-            return linked
+            return linked, "linked"
         personalized = apply_for_you_filter(
             qs_global,
             user=user,
             text_fields=text_fields,
             topic_field=topic_field,
         )
-        return list(personalized[:5])
+        # apply_for_you_filter returns the SAME qs object on every fallback
+        # (no slugs / empty match / exception) — identity tells us whether
+        # the interest filter actually matched anything.
+        tier = "personalized" if personalized is not qs_global else "global"
+        return list(personalized[:5]), tier
 
-    articles = _pick(
+    articles, articles_tier = _pick(
         Article.objects.filter(user_articles__user=user).order_by("-scraped_at"),
         Article.objects.order_by("-scraped_at"),
         ("title", "summary", "content"),
         "topic",
     )
 
-    papers = _pick(
+    papers, papers_tier = _pick(
         ResearchPaper.objects.filter(user_papers__user=user).order_by("-fetched_at"),
         ResearchPaper.objects.order_by("-fetched_at"),
         ("title", "abstract"),
         None,
     )
 
-    repos = _pick(
+    repos, repos_tier = _pick(
         Repository.objects.filter(user_repositories__user=user).order_by("-stars"),
         Repository.objects.order_by("-stars"),
         ("full_name", "description"),
         None,
     )
 
-    videos = _pick(
+    videos, videos_tier = _pick(
         Video.objects.filter(user_videos__user=user).order_by("-fetched_at"),
         Video.objects.order_by("-fetched_at"),
         ("title", "description"),
         None,
     )
 
-    tweets = _pick(
+    tweets, tweets_tier = _pick(
         Tweet.objects.filter(user_tweets__user=user).order_by("-posted_at"),
         Tweet.objects.order_by("-posted_at"),
-        ("text", "hashtags"),
-        None,
+        ("text",),  # NOTE: hashtags is a JSONB ArrayField — iregex would fail
+        "topic",  # Tweet has a real CharField topic set by the scrapers
+    )
+
+    # Surface when personalization had to fall back to the global feed so the
+    # user can see their interests weren't matched yet (vs. a broken pipeline).
+    fell_back_to_global = (
+        articles_tier == "global"
+        or papers_tier == "global"
+        or repos_tier == "global"
+        or videos_tier == "global"
+        or tweets_tier == "global"
     )
 
     # Build personalized content
@@ -1740,6 +1759,14 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
 ---
 *This briefing contains real scraped data personalized for you. Your daily workflows will keep this updated automatically.*
 """
+
+    if fell_back_to_global:
+        content += (
+            "\n> ℹ️ Some sections below are the **latest global content** because "
+            "nothing matching your interests was available yet. "
+            "Run your workflows (or update your interests in Settings) and the "
+            "briefing will be tuned to you."
+        )
 
     # Calculate topics from content
     all_titles = " ".join(a.title for a in articles[:3]).lower()

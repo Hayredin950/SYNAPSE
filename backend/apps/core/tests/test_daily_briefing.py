@@ -262,6 +262,20 @@ class TestGenerateUserBriefingPersonalization:
         b = DailyBriefing.objects.get(user=user)
         assert b.content  # not empty — global fallback
 
+    def test_global_fallback_is_surfaced_in_content(self):
+        """When nothing matches the user's interests, the briefing says so
+        instead of silently showing the same global feed as everyone else."""
+        from apps.core.tasks import generate_user_briefing
+
+        user = self._make_user("brief_global_note", "brief-global-note@example.com")
+        self._seed_articles()
+        # No onboarding prefs at all → global tier
+
+        generate_user_briefing.apply(kwargs={"user_id": str(user.id)}).get()
+
+        b = DailyBriefing.objects.get(user=user)
+        assert "latest global content" in b.content
+
 
 # ─────────────────────── B3: API endpoint tests ──────────────────────────────
 
