@@ -315,9 +315,11 @@ def user_interest_slugs(user) -> list:
 
     try:
         prefs = getattr(user, "onboarding_prefs", None)
-        # Only completed onboarding interests count (a half-finished wizard
-        # should not silently re-shape the feed).
-        if prefs and getattr(prefs, "completed", False):
+        # Lenient gate: interests saved during the wizard count even if the
+        # user hasn't clicked through all 5 steps. A half-finished wizard
+        # should still personalise the feed instead of silently disabling
+        # personalization (which made every account look identical).
+        if prefs:
             for interest in (prefs.interests if prefs else []) or []:
                 _add(interest)
     except Exception:

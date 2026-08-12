@@ -157,6 +157,112 @@ class TestGenerateDailyBriefingsTask:
         )
 
 
+# ─────────────────── B2b: generate_user_briefing personalization ─────────────
+
+
+@pytest.mark.django_db
+class TestGenerateUserBriefingPersonalization:
+    """
+    Two users with different interests must get different briefings even when
+    neither has run scrapers yet (no linked items) — the content-based
+    interest filter must kick in before the global fallback.
+    """
+
+    def _make_user(self, username, email, first_name="Tester"):
+        return User.objects.create_user(
+            username=username,
+            email=email,
+            password="testpass123",
+            first_name=first_name,
+        )
+
+    def _set_interests(self, user, interests):
+        from apps.users.models import OnboardingPreferences
+
+        prefs, _ = OnboardingPreferences.objects.get_or_create(user=user)
+        prefs.interests = interests
+        prefs.completed = True
+        prefs.save()
+        return prefs
+
+    def _seed_articles(self):
+        from apps.articles.models import Article, Source
+
+        src, _ = Source.objects.get_or_create(
+            url="https://example.com/briefing-src",
+            defaults={"name": "BriefingSrc", "source_type": "news"},
+        )
+        ai = Article.objects.create(
+            title="GPT-6 Reasoning Breakthrough",
+            url="https://example.com/brief-ai",
+            content="Deep learning and transformer advances.",
+            topic="AI",
+            source=src,
+        )
+        sec = Article.objects.create(
+            title="New Zero-Day Exploit in Wild",
+            url="https://example.com/brief-sec",
+            content="Security researchers found a vulnerability.",
+            topic="Security",
+            source=src,
+        )
+        return ai, sec
+
+    def test_different_interests_get_different_briefings(self):
+        from apps.core.tasks import generate_user_briefing
+
+        ai_user = self._make_user("brief_ai", "brief-ai@example.com")
+        self._set_interests(ai_user, ["ai_ml"])
+        sec_user = self._make_user("brief_sec", "brief-sec@example.com")
+        self._set_interests(sec_user, ["security"])
+        self._seed_articles()
+
+        res_ai = generate_user_briefing.apply(kwargs={"user_id": str(ai_user.id)}).get()
+        res_sec = generate_user_briefing.apply(
+            kwargs={"user_id": str(sec_user.id)}
+        ).get()
+
+        b_ai = DailyBriefing.objects.get(user=ai_user)
+        b_sec = DailyBriefing.objects.get(user=sec_user)
+
+        assert res_ai["status"] == "success"
+        assert res_sec["status"] == "success"
+        # Different interests → different briefings
+        assert b_ai.content != b_sec.content
+        # AI user's briefing mentions the AI article, not the security one
+        assert "GPT-6" in b_ai.content
+        assert "Zero-Day" not in b_ai.content
+        assert "Zero-Day" in b_sec.content
+        assert "GPT-6" not in b_sec.content
+
+    def test_linked_items_take_precedence_over_interests(self):
+        from apps.articles.models import UserArticle
+        from apps.core.tasks import generate_user_briefing
+
+        user = self._make_user("brief_link", "brief-link@example.com")
+        self._set_interests(user, ["ai_ml"])
+        ai, sec = self._seed_articles()
+        # Link the SECURITY article to this AI-interested user — linked items
+        # are the strongest personalization signal.
+        UserArticle.objects.create(user=user, article=sec)
+
+        generate_user_briefing.apply(kwargs={"user_id": str(user.id)}).get()
+
+        b = DailyBriefing.objects.get(user=user)
+        assert "Zero-Day" in b.content
+
+    def test_no_prefs_falls_back_to_global(self):
+        from apps.core.tasks import generate_user_briefing
+
+        user = self._make_user("brief_none", "brief-none@example.com")
+        self._seed_articles()
+
+        generate_user_briefing.apply(kwargs={"user_id": str(user.id)}).get()
+
+        b = DailyBriefing.objects.get(user=user)
+        assert b.content  # not empty — global fallback
+
+
 # ─────────────────────── B3: API endpoint tests ──────────────────────────────
 
 

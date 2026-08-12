@@ -1,9 +1,10 @@
 """
 TASK-001-T3 — Integration tests for interest-based feed filtering.
 
-Tests verify that when ?for_you=1 is passed and a user has completed onboarding
-with specific interests, the feed returns only articles matching those interests,
-while falling back to unfiltered feed when no preferences exist.
+Tests verify that when ?for_you=1 is passed and a user has saved interests
+(from the onboarding wizard or the InterestProfileBuilder), the feed returns
+only articles matching those interests, while falling back to unfiltered feed
+when the user has no preferences at all.
 """
 
 from __future__ import annotations
@@ -190,8 +191,12 @@ class TestInterestFeedFiltering(TestCase):
 
     # ── Edge cases ────────────────────────────────────────────────────────────
 
-    def test_for_you_incompleted_onboarding_returns_all(self):
-        """User with incomplete onboarding should get unfiltered feed."""
+    def test_for_you_incompleted_onboarding_personalizes(self):
+        """
+        Lenient gate: interests saved during the wizard personalise the feed
+        even if the user never clicked through all 5 steps. A half-finished
+        wizard should not silently disable personalization for the account.
+        """
         user = _make_user()
         _make_onboarding_prefs(user, interests=["ai"], completed=False)  # NOT completed
         self.client.force_authenticate(user=user)
@@ -199,8 +204,12 @@ class TestInterestFeedFiltering(TestCase):
         resp = self.client.get("/api/v1/articles/?for_you=1")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         data = resp.data.get("data", resp.data.get("results", []))
-        # Should fall back to all articles (5 created in setUp)
-        self.assertGreaterEqual(len(data), 3)
+        topics = [a.get("topic", "").lower() for a in data]
+
+        # Interests count despite incomplete wizard — only AI articles
+        self.assertTrue(topics, "Expected personalized results")
+        for topic in topics:
+            self.assertIn("ai", topic, f"Non-AI article leaked: {topic}")
 
     def test_for_you_no_onboarding_prefs_returns_all(self):
         """User with no OnboardingPreferences should get unfiltered feed."""

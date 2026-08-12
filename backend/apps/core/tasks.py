@@ -1611,35 +1611,63 @@ def generate_user_briefing(self, user_id: str) -> Dict:
     DailyBriefing.objects.filter(user=user, date=today).delete()
 
     # Fetch EXACTLY 5 items from each source for this user.
-    # Personalization: prefer items linked to the user, but fall back to the
-    # latest global content when the user has no links yet (e.g. a new account
-    # before onboarding scrapes finish) — otherwise the briefing is an empty
-    # "0 from every source" stub even though the feed has plenty of content.
-    articles = Article.objects.filter(user_articles__user=user).order_by("-scraped_at")[
-        :5
-    ]
-    if not articles:
-        articles = Article.objects.order_by("-scraped_at")[:5]
+    # Personalization preference order:
+    #   1. Items linked to the user (scraped by their own workflows)
+    #   2. Content matching their interest slugs (content-based filter —
+    #      this is what makes two accounts with different interests get
+    #      genuinely different briefings even before per-user scrapes run)
+    #   3. Global latest content (last resort — only when the user has no
+    #      links AND no interests AND nothing matches, so the briefing is
+    #      never an empty "0 from every source" stub).
+    from apps.users.interests import apply_for_you_filter  # noqa: PLC0415
 
-    papers = ResearchPaper.objects.filter(user_papers__user=user).order_by(
-        "-fetched_at"
-    )[:5]
-    if not papers:
-        papers = ResearchPaper.objects.order_by("-fetched_at")[:5]
+    def _pick(qs_linked, qs_global, text_fields, topic_field):
+        """Pick 5 items: linked → interest-filtered → global."""
+        linked = list(qs_linked[:5])
+        if linked:
+            return linked
+        personalized = apply_for_you_filter(
+            qs_global,
+            user=user,
+            text_fields=text_fields,
+            topic_field=topic_field,
+        )
+        return list(personalized[:5])
 
-    repos = Repository.objects.filter(user_repositories__user=user).order_by("-stars")[
-        :5
-    ]
-    if not repos:
-        repos = Repository.objects.order_by("-stars")[:5]
+    articles = _pick(
+        Article.objects.filter(user_articles__user=user).order_by("-scraped_at"),
+        Article.objects.order_by("-scraped_at"),
+        ("title", "summary", "content"),
+        "topic",
+    )
 
-    videos = Video.objects.filter(user_videos__user=user).order_by("-fetched_at")[:5]
-    if not videos:
-        videos = Video.objects.order_by("-fetched_at")[:5]
+    papers = _pick(
+        ResearchPaper.objects.filter(user_papers__user=user).order_by("-fetched_at"),
+        ResearchPaper.objects.order_by("-fetched_at"),
+        ("title", "abstract"),
+        None,
+    )
 
-    tweets = Tweet.objects.filter(user_tweets__user=user).order_by("-posted_at")[:5]
-    if not tweets:
-        tweets = Tweet.objects.order_by("-posted_at")[:5]
+    repos = _pick(
+        Repository.objects.filter(user_repositories__user=user).order_by("-stars"),
+        Repository.objects.order_by("-stars"),
+        ("full_name", "description"),
+        None,
+    )
+
+    videos = _pick(
+        Video.objects.filter(user_videos__user=user).order_by("-fetched_at"),
+        Video.objects.order_by("-fetched_at"),
+        ("title", "description"),
+        None,
+    )
+
+    tweets = _pick(
+        Tweet.objects.filter(user_tweets__user=user).order_by("-posted_at"),
+        Tweet.objects.order_by("-posted_at"),
+        ("text", "hashtags"),
+        None,
+    )
 
     # Build personalized content
     name_greeting = f", {user.first_name}" if user.first_name else ""
@@ -1648,7 +1676,7 @@ def generate_user_briefing(self, user_id: str) -> Dict:
 
 Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech today.
 
-## 📰 Latest Articles ({articles.count()} from HackerNews)
+## 📰 Latest Articles ({len(articles)} from HackerNews)
 
 """
     sources = []
@@ -1660,7 +1688,7 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
         sources.append({"title": article.title, "url": article.url, "type": "article"})
 
     content += f"""
-## 📄 Latest Research ({papers.count()} from arXiv)
+## 📄 Latest Research ({len(papers)} from arXiv)
 
 """
     for paper in papers:
@@ -1670,7 +1698,7 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
         sources.append({"title": paper.title, "url": paper.url, "type": "paper"})
 
     content += f"""
-## 💻 Trending Repositories ({repos.count()} from GitHub)
+## 💻 Trending Repositories ({len(repos)} from GitHub)
 
 """
     for repo in repos:
@@ -1686,7 +1714,7 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
         )
 
     content += f"""
-## 🎬 Featured Videos ({videos.count()} from YouTube)
+## 🎬 Featured Videos ({len(videos)} from YouTube)
 
 """
     for video in videos:
@@ -1695,7 +1723,7 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
         sources.append({"title": video.title, "url": video.url, "type": "video"})
 
     content += f"""
-## 🐦 Latest from X ({tweets.count()} tweets)
+## 🐦 Latest from X ({len(tweets)} tweets)
 
 """
     for tweet in tweets:
@@ -1751,11 +1779,11 @@ Welcome{name_greeting} to your SYNAPSE feed! Here's what's happening in tech tod
         "status": "success",
         "briefing_id": str(briefing.id),
         "content_length": len(content),
-        "articles": articles.count(),
-        "papers": papers.count(),
-        "repos": repos.count(),
-        "videos": videos.count(),
-        "tweets": tweets.count(),
+        "articles": len(articles),
+        "papers": len(papers),
+        "repos": len(repos),
+        "videos": len(videos),
+        "tweets": len(tweets),
     }
 
 
