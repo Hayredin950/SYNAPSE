@@ -5,6 +5,7 @@ Falls back to Google Gemini if GEMINI_API_KEY is set and OPENROUTER_API_KEY is n
 """
 
 import logging
+import re
 from typing import Any, Dict, Iterator, List, Optional
 
 from langchain_core.documents import Document
@@ -67,10 +68,49 @@ Guidelines:
 - Be concise, accurate, and helpful.
 - Format code snippets with appropriate markdown code fences.
 - When discussing research papers, mention the key findings and authors when known.
+- If the user greets you or makes casual small talk, reply warmly and briefly \
+  WITHOUT referencing any documents or the knowledge base.
+- If the user asks you to summarise, shorten, rewrite, or expand on YOUR PREVIOUS \
+  reply, base that on the conversation history — do not answer about the freshly \
+  retrieved documents instead.
 
 Knowledge Base Context:
 {context}
 """
+
+# Used when the user just greets us — no retrieval, no context dump.
+GREETING_PROMPT = (
+    "You are SYNAPSE AI, a friendly and helpful assistant for developers and "
+    "researchers. The user just greeted you or made casual small talk. Reply "
+    "briefly and warmly, ask how you can help, and do NOT mention any documents, "
+    "sources, or knowledge base."
+)
+
+# Short casual greetings / acknowledgements that should NOT trigger retrieval.
+_GREETING_RE = re.compile(
+    r"^(hi+|hello+|hey+|yo+|sup|hiya|howdy|greetings|good (morning|afternoon|evening|night)"
+    r"|hi( |')?there|hello( |')?there"
+    r"|how( |')?(are|r) (you|u|ya)"
+    r"|what'?s up|wassup|wazzup"
+    r"|thanks|thank you|ty|cheers|thanks a lot"
+    r"|bye+|goodbye|see you|gtg)[!.?\s]*$",
+    re.IGNORECASE,
+)
+
+
+def _is_casual_greeting(query: str) -> bool:
+    """
+    True for short casual greetings/small talk that should skip retrieval.
+
+    Only matches when the ENTIRE query is a greeting (e.g. "hello", "hi there",
+    "good morning"). Real questions ("hi, what is X?") contain extra words and
+    are not matched.
+    """
+    q = query.strip().lower()
+    if not q or len(q.split()) > 8:
+        return False
+    return bool(_GREETING_RE.match(q))
+
 
 CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(
     """Given the following conversation history and a follow-up question, \
@@ -202,22 +242,29 @@ class SynapseRAGChain:
         if content_types:
             self.retriever.content_types = content_types
 
-        # Step 1: Retrieve docs
-        docs = self.retriever.invoke(question)
-        context = (
-            _format_context_with_sources(docs)
-            if docs
-            else "No relevant documents found."
-        )
-
-        # Step 2: Condense question if there's history
         chat_history = memory.messages
-        condensed_question = question
-        if chat_history:
-            condensed_question = self._condense_question(question, chat_history)
 
-        # Step 3: Build final prompt
-        system_content = SYSTEM_PROMPT.format(context=context)
+        if _is_casual_greeting(question):
+            # Small talk — skip retrieval entirely and answer conversationally.
+            docs: List[Document] = []
+            system_content = GREETING_PROMPT
+            condensed_question = question
+        else:
+            # Step 1: Retrieve docs
+            docs = self.retriever.invoke(question)
+            context = (
+                _format_context_with_sources(docs)
+                if docs
+                else "No relevant documents found."
+            )
+
+            # Step 2: Condense question if there's history
+            condensed_question = question
+            if chat_history:
+                condensed_question = self._condense_question(question, chat_history)
+
+            # Step 3: Build final prompt
+            system_content = SYSTEM_PROMPT.format(context=context)
 
         from langchain_core.messages import SystemMessage
 
@@ -273,19 +320,26 @@ class SynapseRAGChain:
         if content_types:
             self.retriever.content_types = content_types
 
-        docs = self.retriever.invoke(question)
-        context = (
-            _format_context_with_sources(docs)
-            if docs
-            else "No relevant documents found."
-        )
-
         chat_history = memory.messages
-        condensed_question = question
-        if chat_history:
-            condensed_question = self._condense_question(question, chat_history)
 
-        system_content = SYSTEM_PROMPT.format(context=context)
+        if _is_casual_greeting(question):
+            # Small talk — skip retrieval entirely and answer conversationally.
+            docs: List[Document] = []
+            system_content = GREETING_PROMPT
+            condensed_question = question
+        else:
+            docs = self.retriever.invoke(question)
+            context = (
+                _format_context_with_sources(docs)
+                if docs
+                else "No relevant documents found."
+            )
+
+            condensed_question = question
+            if chat_history:
+                condensed_question = self._condense_question(question, chat_history)
+
+            system_content = SYSTEM_PROMPT.format(context=context)
 
         from langchain_core.messages import HumanMessage, SystemMessage
 
