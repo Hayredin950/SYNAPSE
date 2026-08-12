@@ -96,7 +96,7 @@ export default function InviteAcceptPage() {
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 p-8 max-w-sm w-full">
         {/* Logo */}
         <div className="flex justify-center mb-6">
-          <LogoMark size={48} className="rounded-xl shadow-lg" />
+          <LogoMark size={48} />
         </div>
 
         {/* Content */}

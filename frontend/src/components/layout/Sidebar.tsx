@@ -68,12 +68,12 @@ export const Sidebar = memo(function Sidebar({
       <div className="flex items-center justify-between h-16 px-4 border-b border-slate-300 dark:border-slate-800/60">
         {!isCollapsed && (
           <div className="flex items-center gap-2.5">
-            <LogoMark size={32} className="rounded-xl shadow-glow-indigo" />
+            <LogoMark size={32} />
             <h1 className="text-base font-black gradient-text tracking-tight">SYNAPSE</h1>
           </div>
         )}
         {isCollapsed && (
-          <LogoMark size={36} className="rounded-xl shadow-glow-indigo mx-auto" />
+          <LogoMark size={36} className="mx-auto" />
         )}
 
         {!isCollapsed && (

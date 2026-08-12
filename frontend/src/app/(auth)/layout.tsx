@@ -42,7 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Logo */}
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <LogoMark size={44} className="rounded-2xl shadow-2xl shadow-indigo-500/30 group-hover:scale-105 transition-transform" />
+            <LogoMark size={44} className="transition-transform" />
             <span className="text-2xl font-black tracking-tight text-indigo-900 dark:text-white">SYNAPSE</span>
           </Link>
         </div>
@@ -113,7 +113,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Mobile logo */}
         <div className="lg:hidden mb-10 text-center">
           <div className="inline-flex items-center gap-3 mb-2">
-            <LogoMark size={40} className="rounded-2xl shadow-lg shadow-indigo-500/30" />
+            <LogoMark size={40} />
             <span className="text-2xl font-black tracking-tight text-indigo-900 dark:text-white">SYNAPSE</span>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">AI-Powered Technology Intelligence</p>
