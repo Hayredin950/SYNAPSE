@@ -322,6 +322,16 @@ export default function ChatPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, [modelDropdownOpen]);
 
+  // If the user picked a bring-your-own-key model but no key is actually
+  // configured, fall back to the server default so the chat never sends a
+  // model ID that would 404.
+  const hasPersonalKey = !!apiKeyStatus?.openrouter_configured || !!apiKeyStatus?.gemini_configured;
+  useEffect(() => {
+    if (!hasPersonalKey && selectedModel !== DEFAULT_MODEL && !SERVER_MODELS.some(m => m.id === selectedModel)) {
+      setSelectedModel(DEFAULT_MODEL);
+    }
+  }, [hasPersonalKey, selectedModel]);
+
   // Auto-resize textarea
   useEffect(() => {
     const ta = textareaRef.current;
@@ -612,6 +622,7 @@ export default function ChatPage() {
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
+  const availableModels = getAvailableModels(hasPersonalKey);
   return (
     // Absolutely fill the parent <main> element which is flex-1.
     // Using absolute inset-0 makes this 100% immune to any ancestor flex chain.
@@ -798,7 +809,7 @@ export default function ChatPage() {
             >
               <Zap size={11} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span className="max-w-[110px] sm:max-w-[140px] truncate font-medium">
-                {getAvailableModels(!!apiKeyStatus?.openrouter_configured || !!apiKeyStatus?.gemini_configured).find((m) => m.id === selectedModel)?.label ?? 'Select model'}
+                {availableModels.find((m) => m.id === selectedModel)?.label ?? 'Select model'}
               </span>
               <ChevronDown size={11} className={cn('transition-transform shrink-0 text-slate-500 dark:group-hover:text-slate-300', modelDropdownOpen && 'rotate-180')} />
             </button>
@@ -820,7 +831,7 @@ export default function ChatPage() {
                     <p className="text-[10px] text-slate-500 mt-0.5">Choose the model for this conversation</p>
                   </div>
                   <div className="max-h-80 overflow-y-auto py-1.5">
-                    {getAvailableModels(!!apiKeyStatus?.openrouter_configured || !!apiKeyStatus?.gemini_configured).map((m, i) => (
+                    {availableModels.map((m, i) => (
                       <div key={m.id}>
                         {i === 0 && (
                           <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-indigo-500/70">⚡ Server-provided</p>
