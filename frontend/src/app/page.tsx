@@ -403,13 +403,13 @@ function CTASection() {
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-950/60 to-transparent pointer-events-none" />
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-xs font-semibold mb-8">
-          <Sparkles size={12} /> No credit card required
+          <Sparkles size={12} /> Your AI-powered tech intelligence
         </div>
         <h2 className="text-4xl sm:text-5xl font-black text-white mb-5 leading-tight">
           Ready to discover what's next in tech?
         </h2>
         <p className="text-lg text-indigo-100 mb-10">
-          Join thousands of engineers, researchers and founders who use SYNAPSE to stay ahead. Free forever, upgrade anytime.
+          Join thousands of engineers, researchers and founders who use SYNAPSE to stay ahead — discover what's next in tech, every day.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link href="/register"
