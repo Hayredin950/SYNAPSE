@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import {
   Zap, Search, GitBranch, Bot, Workflow, BookOpen,
-  Star, TrendingUp, FileText, ChevronRight, Check,
+  Star, TrendingUp, FileText, ChevronRight,
   Menu, X, ArrowRight, Sparkles, Shield, Clock,
   BarChart3, MessageSquare, Brain, Twitter
 } from 'lucide-react'
@@ -98,7 +98,7 @@ function LandingNavbar() {
 
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-8">
-            {[['Features', '#features'], ['Pricing', '#pricing'], ['Trending', '#trending']].map(([label, href]) => (
+            {[['Features', '#features'], ['Trending', '#trending']].map(([label, href]) => (
               <a key={label} href={href}
                 className="text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                 {label}
@@ -137,7 +137,7 @@ function LandingNavbar() {
         {menuOpen && (
           <div className="md:hidden pb-4 pt-2 border-t border-slate-200 dark:border-slate-800 mt-1 bg-white dark:bg-slate-950">
             <div className="flex flex-col gap-1">
-              {[['Features', '#features'], ['Pricing', '#pricing'], ['Trending', '#trending']].map(([label, href]) => (
+              {[['Features', '#features'], ['Trending', '#trending']].map(([label, href]) => (
                 <a key={label} href={href} onClick={() => setMenuOpen(false)}
                   className="px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
                   {label}
@@ -276,149 +276,6 @@ function StatsSection() {
                 {inView ? <AnimatedNumber target={value} suffix={suffix} /> : '—'}
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-500 font-medium">{label}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-// ─── Pricing ──────────────────────────────────────────────────────────────────
-
-const PLANS = [
-  {
-    name: 'Free',
-    price: '$0',
-    period: '/month',
-    description: 'Perfect for individuals exploring tech intelligence.',
-    cta: 'Get started free',
-    href: '/register',
-    highlight: false,
-    features: [
-      '50 AI chat messages / day',
-      '10 documents generated',
-      '5 automation workflows',
-      'Tech feed (7-day history)',
-      'Basic keyword search',
-      'Bookmark collections',
-      '1 AI Agent mode',
-    ],
-    missing: ['Semantic search', 'Unlimited AI agents', 'SSO / SAML', 'Team workspaces'],
-  },
-  {
-    name: 'Pro',
-    price: '$19',
-    period: '/month',
-    description: 'Everything you need to stay ahead — unlimited AI power.',
-    cta: 'Start Pro trial',
-    href: '/register?plan=pro',
-    highlight: true,
-    features: [
-      'Unlimited AI chat messages',
-      'Unlimited documents',
-      'Unlimited automations',
-      'Full history (all time)',
-      'Semantic + hybrid search',
-      'All AI Agents modes',
-      'Google Drive & S3 export',
-      'Priority support',
-    ],
-    missing: ['SSO / SAML', 'Team workspaces'],
-  },
-  {
-    name: 'Enterprise',
-    price: '$99',
-    period: '/month',
-    description: 'For high-performance teams with custom requirements.',
-    cta: 'Contact sales',
-    href: 'mailto:sales@synapse.app',
-    highlight: false,
-    features: [
-      'Everything in Pro',
-      'Team workspaces & RBAC',
-      'SSO / SAML integration',
-      'Custom AI model tuning',
-      'White-label licensing',
-      'Advanced audit logs',
-      'Dedicated support channel',
-      'SLA guarantee',
-    ],
-    missing: [],
-  },
-]
-
-function PricingSection() {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref as React.RefObject<HTMLElement>)
-  return (
-    <section id="pricing" ref={ref} className="relative py-24 bg-slate-50 dark:bg-slate-900/50">
-      <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-white dark:from-slate-950 to-transparent pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-indigo-600/20 to-transparent pointer-events-none" />
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-3">
-            <Star size={12} /> Pricing
-          </div>
-          <h2 className="text-4xl sm:text-5xl font-black text-slate-900 dark:text-white mb-4">
-            Simple, transparent pricing
-          </h2>
-          <p className="text-lg text-slate-600 dark:text-slate-400">
-            Start free. Upgrade when your team is ready. No surprises.
-          </p>
-        </div>
-        <div className={`grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch transition-all duration-700 ${inView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          {PLANS.map((plan) => (
-            <div key={plan.name} className={`relative flex flex-col rounded-2xl border p-7 ${
-              plan.highlight
-                ? 'bg-gradient-to-b from-indigo-600 to-violet-700 border-indigo-500 shadow-2xl shadow-indigo-500/30 scale-[1.02]'
-                : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60'
-            }`}>
-              {plan.highlight && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className="bg-amber-400 text-amber-900 text-xs font-black px-3 py-1 rounded-full shadow-lg">
-                    ✦ Most Popular
-                  </span>
-                </div>
-              )}
-              <div className="mb-6">
-                <div className={`text-xs font-bold uppercase tracking-widest mb-1 ${plan.highlight ? 'text-indigo-200' : 'text-slate-500 dark:text-slate-400'}`}>
-                  {plan.name}
-                </div>
-                <div className="flex items-end gap-1 mb-2">
-                  <span className={`text-5xl font-black ${plan.highlight ? 'text-white' : 'text-slate-900 dark:text-white'}`}>
-                    {plan.price}
-                  </span>
-                  <span className={`text-sm font-medium mb-2 ${plan.highlight ? 'text-indigo-200' : 'text-slate-500 dark:text-slate-400'}`}>
-                    {plan.period}
-                  </span>
-                </div>
-                <p className={`text-sm ${plan.highlight ? 'text-indigo-100' : 'text-slate-600 dark:text-slate-400'}`}>
-                  {plan.description}
-                </p>
-              </div>
-              <ul className="space-y-2.5 mb-8 flex-1">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm">
-                    <Check size={15} className={`shrink-0 mt-0.5 ${plan.highlight ? 'text-emerald-300' : 'text-emerald-500'}`} />
-                    <span className={plan.highlight ? 'text-indigo-50' : 'text-slate-700 dark:text-slate-300'}>{f}</span>
-                  </li>
-                ))}
-                {plan.missing.map((f) => (
-                  <li key={f} className="flex items-start gap-2.5 text-sm opacity-40">
-                    <X size={15} className="shrink-0 mt-0.5 text-slate-400" />
-                    <span className={plan.highlight ? 'text-indigo-200' : 'text-slate-500 dark:text-slate-500'}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a href={plan.href}
-                className={`w-full text-center font-bold py-3 rounded-xl transition-all text-sm ${
-                  plan.highlight
-                    ? 'bg-white text-indigo-700 hover:bg-indigo-50 shadow-lg'
-                    : 'border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-                }`}>
-                {plan.cta}
-              </a>
             </div>
           ))}
         </div>
@@ -584,7 +441,7 @@ function Footer() {
             <span className="text-slate-500 text-sm ml-1">· AI-Powered Tech Intelligence</span>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-            {[['Features', '#features'], ['Pricing', '#pricing'], ['Trending', '#trending'], ['Log in', '/login'], ['Register', '/register']].map(([label, href]) => (
+            {[['Features', '#features'], ['Trending', '#trending'], ['Log in', '/login'], ['Register', '/register']].map(([label, href]) => (
               <a key={label} href={href}
                 className="text-sm text-slate-500 hover:text-slate-300 transition-colors">
                 {label}
@@ -737,7 +594,6 @@ export default function LandingPage() {
       <StatsSection />
       <FeaturesSection />
       <TrendingSection />
-      <PricingSection />
       <CTASection />
       <Footer />
     </div>
