@@ -23,6 +23,7 @@ export const metadata: Metadata = {
   title: { default: 'SYNAPSE', template: '%s | SYNAPSE' },
   description: 'AI-Powered Technology Intelligence Platform — discover, research, and automate with AI.',
   keywords: ['AI', 'technology', 'intelligence', 'machine learning', 'research', 'automation'],
+  metadataBase: new URL('https://synapse-one-blond.vercel.app'),
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -35,6 +36,28 @@ export const metadata: Metadata = {
       { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: '/icons/icon-192x192.png',
+  },
+  openGraph: {
+    title: 'SYNAPSE — AI-Powered Tech Intelligence',
+    description: 'Your personal AI-curated feed of articles, papers, repos, and videos — all searchable and summarized. AI agents that research, summarize, and automate.',
+    url: 'https://synapse-one-blond.vercel.app',
+    siteName: 'SYNAPSE',
+    type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/opengraph-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'SYNAPSE — AI-Powered Technology Intelligence',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SYNAPSE — AI-Powered Tech Intelligence',
+    description: 'Your personal AI-curated feed of articles, papers, repos, and videos — all searchable and summarized.',
+    images: ['/twitter-image.png'],
   },
 }
 
