@@ -3,6 +3,7 @@
 import React from 'react'
 import Link from 'next/link'
 import { Zap, Brain, TrendingUp, Shield, Twitter } from 'lucide-react'
+import { LogoMark } from '@/components/ui/Logo'
 
 const features = [
   { icon: Brain,      title: 'AI-Powered Insights',   desc: 'Intelligent summaries from thousands of tech sources daily' },
@@ -41,9 +42,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Logo */}
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-              <span className="text-white font-black text-xl">S</span>
-            </div>
+            <LogoMark size={44} className="rounded-2xl shadow-2xl shadow-indigo-500/30 group-hover:scale-105 transition-transform" />
             <span className="text-2xl font-black tracking-tight text-indigo-900 dark:text-white">SYNAPSE</span>
           </Link>
         </div>
@@ -114,9 +113,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Mobile logo */}
         <div className="lg:hidden mb-10 text-center">
           <div className="inline-flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <span className="text-white font-black text-lg">S</span>
-            </div>
+            <LogoMark size={40} className="rounded-2xl shadow-lg shadow-indigo-500/30" />
             <span className="text-2xl font-black tracking-tight text-indigo-900 dark:text-white">SYNAPSE</span>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">AI-Powered Technology Intelligence</p>

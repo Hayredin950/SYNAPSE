@@ -13,6 +13,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { useLiveContent } from '@/hooks/useLiveContent'
 import { useReaderStore } from '@/store/readerStore'
 import { useAccentTheme } from '@/components/ui/AccentTheme'
+import { LogoMark } from '@/components/ui/Logo'
 
 // ── Lazy-loaded overlays — only downloaded when needed ────────────────────────
 const CommandPalette = dynamic(
@@ -100,9 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30 animate-pulse">
-            <span className="text-white font-black text-base">S</span>
-          </div>
+          <LogoMark size={40} className="rounded-xl shadow-lg shadow-indigo-500/30" />
           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>

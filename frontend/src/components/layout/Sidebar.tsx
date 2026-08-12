@@ -10,6 +10,7 @@ import {
   ChevronLeft, ChevronRight, Bot, Youtube, TrendingUp, Twitter, Gift, Building2, BarChart3,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { LogoMark } from '@/components/ui/Logo'
 
 interface SidebarProps {
   isCollapsed: boolean
@@ -67,16 +68,12 @@ export const Sidebar = memo(function Sidebar({
       <div className="flex items-center justify-between h-16 px-4 border-b border-slate-300 dark:border-slate-800/60">
         {!isCollapsed && (
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl animated-gradient flex items-center justify-center flex-shrink-0 shadow-glow-indigo">
-              <span className="text-white dark:text-white font-black text-sm">S</span>
-            </div>
+            <LogoMark size={32} className="rounded-xl shadow-glow-indigo" />
             <h1 className="text-base font-black gradient-text tracking-tight">SYNAPSE</h1>
           </div>
         )}
         {isCollapsed && (
-          <div className="w-9 h-9 rounded-xl animated-gradient flex items-center justify-center mx-auto shadow-glow-indigo">
-            <span className="text-white dark:text-white font-black text-sm">S</span>
-          </div>
+          <LogoMark size={36} className="rounded-xl shadow-glow-indigo mx-auto" />
         )}
 
         {!isCollapsed && (
