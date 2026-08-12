@@ -499,18 +499,21 @@ function HeroSection() {
 
         {/* Headline */}
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 dark:text-white mb-6 leading-[1.05]">
+          <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
+            SYNAPSE
+          </span>
+          <br />
           The AI intelligence platform
           <br />
-          <span className="bg-gradient-to-r from-indigo-600 via-violet-600 to-cyan-500 bg-clip-text text-transparent">
-            built for tech builders
-          </span>
+          built for tech builders
         </h1>
 
         {/* Subtext */}
         <p className="max-w-2xl mx-auto text-lg sm:text-xl text-slate-600 dark:text-slate-400 leading-relaxed mb-10">
-          SYNAPSE aggregates articles, research papers, GitHub repos, X/Twitter posts and videos — 
-          then lets AI agents research, summarize, and automate so you 
-          <span className="font-semibold text-slate-800 dark:text-slate-200"> never miss a breakthrough</span>.
+          SYNAPSE is an AI-powered technology intelligence platform. It aggregates articles,
+          research papers, GitHub repos, videos and tweets into one personalized feed, then lets
+          AI agents research, summarize, and automate so you{' '}
+          <span className="font-semibold text-slate-800 dark:text-slate-200">never miss a breakthrough</span>.
         </p>
 
         {/* CTAs */}

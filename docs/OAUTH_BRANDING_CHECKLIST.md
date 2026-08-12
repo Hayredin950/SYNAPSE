@@ -58,6 +58,47 @@ as the hosts above match.
 **Done →** the dialog now shows **SYNAPSE** + your logo, and users can sign in
 (no more "testing mode" block).
 
+### ⚠️ Google branding verification — the domain ownership blocker
+
+Google shows these errors on the **Branding** page:
+
+> - The website of your home page URL is not registered to you.
+> - Your home page does not explain the purpose of your app.
+> - The app name "SYNAPSE" configured for your OAuth consent screen does not
+>   match the app name on your home page.
+
+**The root cause of ALL THREE is the same: `synapse-one-blond.vercel.app` is a
+Vercel-owned subdomain (`*.vercel.app`), and Google cannot verify ownership of
+a domain you don't control.** Google only accepts domains you own and have
+verified in Google Search Console. `*.vercel.app` / `*.onrender.com` can never
+pass — no DNS record or meta-tag trick works on a platform-owned subdomain.
+
+**The fix (only you can do this):**
+
+1. **Buy a real domain** you own, e.g. `synapse.app`, `getsynapse.com`, or
+   `hayredin.dev` (any registrar: Namecheap, Cloudflare, Porkbun, …).
+2. **Add it to Vercel:** project → Settings → Domains → add your domain and
+   follow Vercel's DNS instructions. The app keeps working — Vercel serves it.
+3. **Verify ownership in Google Search Console:**
+   <https://search.google.com/search-console> → Add property → paste your
+   domain → copy the DNS TXT record → add it at your registrar. (This is the
+   step that makes the domain "registered to you" in Google's eyes.)
+4. **Update the consent screen (Branding page):**
+   - App home page → `https://<your-domain>`
+   - Authorized domain → `<your-domain>` (the `vercel.app` entry can stay,
+     but the homepage must be your own domain)
+   - The app name `SYNAPSE` already matches the homepage hero text (fixed in
+     the app) — keep both `SYNAPSE`.
+5. Click **Request re-verification** on the Branding page.
+
+**About the other two errors:**
+- *"home page does not explain the purpose"* → the landing page hero now
+  states the purpose explicitly ("SYNAPSE is an AI-powered technology
+  intelligence platform…") and the app name in the H1 — this satisfies the
+  requirement once the domain is verified.
+- *"app name does not match"* → the homepage headline now reads **SYNAPSE**
+  prominently, matching the consent screen name exactly.
+
 ---
 
 ## Part 2 — GitHub (authorize page)
